@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-003",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Acción `cuenta_corriente.consultar_al_vender` («Ver el saldo del cliente al vender a cuenta») para los roles de cargar_a_cuenta: un cliente a la vez, con rastro (opción A).",
+  "que_cambia": "Nadie tiene la acción hasta que el dueño abra el módulo (CC-5). Si el dueño quiere que solo se vea el cliente elegido para ese ticket, se guarda la elección en la cuenta de consumo (una migración y una acción más).",
+  "donde": "src/capacidades/permisos/permisos-de-cuenta_corriente.ts; src/modulos/cuenta_corriente/casos-de-uso/ver-cliente-para-vender.ts; el dueño, chat del 26/11/2026: «Si a tus recomendaciones» (opción A y el nombre de la acción), vía el orquestador"
+}

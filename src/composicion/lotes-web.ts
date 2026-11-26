@@ -41,12 +41,18 @@ export type LoteParaLaPantalla = Readonly<{
   existencia: string;
   disponible: string;
   sinAsignar: boolean;
+  /** La versión del lote: «Corregir» la manda de vuelta para que dos correcciones a la vez no se pisen. */
+  version: number;
+  /** Dónde tiene existencia (solo los depósitos que se ven), para elegir el depósito al reasignar. */
+  depositos: readonly Readonly<{ depositoId: string; existencia: string }>[];
 }>;
 
 export type LotesParaLaPantalla = Readonly<{
   articulos: readonly ArticuloParaElSelector[];
   articuloId: string | null;
   unidadId: string | null;
+  /** Si el artículo se controla por lote hoy (`activo`); `null`: nunca se controló. */
+  control: Readonly<{ activo: boolean }> | null;
   lotes: readonly LoteParaLaPantalla[];
 }>;
 
@@ -139,6 +145,7 @@ export function lotesDelArticulo(
       articulos,
       articuloId,
       unidadId,
+      control: lotes?.control == null ? null : { activo: lotes.control.activo },
       lotes: (lotes?.lotes ?? []).map((l) => ({
         loteId: l.loteId,
         codigo: l.codigo,
@@ -146,6 +153,11 @@ export function lotesDelArticulo(
         existencia: l.existencia,
         disponible: l.disponible,
         sinAsignar: l.esSinAsignar,
+        version: l.version,
+        depositos: l.depositos.map((d) => ({
+          depositoId: d.depositoId,
+          existencia: d.existencia,
+        })),
       })),
     }),
   );
