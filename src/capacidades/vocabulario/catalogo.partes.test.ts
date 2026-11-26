@@ -4,7 +4,6 @@ import { TEXTOS_DE_CAJA } from "./catalogo-caja";
 import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
 import { TEXTOS_DE_CATALOGO } from "./catalogo-catalogo";
 import { TEXTOS_DE_CIERRE } from "./catalogo-cierre";
-import { TEXTOS_DE_CUENTAS_DE_FOTOS } from "./catalogo-cuentas-de-fotos";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
@@ -37,7 +36,6 @@ const PARTES: readonly object[] = [
   TEXTOS_DE_CARTA_PUBLICA,
   TEXTOS_DE_CATALOGO,
   TEXTOS_DE_CIERRE,
-  TEXTOS_DE_CUENTAS_DE_FOTOS,
   TEXTOS_DE_CLIENTES,
   TEXTOS_DE_COMANDAS,
   TEXTOS_DE_COMPRAS,
@@ -76,7 +74,7 @@ describe("el catálogo de textos partido en archivos", () => {
   });
 
   it("ninguna clave vive en dos archivos y las partes suman todo el catálogo", () => {
-    expect(PARTES).toHaveLength(22);
+    expect(PARTES).toHaveLength(21);
     expect(clavesRepetidas(PARTES)).toEqual([]);
     const suma = PARTES.reduce<number>((n, parte) => n + Object.keys(parte).length, 0);
     expect(suma).toBe(Object.keys(CATALOGO_DE_TEXTOS).length);

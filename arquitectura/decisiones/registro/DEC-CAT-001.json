@@ -6,5 +6,5 @@
   "estado": "PENDIENTE_DE_OK",
   "decision": "La pantalla de cuentas de fotos se titula «Conectá tu cuenta de fotos» y su campo dice «Pegá el nombre de tu cuenta»; el resto de sus rótulos son textos ya aprobados.",
   "que_cambia": "Dos textos nuevos que ve la empresa. Revertir: cambiar los dos textos del catálogo. Quedan fuera «¿Ya tenés cuenta en Cloudinary?» (enlace externo sin verificar) y «Revisá dos cosas en tu cuenta» (la prueba el dueño con una cuenta real).",
-  "donde": "src/capacidades/vocabulario/catalogo-cuentas-de-fotos.ts; brief-logo-de-la-carta-cuentas-declaradas-2026-11-25.md §8 (CD-1 y CD-3); aceptada para construir por el orquestador el 26/11/2026"
+  "donde": "src/capacidades/vocabulario/catalogo-carta-publica.ts; brief-logo-de-la-carta-cuentas-declaradas-2026-11-25.md §8 (CD-1 y CD-3); aceptada para construir por el orquestador el 26/11/2026"
 }
