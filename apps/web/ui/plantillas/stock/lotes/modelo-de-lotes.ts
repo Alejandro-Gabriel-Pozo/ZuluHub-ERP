@@ -26,7 +26,10 @@ export type LotesDeLaComposicion = Readonly<{
     existencia: string;
     disponible: string;
     sinAsignar: boolean;
+    version: number;
+    depositos: readonly Readonly<{ depositoId: string; existencia: string }>[];
   }>[];
+  control: Readonly<{ activo: boolean }> | null;
 }>;
 
 export type VencimientosDeLaComposicion = Readonly<{
@@ -47,6 +50,12 @@ export const hrefDeLotes = (articuloId: string | null = null): string =>
     ? RUTAS_DE_STOCK.lotes
     : `${RUTAS_DE_STOCK.lotes}?${new URLSearchParams({ articulo: articuloId }).toString()}`;
 
+/** Las direcciones de Corregir y Reasignar: el artículo y el lote viajan escapados; la forma la valida la composición. */
+export const hrefDeCorregir = (articuloId: string, loteId: string): string =>
+  `${RUTAS_DE_STOCK.corregirLote}?${new URLSearchParams({ articulo: articuloId, lote: loteId }).toString()}`;
+export const hrefDeReasignar = (articuloId: string, loteId: string): string =>
+  `${RUTAS_DE_STOCK.reasignarLote}?${new URLSearchParams({ articulo: articuloId, lote: loteId }).toString()}`;
+
 export const hrefDeVencimientos = (dias: number | null = null): string =>
   `${RUTAS_DE_STOCK.lotes}?${new URLSearchParams({ vista: "vencimientos", ...(dias === null ? {} : { dias: String(dias) }) }).toString()}`;
 
@@ -56,6 +65,9 @@ const fechaDeLote = (vence: string): string => {
 };
 
 export type VistaDeLotes = Readonly<{
+  articuloId: string | null;
+  /** El artículo se controla por lote hoy (`true`), dejó de controlarse o nunca se controló (`false`). */
+  controlado: boolean;
   opciones: readonly Readonly<{ id: string; nombre: string; href: string; actual: boolean }>[];
   hrefDeVencimientos: string;
   filas: readonly Readonly<{
@@ -64,11 +76,21 @@ export type VistaDeLotes = Readonly<{
     vence: string | null;
     existencia: string;
     disponible: string;
+    /** Adónde lleva «Corregir» (no se ofrece en «Sin asignar», que no tiene fechas) y «Reasignar» (solo en «Sin asignar» con existencia). */
+    hrefDeCorregir: string | null;
+    hrefDeReasignar: string | null;
   }>[];
 }>;
 
+/** Hay existencia positiva (texto decimal exacto, sin `Number`). */
+const hayExistencia = (cantidad: string): boolean =>
+  !cantidad.startsWith("-") && /[1-9]/.test(cantidad);
+
 export function armarLosLotes(dato: LotesDeLaComposicion, textoDe: TextoDe): VistaDeLotes {
+  const articuloId = dato.articuloId;
   return {
+    articuloId,
+    controlado: dato.control?.activo === true,
     opciones: dato.articulos.map((a) => ({
       id: a.id,
       nombre: a.nombre,
@@ -82,7 +104,58 @@ export function armarLosLotes(dato: LotesDeLaComposicion, textoDe: TextoDe): Vis
       vence: l.vence === null ? null : fechaDeLote(l.vence),
       existencia: cantidadConUnidad(l.existencia, dato.unidadId ?? ""),
       disponible: cantidadConUnidad(l.disponible, dato.unidadId ?? ""),
+      hrefDeCorregir:
+        articuloId === null || l.sinAsignar ? null : hrefDeCorregir(articuloId, l.loteId),
+      hrefDeReasignar:
+        articuloId !== null && l.sinAsignar && hayExistencia(l.existencia)
+          ? hrefDeReasignar(articuloId, l.loteId)
+          : null,
     })),
+  };
+}
+
+type LoteDeLaComposicion = LotesDeLaComposicion["lotes"][number];
+
+/** El lote a corregir: tiene que ser uno del artículo y no el «Sin asignar» (no tiene fechas). Su versión es la que se manda de vuelta. */
+export function loteParaCorregir(
+  dato: LotesDeLaComposicion,
+  loteId: string | undefined,
+): Readonly<{ codigo: string; vence: string; version: number }> | null {
+  const lote = dato.lotes.find((l) => l.loteId === loteId);
+  return lote === undefined || lote.sinAsignar
+    ? null
+    : { codigo: lote.codigo, vence: lote.vence ?? "", version: lote.version };
+}
+
+/**
+ * La reasignación del «Sin asignar» con existencia: de qué lote sale, en qué depósitos tiene existencia (con su nombre) y a qué lotes EXISTENTES puede ir. Un lote que no es el «Sin asignar» o sin existencia no se reasigna
+ * desde acá (`null`). Ayuda: el servidor valida el saldo, el artículo y el depósito.
+ */
+export function loteParaReasignar(
+  dato: LotesDeLaComposicion,
+  loteId: string | undefined,
+  depositos: readonly Readonly<{ id: string; nombre: string }>[],
+  textoDe: TextoDe,
+): Readonly<{
+  origen: string;
+  unidadId: string;
+  depositos: readonly Readonly<{ valor: string; etiqueta: string }>[];
+  destinos: readonly Readonly<{ valor: string; etiqueta: string }>[];
+}> | null {
+  const origen: LoteDeLaComposicion | undefined = dato.lotes.find((l) => l.loteId === loteId);
+  if (origen === undefined || !origen.sinAsignar || !hayExistencia(origen.existencia)) return null;
+  const conExistencia = new Set(
+    origen.depositos.filter((d) => hayExistencia(d.existencia)).map((d) => d.depositoId),
+  );
+  return {
+    origen: textoDe("stock.lotes.sin_asignar"),
+    unidadId: dato.unidadId ?? "",
+    depositos: depositos
+      .filter((d) => conExistencia.has(d.id))
+      .map((d) => ({ valor: d.id, etiqueta: d.nombre })),
+    destinos: dato.lotes
+      .filter((l) => l.loteId !== origen.loteId && !l.sinAsignar)
+      .map((l) => ({ valor: l.loteId, etiqueta: l.codigo })),
   };
 }
 
@@ -131,14 +204,16 @@ export function armarLosVencimientos(
 /** Lo que el navegador manda en la dirección, solo como texto: la forma la valida la composición. Un valor repetido o de otro tipo se descarta. */
 export function leerLosLotes(
   params: Readonly<Record<string, string | string[] | undefined>>,
-): Readonly<{ vencimientos: boolean; articuloId?: string; dias?: string }> {
+): Readonly<{ vencimientos: boolean; articuloId?: string; loteId?: string; dias?: string }> {
   const uno = (v: string | string[] | undefined): string | undefined =>
     typeof v === "string" && v !== "" ? v : undefined;
   const articuloId = uno(params["articulo"]);
+  const loteId = uno(params["lote"]);
   const dias = uno(params["dias"]);
   return {
     vencimientos: uno(params["vista"]) === "vencimientos",
     ...(articuloId === undefined ? {} : { articuloId }),
+    ...(loteId === undefined ? {} : { loteId }),
     ...(dias === undefined ? {} : { dias }),
   };
 }

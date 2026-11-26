@@ -180,6 +180,37 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-STK-002" },
   },
+  // Lotes (STK-E1, escritura): Controlar por lote (L-05), Dejar de controlar (L-06), Reasignar (L-07), Corregir (L-08) y «El lote no tiene tanta existencia» (L-15) los aprobó el dueño el 25/11/2026 (fila 449); «Fecha de vencimiento» (L-09), el orquestador por delegación (fila 173); DEC-STK-005.
+  "stock.lotes.controlar": {
+    porDefecto: "Controlar por lote",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.dejar_de_controlar": {
+    porDefecto: "Dejar de controlar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.reasignar": {
+    porDefecto: "Reasignar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.corregir": {
+    porDefecto: "Corregir",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.fecha_de_vencimiento": {
+    porDefecto: "Fecha de vencimiento",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.error.saldo_de_lote_insuficiente": {
+    porDefecto: "El lote no tiene tanta existencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
   "stock.estado.anulado": {
     porDefecto: "Anulado",
     usos: ["DE_FICHA"],
