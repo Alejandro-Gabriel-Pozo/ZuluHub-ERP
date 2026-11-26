@@ -29,6 +29,8 @@ export type EntradaDeAnularTicket = Readonly<{
   /** El id del ejemplar de anulación; lo manda la pantalla, como todo id de ventas (idempotencia). */
   ejemplarNuevoId: string;
   motivo: string;
+  /** La sucursal con la que trabaja quien anula (la fija el servidor): un ticket de OTRA, o sin ella, es como si no existiera (`TICKET_NO_ENCONTRADO`) y no se escribe nada, también en una repetición. */
+  sucursalDeTrabajo: string;
 }>;
 
 export type SalidaDeAnularTicket = Readonly<{
@@ -73,6 +75,7 @@ async function anular(
   if (inicial === null) return err("TICKET_NO_ENCONTRADO");
   const alcance = await exigirAlcance(tx, contexto, inicial.sucursalId);
   if (!alcance.ok) return alcance;
+  if (entrada.sucursalDeTrabajo !== inicial.sucursalId) return err("TICKET_NO_ENCONTRADO");
 
   // Idempotencia por clave: la misma huella devuelve lo hecho (aunque la jornada se haya cerrado después); otra huella es otra cosa.
   const huella = huellaDeAnulacion({

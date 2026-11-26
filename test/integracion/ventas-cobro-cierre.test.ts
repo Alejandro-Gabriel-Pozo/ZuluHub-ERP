@@ -72,6 +72,7 @@ describe.skipIf(base === null)("ventas: el cobro y el cierre del día de caja", 
   const anular = async (e: EscenarioDeVentas, v: Awaited<ReturnType<typeof vender>>) =>
     valorDe(
       await m.casos.anularTicket(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         ticketId: v.ticketId,
         ejemplarBaseId: v.ejemplarId,
