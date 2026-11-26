@@ -8,6 +8,10 @@ import { crearCuentaCorrienteDeVentas } from "../../src/composicion/cuenta-corri
 import { armarTxDeSaldos } from "../../src/composicion/libro-de-saldos";
 import { crearRepositoriosDeCuentaCorriente } from "../../src/modulos/cuenta_corriente/publico";
 import { crearRepositoriosDeStock } from "../../src/modulos/stock/publico";
+import {
+  crearCasosDeUsoDeProduccion,
+  crearRepositoriosDeProduccion,
+} from "../../src/modulos/produccion/publico";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
   crearLecturasDeComprobantes,
@@ -78,6 +82,15 @@ export const REGLAS_DE_PRUEBA_CON_STOCK: ReglasDeEmpresa = {
   },
 };
 
+/** Las mismas reglas con `stock` y `produccion` disponibles: lo que usa un mundo con ventas, stock y producción sobre la misma base (PRO-V). */
+export const REGLAS_DE_PRUEBA_CON_PRODUCCION: ReglasDeEmpresa = {
+  ...REGLAS_DE_PRUEBA_CON_STOCK,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA_CON_STOCK.catalogo,
+    produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "disponible" },
+  },
+};
+
 /** Las mismas reglas con `clientes` y `cuenta_corriente` disponibles (el módulo real está en desarrollo): lo que usa un mundo con la cuenta corriente de clientes cableada (CC-2). */
 export const REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE: ReglasDeEmpresa = {
   ...REGLAS_DE_PRUEBA,
@@ -120,6 +133,8 @@ export async function montarVentas(
     stock?: boolean;
     /** CC-2: arma también la ficha y el libro de saldos sobre la MISMA conexión, le da a ventas el puerto de la cuenta corriente y deja `clientes` y `cuenta_corriente` ACTIVOS para la empresa. */
     cuentaCorriente?: boolean;
+    /** PRO-V: con `stock: true`, arma también los repositorios de producción sobre la MISMA conexión, deja el módulo `produccion` activo y devuelve sus casos de uso (`produccion`). */
+    produccion?: boolean;
   }> = {},
 ) {
   let stockActivo = opciones.stock === true;
@@ -142,7 +157,13 @@ export async function montarVentas(
     } as TxDePrueba;
   };
   const conStock = (tx: TxDePrueba): TxDePrueba =>
-    opciones.stock === true ? { ...tx, ...crearRepositoriosDeStock(tx.db) } : tx;
+    opciones.stock === true
+      ? {
+          ...tx,
+          ...crearRepositoriosDeStock(tx.db),
+          ...(opciones.produccion === true ? crearRepositoriosDeProduccion(tx.db) : {}),
+        }
+      : tx;
   const conCuentaCorriente = (tx: TxDePrueba): TxDePrueba => {
     if (opciones.cuentaCorriente !== true) return tx;
     const { asientos, imputaciones, saldos } = armarTxDeSaldos(tx.db);
@@ -181,6 +202,7 @@ export async function montarVentas(
                   "caja",
                   "facturacion",
                   ...(stockActivo ? ["stock"] : []),
+                  ...(opciones.produccion === true ? ["produccion"] : []),
                   ...(opciones.cuentaCorriente === true ? ["clientes", "cuenta_corriente"] : []),
                 ],
                 modulosHabilitados: [
@@ -191,6 +213,7 @@ export async function montarVentas(
                   "caja",
                   "facturacion",
                   ...(stockActivo ? ["stock"] : []),
+                  ...(opciones.produccion === true ? ["produccion"] : []),
                   ...(opciones.cuentaCorriente === true ? ["clientes", "cuenta_corriente"] : []),
                 ],
               };
@@ -203,9 +226,11 @@ export async function montarVentas(
   const reglas =
     opciones.cuentaCorriente === true
       ? REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE
-      : opciones.stock === true
-        ? REGLAS_DE_PRUEBA_CON_STOCK
-        : REGLAS_DE_PRUEBA;
+      : opciones.produccion === true
+        ? REGLAS_DE_PRUEBA_CON_PRODUCCION
+        : opciones.stock === true
+          ? REGLAS_DE_PRUEBA_CON_STOCK
+          : REGLAS_DE_PRUEBA;
   const facturador = opciones.facturacion === true ? crearFacturadorDeTickets(reglas) : undefined;
   const casos = crearCasosDeUsoDeVentas({
     transacciones: entorno,
@@ -221,6 +246,10 @@ export async function montarVentas(
     reglas,
     ...(facturador === undefined ? {} : { facturador }),
   });
+  const produccion =
+    opciones.produccion === true
+      ? crearCasosDeUsoDeProduccion({ transacciones: entorno as never, reglas })
+      : null;
   const caja = crearCasosDeUsoDeCaja({ transacciones: entorno, reglas });
   const cierre = crearCasosDeUsoDeCierre({
     transacciones: entorno,
@@ -336,6 +365,9 @@ export async function montarVentas(
     dueno,
     casos,
     consultas,
+    /** Los casos de uso de producción (solo con `produccion: true`). */
+    produccion,
+    reglas,
     caja,
     cajaAbierta,
     cierre,
