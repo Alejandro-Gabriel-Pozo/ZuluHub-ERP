@@ -60,7 +60,8 @@ function accionQueAnota() {
   const pedidos: Record<string, string[]>[] = [];
   const accion: AccionDeFormulario = async (_previo, datos) => {
     const lectura: Record<string, string[]> = {};
-    for (const [k, v] of datos.entries()) (lectura[k] ??= []).push(String(v));
+    for (const [k, v] of datos.entries())
+      (lectura[k] ??= []).push(typeof v === "string" ? v : "(archivo)");
     pedidos.push(lectura);
     await new Promise((r) => setTimeout(r, 150));
     return { error: null };
