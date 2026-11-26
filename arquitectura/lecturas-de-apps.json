@@ -191,6 +191,7 @@
   ],
   "test/web/ficha-de-usuarios.test.ts": [
     "apps/web/app/s/app/(operacion)/cuenta/**",
+    "apps/web/ui/plantillas/roles/*",
     "apps/web/servidor/usuarios.ts",
     "apps/web/ui/plantillas/sesion/PantallaDeCuenta.tsx",
     "apps/web/ui/plantillas/usuarios/*"

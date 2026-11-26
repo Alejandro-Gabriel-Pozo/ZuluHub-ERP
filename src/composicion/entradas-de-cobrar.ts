@@ -162,3 +162,51 @@ export function entradaDeCobrarLaMesa(
 ): Resultado<EntradaWebDeCobrarLaMesa, ErrorDeEntrada> {
   return leer(formaDeCobrarLaMesa, crudo);
 }
+
+/**
+ * La frontera de «Vender a cuenta corriente» desde el mostrador (CC-5 B1b): lo mismo que cobrar la venta rápida (cuenta, ejemplar, líneas, total que vio quien vende) más el CLIENTE, y sin caja ni cobros (no entra
+ * plata a la caja). Lista de permitidos estricta: NO hay campo de aprobación del exceso (en la primera etapa ninguna pantalla aprueba: con el límite pasado el servidor rechaza), ni sucursal, ni empresa. La
+ * `claveIdempotencia` la agrega el envío de la hoja a todo pedido; se acepta y NO se usa: la identidad de la venta es su `cuentaId` con su `ejemplarId` (repetir devuelve el mismo ticket).
+ */
+const formaDeVenderACuenta = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
+  clienteId: identificador,
+  lineas: z.array(linea),
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+});
+
+const formaDeCerrarLaMesaACuenta = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
+  clienteId: identificador,
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+});
+
+export type EntradaWebDeVenderACuenta = Readonly<
+  Omit<EntradaWebDeCobrarLaVenta, "claveIdempotencia" | "cajaId" | "cobros"> & { clienteId: string }
+>;
+
+export type EntradaWebDeCerrarLaMesaACuenta = Readonly<{
+  cuentaId: string;
+  ejemplarId: string;
+  clienteId: string;
+  totalEsperado: Readonly<{ moneda: string; monto: string }>;
+  confirmaciones?: readonly string[] | undefined;
+}>;
+
+export function entradaDeVenderACuenta(
+  crudo: unknown,
+): Resultado<EntradaWebDeVenderACuenta, ErrorDeEntrada> {
+  return leer(formaDeVenderACuenta, crudo);
+}
+
+export function entradaDeCerrarLaMesaACuenta(
+  crudo: unknown,
+): Resultado<EntradaWebDeCerrarLaMesaACuenta, ErrorDeEntrada> {
+  return leer(formaDeCerrarLaMesaACuenta, crudo);
+}

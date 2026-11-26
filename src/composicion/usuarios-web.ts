@@ -51,6 +51,8 @@ export type UsuarioParaLaPantalla = Readonly<{
   personaId: string;
   email: string;
   rol: RolDeEmpresa | Readonly<{ propio: string }>;
+  /** El id del rol propio de la persona (`null` con un rol base): la ficha lo usa para marcar su rol actual al reasignarlo. */
+  rolPropioId: string | null;
   activo: boolean;
 }>;
 
@@ -81,6 +83,7 @@ const delUsuario = (m: MiembroDeLista): UsuarioParaLaPantalla => ({
   personaId: m.personaId,
   email: m.email,
   rol: rolDelUsuario(m),
+  rolPropioId: m.rolPropioId,
   activo: m.activo,
 });
 

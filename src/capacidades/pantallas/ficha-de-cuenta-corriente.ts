@@ -50,6 +50,12 @@ const A2: FuenteDeTexto = {
   donde:
     "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-ficha-listado-y-cobro.html (v2, «Habilitar cuenta» y «Ficha suspendida»); arquitectura/decisiones/registro/DEC-CCL-006.json",
 };
+const VENDER: FuenteDeTexto = {
+  decidio:
+    "el dueño, 26/11/2026 (chat: «Apruebo» a los textos de las maquetas; «Si» a que en la primera etapa con el límite pasado el confirmar quede bloqueado para todos); el orquestador asentó los textos en DEC-CCL-008 por la delegación de la fila 173, sin la aprobación del exceso ni el límite a la vista de quien vende",
+  donde:
+    "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-elegir-cliente.html y cuenta-corriente-aprobar-exceso.html; arquitectura/decisiones/registro/DEC-CCL-008.json",
+};
 const MODELO = "modelo-de-cuenta-corriente.ts";
 
 export const FICHA_DE_CUENTA_CORRIENTE = {
@@ -70,6 +76,8 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "apps/web/ui/plantillas/cuenta-corriente/modelo-de-cuenta-corriente.ts",
     "apps/web/ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente.ts",
     "apps/web/ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente.ts",
+    "apps/web/ui/plantillas/cobrar/HojaDeVenderACuenta.cliente.tsx",
+    "apps/web/ui/plantillas/cobrar/textos-de-vender-a-cuenta.ts",
   ],
   rutas: [
     "/caja/cuenta-corriente",
@@ -281,6 +289,38 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
       fuente: A2,
     },
     "cuenta_corriente.ficha.reactivar": { usos: ["botón de reactivar la cuenta"], fuente: A2 },
+    "cuenta_corriente.vender.titulo": {
+      usos: ["título de la hoja «Vender a cuenta corriente» y botón del cobro que la abre"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.saldo_actual": {
+      usos: ["fila de la hoja de vender a cuenta"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.esta_venta": {
+      usos: ["fila de la hoja de vender a cuenta"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.saldo_despues": {
+      usos: ["fila de la hoja de vender a cuenta"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.cargar": {
+      usos: ["botón de la hoja: confirma la venta a cuenta"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.elegir_otro_cliente": {
+      usos: ["botón de la hoja cuando la venta supera el límite"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.supera_el_limite": {
+      usos: ["aviso de la hoja cuando la venta pasa el límite del cliente"],
+      fuente: VENDER,
+    },
+    "cuenta_corriente.vender.sin_permiso_para_aprobar": {
+      usos: ["aviso de la hoja, solo a quien no tiene aprobar_exceso"],
+      fuente: VENDER,
+    },
   },
   reutilizados: [
     "fiscal.pantalla.rotulo_cliente",
@@ -295,6 +335,8 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "catalogo.accion.guardar",
     "catalogo.accion.cancelar",
     "compras.exportacion.exportar",
+    "cuenta_corriente.credito_disponible",
+    "ventas.cobro.volver_al_cobro",
   ],
   estadoDeLaFicha: "EN_CONSTRUCCION",
 } as const satisfies FichaDeLaCuentaCorriente;

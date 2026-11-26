@@ -19,6 +19,7 @@ const U = (
   personaId: `0b0b0b0b-1111-4222-8333-44444444444${n}`,
   email,
   rol,
+  rolPropioId: null,
   activo,
 });
 const I = (

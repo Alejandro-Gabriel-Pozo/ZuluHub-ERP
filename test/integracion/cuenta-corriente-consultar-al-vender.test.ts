@@ -110,6 +110,18 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     (await m.auditoria(e.empresa, "CUENTA_CORRIENTE_CONSULTADA_AL_VENDER")).length;
   const noDisponible = { ok: false, error: "CLIENTE_NO_DISPONIBLE" };
 
+  it("dice si quien consulta puede aprobar excesos: lo decide el servidor por el rol (el cajero no; el gerente y el administrador sí)", async () => {
+    const c = await cliente(e, { limite: "5000.00" });
+    const cuenta = await cuentaAbierta();
+    const puede = async (contexto: typeof e.operador) =>
+      valorDe(
+        await casos.verClienteParaVender(contexto, { cuentaDeConsumoId: cuenta, clienteId: c }),
+      ).puedeAprobarElExceso;
+    expect(await puede(e.operador)).toBe(false);
+    expect(await puede(e.gerente)).toBe(true);
+    expect(await puede(e.administrador)).toBe(true);
+  });
+
   it("el cajero ve SOLO el estado, el saldo, el crédito disponible y si está excedido del cliente (con su nombre y CUIT): ni el límite, ni los movimientos, ni otros clientes", async () => {
     const c = await cliente(e, { limite: "5000.00" });
     await cargar(c);
@@ -117,10 +129,18 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const r = valorDe(
       await casos.verClienteParaVender(e.operador, { cuentaDeConsumoId: cuenta, clienteId: c }),
     );
-    expect(Object.keys(r).sort()).toEqual(["cliente", "disponible", "estado", "excedido", "saldo"]);
+    expect(Object.keys(r).sort()).toEqual([
+      "cliente",
+      "disponible",
+      "estado",
+      "excedido",
+      "puedeAprobarElExceso",
+      "saldo",
+    ]);
     expect(Object.keys(r.cliente).sort()).toEqual(["cuit", "nombre"]);
     expect(r).toMatchObject({
       estado: "HABILITADA",
+      puedeAprobarElExceso: false,
       saldo: { moneda: "ARS", monto: "1000.00" },
       disponible: { moneda: "ARS", monto: "4000.00" },
       excedido: false,

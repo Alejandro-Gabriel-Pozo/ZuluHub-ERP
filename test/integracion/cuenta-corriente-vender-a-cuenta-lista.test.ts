@@ -173,6 +173,7 @@ describe.skipIf(base === null)("cuenta corriente: vender a cuenta, lista y previ
         "disponible",
         "estado",
         "excedido",
+        "puedeAprobarElExceso",
         "saldo",
       ]);
       expect(r).toMatchObject({
