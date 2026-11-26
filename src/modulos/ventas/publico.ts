@@ -129,6 +129,11 @@ export {
   crearRepositoriosDeVentas,
   type RepositoriosDeVentas,
 } from "./persistencia/repositorios-de-ventas";
+export {
+  crearLecturaDeTicketsParaCuentas,
+  type LecturaDeTicketsParaCuentas,
+  type TicketParaMostrar,
+} from "./persistencia/lectura-de-tickets-para-cuentas";
 export type {
   CargoACuenta,
   CuentaCorrienteDeVentas,

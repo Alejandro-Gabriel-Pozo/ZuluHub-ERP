@@ -17,6 +17,13 @@ import {
 import type { TxDeClientes } from "../../clientes/publico";
 import { aCuentaPublica, type CuentaPublica } from "../casos-de-uso/cuenta-publica";
 import { antiguedadEnDias } from "../antiguedad";
+import type { ApoyoDeLaExportacion } from "../casos-de-uso/puertos-de-exportacion";
+import {
+  esOrigenDeUnaCobranza,
+  esOrigenDeUnTicket,
+  tipoDeMovimiento,
+  type TipoDeMovimiento,
+} from "../tipo-de-movimiento";
 import type { RepositorioDeCuentasDeClientes } from "../persistencia/repositorio-de-cuentas";
 import { datosDeLosClientes } from "./datos-de-clientes";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
@@ -33,6 +40,8 @@ export type TxDeEstadoDeCuenta = Readonly<{
 export type DependenciasDeEstadoDeCuenta = Readonly<{
   transacciones: Transacciones<TxDeEstadoDeCuenta>;
   reglas: ReglasDeEmpresa;
+  /** Lo que la ficha lee de ventas, caja y empresas (el ticket de cada movimiento, el medio de cada cobro, el nombre de las sucursales): lo arma la composición. Sin él, los movimientos salen sin origen. */
+  apoyo?: ApoyoDeLaExportacion<TxDeEstadoDeCuenta> | undefined;
 }>;
 
 export type EntradaDeVerEstadoDeCuenta = Readonly<{
@@ -52,6 +61,18 @@ export type LineaDelEstadoDeCuenta = Readonly<{
   fechaDeNegocio: string;
   venceEl: string | null;
   anulaA: string | null;
+  /** Qué es el movimiento (venta a cuenta, cobranza o su anulación). */
+  tipo: TipoDeMovimiento;
+  /** `true`: un cargo todavía con algo por saldar cuyo vencimiento ya pasó. */
+  vencida: boolean;
+  /** El ticket detrás del movimiento (el del cargo o el de la cobranza); `null` si no se pudo determinar o la composición no lo ofrece. */
+  ticket: Readonly<{
+    numero: number;
+    canal: "SALON" | "MOSTRADOR";
+    sucursal: string | null;
+  }> | null;
+  /** El tipo de medio de pago de una cobranza con UN solo medio; `null` en el resto (o si pagó con varios). */
+  medioDePago: string | null;
 }>;
 
 export type CargoPendienteDelEstadoDeCuenta = Readonly<{
@@ -93,7 +114,8 @@ const fechaOpcional = (
  * cargo con su vencimiento y su antigüedad, el saldo y el disponible. Exige `cuenta_corriente.ver` y lee TODO en una sola transacción de solo lectura `serializable`: una foto, no un
  * saldo de un instante y las líneas de otro mientras alguien cobra o carga. Una parte sin ficha o de otra empresa es `CUENTA_NO_ENCONTRADA` (sin oráculo de existencia).
  */
-export function armarVerEstadoDeCuenta({ transacciones, reglas }: DependenciasDeEstadoDeCuenta) {
+export function armarVerEstadoDeCuenta(dependencias: DependenciasDeEstadoDeCuenta) {
+  const { transacciones, reglas } = dependencias;
   return async function verEstadoDeCuenta(
     contexto: ContextoOperativo,
     entrada: EntradaDeVerEstadoDeCuenta,
@@ -141,6 +163,35 @@ export function armarVerEstadoDeCuenta({ transacciones, reglas }: DependenciasDe
         );
         const datos = await datosDeLosClientes(tx, contexto.empresaId, [cuenta.parteId]);
         const { disponible, excedido } = disponibleDe(cuenta.limite, saldo);
+        const empresa = contexto.empresaId;
+        const idsDeTickets = [
+          ...new Set(lineas.filter((l) => esOrigenDeUnTicket(l.origenTipo)).map((l) => l.origenId)),
+        ];
+        const idsDeCobranzas = [
+          ...new Set(
+            lineas.filter((l) => esOrigenDeUnaCobranza(l.origenTipo)).map((l) => l.origenId),
+          ),
+        ];
+        const apoyo = dependencias.apoyo;
+        const tickets =
+          apoyo === undefined
+            ? { porTicket: new Map(), porCobranza: new Map() }
+            : await apoyo.ticketsDeLosMovimientos(tx, empresa, idsDeTickets, idsDeCobranzas);
+        const medios =
+          apoyo === undefined
+            ? new Map()
+            : await apoyo.mediosDeCobranza(tx, empresa, idsDeCobranzas);
+        const sucursales =
+          apoyo === undefined
+            ? new Map<string, string>()
+            : await apoyo.nombresDeSucursales(tx, empresa, [
+                ...new Set(
+                  [...tickets.porTicket.values(), ...tickets.porCobranza.values()].map(
+                    (t) => t.sucursalId,
+                  ),
+                ),
+              ]);
+        const vencidas = new Set(pendientes.filter((c) => c.vencida).map((c) => c.asientoId));
         return ok({
           cuenta: aCuentaPublica(cuenta),
           cliente: datos.get(cuenta.parteId) ?? { nombre: null, cuit: null },
@@ -157,6 +208,26 @@ export function armarVerEstadoDeCuenta({ transacciones, reglas }: DependenciasDe
             fechaDeNegocio: l.fechaNegocio,
             venceEl: l.venceEl,
             anulaA: l.anulaA,
+            tipo: tipoDeMovimiento(l.clase, l.naturaleza),
+            vencida: vencidas.has(l.asientoId),
+            ticket: (() => {
+              const t = esOrigenDeUnaCobranza(l.origenTipo)
+                ? tickets.porCobranza.get(l.origenId)
+                : esOrigenDeUnTicket(l.origenTipo)
+                  ? tickets.porTicket.get(l.origenId)
+                  : undefined;
+              return t === undefined
+                ? null
+                : {
+                    numero: t.numero,
+                    canal: t.esDelSalon ? ("SALON" as const) : ("MOSTRADOR" as const),
+                    sucursal: sucursales.get(t.sucursalId) ?? null,
+                  };
+            })(),
+            medioDePago: (() => {
+              const m = esOrigenDeUnaCobranza(l.origenTipo) ? medios.get(l.origenId) : undefined;
+              return m?.length === 1 ? (m[0]?.tipoDeMedio ?? null) : null;
+            })(),
           })),
           cargosPendientes: pendientes.map((c) => ({
             asientoId: c.asientoId,

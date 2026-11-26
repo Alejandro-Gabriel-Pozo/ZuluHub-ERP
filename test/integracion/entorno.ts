@@ -27,10 +27,12 @@ import {
   type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
 import {
+  crearLecturaDeTicketsParaCuentas,
   crearRepositorioDeCuentas,
   crearRepositorioDeDocumentos,
   crearRepositorioDeLecturas,
   crearRepositorioDeTickets,
+  type LecturaDeTicketsParaCuentas,
   type LecturasDeVentas,
   type RepositorioDeCuentas,
   type RepositorioDeDocumentos,
@@ -173,6 +175,8 @@ export type TxDePrueba = Readonly<{
   /** El puntero ticket → comprobante (E1, 0029). */
   documentos: RepositorioDeDocumentos;
   lecturasDeVentas: LecturasDeVentas;
+  /** CC-5: el ticket detrás de un movimiento de la cuenta corriente. */
+  ticketsParaCuentas: LecturaDeTicketsParaCuentas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
   /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
@@ -238,6 +242,7 @@ export function crearEntornoDePrueba(
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
       documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
       lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
+      ticketsParaCuentas: crearLecturaDeTicketsParaCuentas(db.withTables<VentasDb>()),
       personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
       membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
       asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
