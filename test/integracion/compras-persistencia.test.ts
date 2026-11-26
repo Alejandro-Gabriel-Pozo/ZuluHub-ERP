@@ -96,6 +96,10 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0085_compras_notas_de_credito.sql"),
       "utf8",
     );
+    const notasDeDebito = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0111_compras_notas_de_debito.sql"),
+      "utf8",
+    );
     const devoluciones = await readFile(
       join(import.meta.dirname, "../../migraciones", "0084_compras_devoluciones.sql"),
       "utf8",
@@ -110,6 +114,7 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...notas.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...notasDeDebito.matchAll(/CONSTRAINT = '(\w+)'/g),
       // De 0084 solo cuenta lo de compras: la función de stock que vuelve a definir (`renglon_de_movimiento_validar`) tiene sus restricciones en stock.
       ...(devoluciones
         .split("CREATE OR REPLACE FUNCTION renglon_de_movimiento_validar")[0]

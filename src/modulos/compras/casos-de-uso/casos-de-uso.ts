@@ -12,6 +12,7 @@ import { armarAnularRecepcionPendiente, armarConfirmarRecepcion } from "./confir
 import { armarRegistrarRecepcion } from "./registrar-recepcion";
 import { armarCrearOrden, armarEditarOrden } from "./ordenes";
 import { armarAnularNotaDeCredito, armarRegistrarNotaDeCredito } from "./notas-de-credito";
+import { armarAnularNotaDeDebito, armarRegistrarNotaDeDebito } from "./notas-de-debito";
 import { armarAnularDevolucion, armarDevolverAlProveedor } from "./devoluciones";
 import { armarConfigurarTolerancias, armarResolverDiferencia } from "./diferencias";
 import { armarAnularOrden, armarCerrarOrden, armarPedirOrden } from "./ordenes-de-estado";
@@ -57,6 +58,8 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     anularOrden: armarAnularOrden(dependencias),
     registrarNotaDeCredito: armarRegistrarNotaDeCredito(dependencias),
     anularNotaDeCredito: armarAnularNotaDeCredito(dependencias),
+    registrarNotaDeDebito: armarRegistrarNotaDeDebito(dependencias),
+    anularNotaDeDebito: armarAnularNotaDeDebito(dependencias),
     devolverAlProveedor: armarDevolverAlProveedor(dependencias),
     anularDevolucion: armarAnularDevolucion(dependencias),
     configurarTolerancias: armarConfigurarTolerancias(dependencias),

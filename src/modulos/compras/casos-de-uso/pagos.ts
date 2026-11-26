@@ -1,5 +1,4 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
@@ -14,8 +13,8 @@ import {
 } from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
 import { anularElPagoDeLaFactura, asentarElPagoDeLaFactura } from "./cargo-de-la-factura";
-import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
-import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
+import { autorizar, exigirAlcanceDelComprobante, traducir } from "./comun";
+import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
@@ -37,30 +36,6 @@ export type EntradaDeDeclararPago = Readonly<{
   salidaDeCaja?: Readonly<{ cajaId: string; motivo: string }>;
 }>;
 export type SalidaDeDeclararPago = Readonly<{ pagoId: string; yaExistia: boolean }>;
-
-/**
- * La sucursal de un comprobante, por la recepción a la que apuntan sus líneas: el alcance de sucursales de quien paga o anula tiene que incluirla. Un
- * comprobante que no apunta a ninguna recepción (no lo hay en N1 y N2) exige alcance sobre TODAS y no tiene sucursal (`null`).
- */
-async function exigirAlcanceDelComprobante(
-  tx: TxDeCompras,
-  contexto: ContextoOperativo,
-  comprobanteId: string,
-): Promise<Resultado<string | null, "SUCURSAL_FUERA_DE_ALCANCE">> {
-  const recepcionId = await tx.comprobantesDeProveedor.recepcionIdDe(
-    contexto.empresaId,
-    comprobanteId,
-  );
-  const recepcion =
-    recepcionId === null ? null : await tx.recepciones.obtener(contexto.empresaId, recepcionId);
-  if (recepcion === null) {
-    return (await tx.autorizacion.sucursalesDelActor(contexto)) === "TODAS"
-      ? ok(null)
-      : err("SUCURSAL_FUERA_DE_ALCANCE");
-  }
-  const alcance = await exigirAlcanceDeSucursal(tx, contexto, sucursalId(recepcion.sucursalId));
-  return alcance.ok ? ok(recepcion.sucursalId) : alcance;
-}
 
 /** Lo que paga la línea en efectivo (la única que mueve la caja); con `salidaDeCaja` hay una. */
 const efectivo = (lineas: readonly LineaDePago[]): string =>

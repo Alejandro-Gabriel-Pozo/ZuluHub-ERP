@@ -10,8 +10,8 @@ import { esFechaCivil } from "./factura";
 import { huellaDeComando } from "./huella";
 
 /**
- * La nota de crédito del proveedor (N4, E9 §3.8; decisión del dueño 16/11/2026): un comprobante que corrige UNA factura, SIN saldo: no tiene líneas, no se concilia, no reduce lo que se paga y
- * no toca stock; el libro de saldos va aparte. Se carga por sus importes por alícuota (lo que dice el papel), positivos: la clase de la nota le da el sentido (ADR-006). Pura: sin reloj ni azar.
+ * La nota del proveedor (N4, E9 §3.8; decisión del dueño 16/11/2026). La de crédito corrige UNA factura, SIN líneas: no se concilia y no toca stock; la de débito (NOTAS-1) suma a lo que se debe, con una factura vinculada o
+ * sin ninguna. Se cargan por sus importes por alícuota (lo que dice el papel), positivos: la clase de la nota le da el sentido (ADR-006). Pura: sin reloj ni azar.
  */
 export const MAXIMO_DE_IMPORTES_DE_UNA_NOTA = 99;
 
@@ -48,17 +48,19 @@ const comoRegistro = (valor: unknown): Record<string, unknown> =>
     ? (valor as Record<string, unknown>)
     : {};
 
+export type ClaseDeNota = "NOTA_DE_CREDITO" | "NOTA_DE_DEBITO";
+
 /**
- * Lee lo que la persona carga de la nota: tipo (solo una nota de crédito), punto de venta y número en los rangos de ARCA, fecha civil, moneda (solo pesos), los importes por alícuota
+ * Lee lo que la persona carga de la nota: tipo (solo el de la clase pedida), punto de venta y número en los rangos de ARCA, fecha civil, moneda (solo pesos), los importes por alícuota
  * (no vacíos, con tope) y el total que dice el papel. Las cuentas y que la letra discrimine o no el IVA las hace `calcularComprobante`.
  */
-export function leerNotaDeCredito(valor: unknown): Resultado<NotaPedida, ErrorDeNota> {
+export function leerNota(valor: unknown, clase: ClaseDeNota): Resultado<NotaPedida, ErrorDeNota> {
   const n = comoRegistro(valor);
   const tipo = n["tipo"];
   // `includes` compara con `===`: lo que no es un texto de la lista no pasa, sin mirar el tipo antes.
   if (
     !esTipoDeComprobanteDeProveedor(tipo as string) ||
-    claseDeTipoDeComprobante(tipo as TipoDeComprobanteDeProveedor) !== "NOTA_DE_CREDITO"
+    claseDeTipoDeComprobante(tipo as TipoDeComprobanteDeProveedor) !== clase
   ) {
     return err("TIPO_DE_COMPROBANTE_INVALIDO");
   }
@@ -93,17 +95,23 @@ export function leerNotaDeCredito(valor: unknown): Resultado<NotaPedida, ErrorDe
   });
 }
 
-/** La huella del pedido de cargar la nota: la factura que corrige y todo el contenido; los importes se ordenan antes de hashear (los mismos importes en otro orden son el mismo pedido). */
-export function huellaDeLaNotaDeCredito(
+export const leerNotaDeCredito = (valor: unknown): Resultado<NotaPedida, ErrorDeNota> =>
+  leerNota(valor, "NOTA_DE_CREDITO");
+export const leerNotaDeDebito = (valor: unknown): Resultado<NotaPedida, ErrorDeNota> =>
+  leerNota(valor, "NOTA_DE_DEBITO");
+
+/** La huella del pedido de cargar la nota: la factura que corrige o vincula (`null` en una nota de débito suelta) y todo el contenido; los importes se ordenan antes de hashear (los mismos importes en otro orden son el mismo pedido). */
+export function huellaDeLaNota(
+  clase: ClaseDeNota,
   proveedorId: string,
-  facturaId: string,
+  facturaId: string | null,
   nota: NotaPedida,
 ): string {
   return huellaDeComando(
-    "cargar_nota_de_credito",
+    clase === "NOTA_DE_CREDITO" ? "cargar_nota_de_credito" : "cargar_nota_de_debito",
     [
       proveedorId,
-      facturaId,
+      facturaId ?? "",
       nota.tipo,
       nota.puntoDeVenta,
       nota.numero,
@@ -113,3 +121,10 @@ export function huellaDeLaNotaDeCredito(
     nota.importes.map((i) => [i.alicuota, i.neto]),
   );
 }
+
+/** La huella de la nota de crédito (la misma de siempre: lo ya cargado sigue siendo repetible). */
+export const huellaDeLaNotaDeCredito = (
+  proveedorId: string,
+  facturaId: string,
+  nota: NotaPedida,
+): string => huellaDeLaNota("NOTA_DE_CREDITO", proveedorId, facturaId, nota);
