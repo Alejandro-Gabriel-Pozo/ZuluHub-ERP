@@ -1,10 +1,12 @@
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
-import type { FuenteDeTexto, TextoDeFicha } from "./ficha-de-cuenta-corriente";
 
 /**
  * Los textos de «Cobrar un ticket a cuenta» (CC-5 B2b) en la ficha de las pantallas de la cuenta corriente: aparte de `ficha-de-cuenta-corriente.ts` por el tope de tamaño de archivo. Cada uno con su
  * uso y su fuente (`DEC-CCL-009`); `test/web/ficha-de-cuenta-corriente.test.ts` los compara con el catálogo de textos.
  */
+export type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
+export type TextoDeFicha = Readonly<{ usos: readonly string[]; fuente: FuenteDeTexto }>;
+
 const B2B: FuenteDeTexto = {
   decidio:
     "el dueño, 26/11/2026 (chat: «Apruebo» a los textos de la maqueta P4; la corrección de «sin caja abierta»: la caja abierta es obligatoria para todo medio); el orquestador asentó los quince textos en DEC-CCL-009 por la delegación de la fila 173",

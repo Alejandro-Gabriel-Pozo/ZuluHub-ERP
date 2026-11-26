@@ -1,6 +1,10 @@
 import type { ClaveAccion } from "../modulos/catalogo";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
-import { TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA } from "./textos-de-ficha-de-cobrar-a-cuenta";
+import {
+  TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA,
+  type FuenteDeTexto,
+  type TextoDeFicha,
+} from "./textos-de-ficha-de-cobrar-a-cuenta";
 
 /**
  * LA FICHA DE LAS PANTALLAS DE LA CUENTA CORRIENTE DE CLIENTES (CC-5, A1: el listado y la ficha del cliente; A2: habilitar, cambiar plazo o límite, suspender y reactivar; DDD:174: toda pantalla nace con ficha). Declara lo que ofrecen: rutas y archivos, el acceso,
@@ -9,14 +13,12 @@ import { TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA } from "./textos-de-ficha-de-cobr
  * (`reutilizados`) y no se duplican. Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  */
 
-export type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
 type BotonDeLaFicha = Readonly<{
   id: string;
   texto: ClaveDeTexto;
   hace: Readonly<{ navega: string }> | Readonly<{ envia: ClaveAccion }>;
   sinPermiso: "APAGADO";
 }>;
-export type TextoDeFicha = Readonly<{ usos: readonly string[]; fuente: FuenteDeTexto }>;
 
 export type FichaDeLaCuentaCorriente = Readonly<{
   archivos: readonly string[];
