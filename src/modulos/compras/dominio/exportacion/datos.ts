@@ -6,8 +6,12 @@ import type { TipoDeComprobanteDeProveedor } from "../comprobante";
  */
 
 export type PagoParaExportar = Readonly<{
+  id: string;
   fechaDePago: string;
+  /** El medio único, o `COMPUESTO` si el pago tiene varios (sus líneas, en `medios`). */
   medio: string;
+  /** Una línea por medio con lo que pagó (la suma es `importe`), en el orden de la lista de medios. */
+  medios: readonly Readonly<{ medio: string; importe: string }>[];
   /** Texto decimal de 2 decimales: el total del comprobante al declarar el pago. */
   importe: string;
   estado: "VIGENTE" | "ANULADO";
