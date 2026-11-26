@@ -95,7 +95,7 @@ export type EntradaDeCotizarVentaRapida = Readonly<{
 type Previo = Readonly<{ alcance: "TODAS" | readonly SucursalId[] }>;
 
 /** El guard (`ventas.ver`), que la empresa opere y el alcance de sucursales de quien pide: lo primero de toda consulta. */
-async function previo(
+export async function previo(
   tx: TxDeConsultasDeVentas,
   contexto: ContextoOperativo,
   dependencias: DependenciasDeConsultasDeVentas,

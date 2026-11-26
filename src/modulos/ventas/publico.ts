@@ -5,6 +5,11 @@ export { DECLARACIONES as DECLARACIONES_DE_VENTAS } from "./casos-de-uso/declara
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_VENTAS } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeVentas, type CasosDeUsoDeVentas } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeVentas, type ConsultasDeVentas } from "./consultas/consultas";
+export {
+  crearTicketACobrar,
+  type ErrorDeTicketACobrar,
+  type TicketACobrar,
+} from "./consultas/ticket-a-cobrar";
 export type { DependenciasDeVentas, TxDeVentas } from "./casos-de-uso/contrato";
 export type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./consultas/contrato";
 export type { ErrorDeVentas } from "./casos-de-uso/errores";

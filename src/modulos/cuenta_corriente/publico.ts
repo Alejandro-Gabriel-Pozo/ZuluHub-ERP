@@ -88,7 +88,10 @@ export type {
   LineaDelEstadoDeCuenta,
   TxDeEstadoDeCuenta,
 } from "./consultas/ver-estado-de-cuenta";
-export { ORIGEN_DE_LA_COBRANZA_DE_VENTA } from "./dominio/cargo-de-venta";
+export {
+  ORIGEN_DE_LA_COBRANZA_DE_VENTA,
+  ORIGEN_DEL_CARGO_DE_VENTA,
+} from "./dominio/cargo-de-venta";
 export {
   armarHojaDeLaExportacion,
   type RotulosDeLaExportacion,
