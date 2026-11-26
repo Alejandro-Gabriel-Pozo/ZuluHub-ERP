@@ -214,6 +214,7 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
         ejemplarBaseId: r.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo: "Error de carga",
+        sucursalDeTrabajo: e.sucursal,
       }),
     );
     expect(anulado.estado).toBe("ANULADO");

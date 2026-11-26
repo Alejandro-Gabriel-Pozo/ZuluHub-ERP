@@ -319,6 +319,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
       ejemplarBaseId: t.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "Error del cajero",
+      sucursalDeTrabajo: e.sucursal,
     };
     valorDe(await m.casos.anularTicket(e.gerente, anular));
     valorDe(await m.casos.anularTicket(e.gerente, anular));

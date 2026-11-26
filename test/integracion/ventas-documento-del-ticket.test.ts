@@ -104,6 +104,7 @@ describe.skipIf(base === null)("ventas: documentoDelTicket", () => {
     const v = await vender(e, caja);
     valorDe(
       await m.casos.anularTicket(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         ticketId: v.ticketId,
         ejemplarBaseId: v.ejemplarId,
