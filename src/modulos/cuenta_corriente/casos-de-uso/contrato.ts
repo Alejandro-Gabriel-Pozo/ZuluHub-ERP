@@ -7,6 +7,7 @@ import type { LecturaDeEstados } from "../../empresas/publico";
 import type { TxDeSaldos } from "../../saldos_de_partes/publico";
 import type { RepositorioDeCuentasDeClientes } from "../persistencia/repositorio-de-cuentas";
 import type { ApoyoDeLaExportacion } from "./puertos-de-exportacion";
+import type { CuentasDeConsumoParaVender } from "./puertos-de-venta";
 
 /**
  * Lo que recibe el trabajo de una transacción de la cuenta corriente de clientes (ADR-004, G5): el repositorio de la ficha, la lectura de estados (la empresa
@@ -30,4 +31,6 @@ export type DependenciasDeCuentaCorriente = Readonly<{
   reglas: ReglasDeEmpresa;
   /** Lo que la exportación lee de otros módulos (medio de pago de las cobranzas y nombre de sucursales); lo arma la composición. Sin él, exportar se rechaza (nace cerrado). */
   apoyoDeLaExportacion?: ApoyoDeLaExportacion<TxDeCuentaCorriente> | undefined;
+  /** La cuenta de consumo que se vende (CC-5, C3): la arma la composición. Sin ella, `verClienteParaVender` se rechaza (nace cerrado). */
+  cuentasDeConsumoParaVender?: CuentasDeConsumoParaVender<TxDeCuentaCorriente> | undefined;
 }>;
