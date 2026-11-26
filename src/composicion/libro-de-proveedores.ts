@@ -1,18 +1,26 @@
 import { ARS } from "../primitivas/dinero/moneda";
-import { importeDesdeTexto } from "../primitivas/dinero/importe";
+import { importeCero, importeDesdeTexto, restar } from "../primitivas/dinero/importe";
 import { fechaCivilDesdeTexto } from "../primitivas/tiempo/fecha-civil";
 import {
   CLASE_DEL_CARGO_DE_FACTURA,
+  CLASE_DEL_PAGO,
   DETALLE_DE_LA_ANULACION_DEL_CARGO,
+  DETALLE_DE_LA_ANULACION_DEL_PAGO,
   ORIGEN_DEL_CARGO_DE_FACTURA,
+  ORIGEN_DEL_PAGO,
   claveDeLaAnulacionDelCargo,
+  claveDeLaAnulacionDelPago,
+  claveDeLaImputacionDelPago,
   claveDelCargo,
+  claveDelPago,
   type CodigoDelLibroDeProveedores,
   type LibroDeProveedores,
   type TxDeCompras,
 } from "../modulos/compras/publico";
 import {
   anularAsientoEnTx,
+  conSigno,
+  imputarEnTx,
   registrarAsientoEnTx,
   type ErrorDelLibro,
   type TxDeSaldos,
@@ -71,6 +79,63 @@ export function crearLibroDeProveedores(): LibroDeProveedores {
         asientoId: original.id,
         detalle: DETALLE_DE_LA_ANULACION_DEL_CARGO,
         clave: claveDeLaAnulacionDelCargo(entrada.comprobanteId),
+      });
+      return r.ok
+        ? { ok: true, valor: { asientoId: r.valor.asientoId, yaExistia: r.valor.yaExistia } }
+        : { ok: false, error: codigoDelLibro(r.error) };
+    },
+    async registrarPago(tx, contexto, entrada) {
+      const tx2 = comoTxDeSaldos(tx);
+      const cargo = await tx2.asientos.porOrigen(
+        contexto.empresaId,
+        ORIGEN_DEL_CARGO_DE_FACTURA,
+        entrada.comprobanteId,
+        1,
+      );
+      if (cargo === null) return { ok: false, error: "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO" };
+      const importe = importeDesdeTexto(ARS, entrada.importe);
+      // L2 paga el cargo entero: un pago por otro importe (el neto con notas de crédito) llega con L3, que también reparte el pago entre los centros de costo del cargo.
+      if (importe.unidades !== cargo.importe.unidades) {
+        return { ok: false, error: "LIBRO_DE_SALDOS_RECHAZADO" };
+      }
+      const asiento = await registrarAsientoEnTx(tx2, contexto, {
+        parteId: cargo.parteId,
+        sentido: "A_PAGAR",
+        clase: CLASE_DEL_PAGO,
+        // El pago resta: el libro lo pide con el signo de su clase, y su distribución con el mismo signo.
+        importe: restar(importeCero(ARS), importe),
+        origen: { tipo: ORIGEN_DEL_PAGO, id: entrada.pagoId, orden: 1 },
+        venceEl: null,
+        clave: claveDelPago(entrada.pagoId),
+        hechoEn: entrada.hechoEn,
+        distribucion: conSigno(
+          await tx2.asientos.distribucionDe(contexto.empresaId, cargo.id),
+          "-",
+        ),
+      });
+      if (!asiento.ok) return { ok: false, error: codigoDelLibro(asiento.error) };
+      const imputacion = await imputarEnTx(tx2, contexto, {
+        saldanteId: asiento.valor.asientoId,
+        repartos: [{ saldadoId: cargo.id, importe }],
+        clave: claveDeLaImputacionDelPago(entrada.pagoId),
+      });
+      return imputacion.ok
+        ? { ok: true, valor: asiento.valor }
+        : { ok: false, error: codigoDelLibro(imputacion.error) };
+    },
+    async anularPago(tx, contexto, entrada) {
+      const tx2 = comoTxDeSaldos(tx);
+      const original = await tx2.asientos.porOrigen(
+        contexto.empresaId,
+        ORIGEN_DEL_PAGO,
+        entrada.pagoId,
+        1,
+      );
+      if (original === null) return { ok: false, error: "ASIENTO_DEL_PAGO_NO_ENCONTRADO" };
+      const r = await anularAsientoEnTx(tx2, contexto, {
+        asientoId: original.id,
+        detalle: DETALLE_DE_LA_ANULACION_DEL_PAGO,
+        clave: claveDeLaAnulacionDelPago(entrada.pagoId),
       });
       return r.ok
         ? { ok: true, valor: { asientoId: r.valor.asientoId, yaExistia: r.valor.yaExistia } }
