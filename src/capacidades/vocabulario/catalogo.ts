@@ -42,6 +42,7 @@ import { TEXTOS_DE_STOCK } from "./catalogo-stock";
 import { TEXTOS_DE_USUARIOS } from "./catalogo-usuarios";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
+import { TEXTOS_DE_CUENTAS_DE_FOTOS } from "./catalogo-cuentas-de-fotos";
 import { TEXTOS_DEL_NUCLEO } from "./catalogo-nucleo";
 import { TEXTOS_DE_SESION_Y_EMPRESA } from "./catalogo-sesion-y-empresa";
 import type { FuenteDeTexto, UsosDeTexto } from "./uso-y-fuente-de-texto";
@@ -65,6 +66,7 @@ export type DefinicionDeTexto = Readonly<{
 export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DEL_NUCLEO,
   ...TEXTOS_DE_CARTA_PUBLICA,
+  ...TEXTOS_DE_CUENTAS_DE_FOTOS,
   ...TEXTOS_DE_SESION_Y_EMPRESA,
   ...TEXTOS_DE_FISCAL,
   ...TEXTOS_DE_FISCAL_PANTALLAS,
