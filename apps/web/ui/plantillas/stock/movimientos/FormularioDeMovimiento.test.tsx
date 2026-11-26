@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
+import { errorDeCodigo } from "../../../../../../src/capacidades/experiencia/respuesta";
 import { tocar, violacionesDeAccesibilidad } from "../../../pruebas/ayudas";
 import type { AccionDeFormulario } from "../../../patrones/FormularioDeAccion.cliente";
 import { FormularioDeMovimiento } from "./FormularioDeMovimiento.cliente";
@@ -150,5 +151,39 @@ describe("FormularioDeMovimiento", () => {
       articuloId: "a1",
       cantidad: "1",
     });
+  });
+
+  it("tras el aviso de negativo, «Registrar» reenvía confirmando; cambiar un dato descarta la confirmación", async () => {
+    const aviso = { error: errorDeCodigo("STOCK_CONTROL_AVISA") };
+    const accion = vi.fn((_previo: unknown, datos: FormData) => {
+      void datos;
+      return Promise.resolve(accion.mock.calls.length === 1 ? aviso : { error: null });
+    });
+    await render(formulario("SALIDA", accion));
+    await userEvent.fill(page.getByLabelText("Cantidad"), "3");
+    const registrar = page.getByRole("button", { name: "Registrar" });
+    tocar(registrar);
+    await expect.element(page.getByText("Va a quedar en negativo. ¿Confirmás?")).toBeVisible();
+    expect(accion.mock.calls[0]?.[1].get("confirmar")).toBeNull();
+    tocar(registrar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect(accion.mock.calls[1]?.[1].get("confirmar")).toBe("1");
+  });
+
+  it("si después del aviso la persona cambia la cantidad, el reenvío ya no confirma", async () => {
+    const aviso = { error: errorDeCodigo("STOCK_CONTROL_AVISA") };
+    const accion = vi.fn((_previo: unknown, datos: FormData) => {
+      void datos;
+      return Promise.resolve(aviso);
+    });
+    await render(formulario("SALIDA", accion));
+    await userEvent.fill(page.getByLabelText("Cantidad"), "3");
+    const registrar = page.getByRole("button", { name: "Registrar" });
+    tocar(registrar);
+    await expect.element(page.getByText("Va a quedar en negativo. ¿Confirmás?")).toBeVisible();
+    await userEvent.fill(page.getByLabelText("Cantidad"), "9");
+    tocar(registrar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect(accion.mock.calls[1]?.[1].get("confirmar")).toBeNull();
   });
 });

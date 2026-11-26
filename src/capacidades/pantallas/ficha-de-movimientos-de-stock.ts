@@ -93,7 +93,9 @@ export const FICHA_DE_SALIDA = {
     "stock.accion.motivo": { usos: [USO], fuente: MAQUETA },
     "stock.accion.detalle": { usos: [USO], fuente: MAQUETA },
     "stock.error.control_avisa": {
-      usos: ["el servidor avisa que va a quedar en negativo (no aparece con el nivel «Permitir»)"],
+      usos: [
+        "el servidor avisa que va a quedar en negativo (nivel «Avisar»): «Registrar» reenvía confirmando con la misma clave; con «Permitir» no aparece nunca",
+      ],
       fuente: MAQUETA,
     },
   },
@@ -125,7 +127,9 @@ export const FICHA_DE_TRANSFERIR = {
       fuente: MAQUETA,
     },
     "stock.error.control_avisa": {
-      usos: ["el servidor avisa que va a quedar en negativo (no aparece con el nivel «Permitir»)"],
+      usos: [
+        "el servidor avisa que va a quedar en negativo (nivel «Avisar»): «Registrar» reenvía confirmando con la misma clave; con «Permitir» no aparece nunca",
+      ],
       fuente: MAQUETA,
     },
   },
