@@ -648,6 +648,12 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
           [
             ["pantalla", "caja", "/caja", "caja.pantalla.titulo"],
             ["pantalla", "cierre-del-dia", "/caja/cierre-del-dia", "cierre.titulo"],
+            [
+              "pantalla",
+              "cuenta-corriente",
+              "/caja/cuenta-corriente",
+              "cuenta_corriente.menu.entrada",
+            ],
           ],
         ],
         [

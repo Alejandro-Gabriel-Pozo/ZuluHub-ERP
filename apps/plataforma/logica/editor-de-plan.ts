@@ -40,11 +40,13 @@ export type ModuloParaElegir = Readonly<{
 export const modulosParaElegir = (): readonly ModuloParaElegir[] =>
   CLAVES_DE_MODULOS.map((clave) => {
     const d = MODULOS[clave] as DefinicionDeModulo;
+    // Como texto: hoy ningún módulo del catálogo está en desarrollo y el tipo literal ya no deja escribir la comparación.
+    const estado: string = d.estado;
     return {
       clave,
       rotulo: rotuloDeModulo(clave),
       obligatorio: d.obligatorio,
-      enDesarrollo: d.estado === "en_desarrollo",
+      enDesarrollo: estado === "en_desarrollo",
       requiere: d.requiere,
     };
   });
