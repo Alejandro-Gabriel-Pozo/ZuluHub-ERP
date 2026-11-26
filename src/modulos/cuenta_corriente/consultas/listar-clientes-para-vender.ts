@@ -3,7 +3,7 @@ import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import type { EstadoDeCuenta } from "../dominio/condiciones";
+import type { CuentaPublica } from "../casos-de-uso/cuenta-publica";
 import { datosDeLosClientes } from "./datos-de-clientes";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import type { DependenciasDeEstadoDeCuenta } from "./ver-estado-de-cuenta";
@@ -18,7 +18,7 @@ export type ClienteParaElegirAlVender = Readonly<{
   cuit: string | null;
   plazoDias: number;
   /** Una cuenta suspendida se muestra (para que se vea por qué no se puede) y el servidor igual rechaza cargarle una venta. */
-  estado: EstadoDeCuenta;
+  estado: CuentaPublica["estado"];
 }>;
 
 export type ErrorAlListarClientesParaVender = MotivoDeRechazo | ErrorDePersistencia;
