@@ -560,6 +560,8 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.lotes.corregir": "Corregir",
       "stock.lotes.fecha_de_vencimiento": "Fecha de vencimiento",
       "stock.error.vencimiento_pasado": "La fecha de vencimiento ya pasó",
+      "stock.error.lote_con_otra_fecha":
+        "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
       "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
       "stock.lotes.pantalla": "Lotes",
       "stock.lotes.vence": "Vence",
