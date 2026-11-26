@@ -23,6 +23,8 @@ export async function guardarFactura(
     /** Solo N3: el producto de cada línea de la factura (descripción, unidad base y producto). */
     deLaFactura?: readonly Readonly<{ descripcion: string; unidad: string; productoId: string }>[];
     preparada: FacturaPreparada;
+    /** NOTAS-2: la factura anulada que la nueva reemplaza (solo una factura que llega sola, N3 y N4). */
+    reemplazaAId?: string | null;
   }>,
 ): Promise<string> {
   const { empresaId, factura, preparada } = datos;
@@ -30,6 +32,7 @@ export async function guardarFactura(
   const comprobanteId = await tx.comprobantesDeProveedor.insertar(empresaId, {
     proveedorId: datos.proveedorId,
     clase: claseDeComprobante(factura.tipo),
+    reemplazaAId: datos.reemplazaAId ?? null,
     tipo: factura.tipo,
     puntoDeVenta: factura.puntoDeVenta,
     numero: factura.numero,

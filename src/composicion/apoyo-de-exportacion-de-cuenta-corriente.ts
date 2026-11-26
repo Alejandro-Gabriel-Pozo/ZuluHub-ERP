@@ -7,10 +7,10 @@ import type { TxDeApp } from "./conexiones";
  * la exportación, el medio de pago VIGENTE de cada cobro de caja de las cobranzas (el destino de su última corrección de medio, si la hubo) y el nombre de las sucursales. Solo lectura;
  * sin las piezas de caja y de empresas falla cerrado antes de leer.
  */
-type PiezasDelApoyo = Pick<TxDeApp, "cobros" | "sucursales">;
+type PiezasDelApoyo = Pick<TxDeApp, "cobros" | "sucursales" | "ticketsParaCuentas">;
 
 function comoPiezas(tx: object): PiezasDelApoyo {
-  for (const pieza of ["cobros", "sucursales"] as const) {
+  for (const pieza of ["cobros", "sucursales", "ticketsParaCuentas"] as const) {
     if (!Object.hasOwn(tx, pieza)) {
       throw new Error(`la transacción de la exportación no trae la pieza «${pieza}»`);
     }
@@ -35,6 +35,21 @@ export function crearApoyoDeLaExportacionDeCuentaCorriente(): ApoyoDeLaExportaci
         porCobranza.set(c.origenId, lista);
       }
       return porCobranza;
+    },
+    async ticketsDeLosMovimientos(tx, empresa, ticketIds, cobranzaIds) {
+      const { ticketsParaCuentas } = comoPiezas(tx);
+      const aTicket = (t: { numero: number; sucursalId: string; esDelSalon: boolean }) => ({
+        numero: t.numero,
+        sucursalId: t.sucursalId,
+        esDelSalon: t.esDelSalon,
+      });
+      const porTicket = (await ticketsParaCuentas.paraMostrar(empresa, ticketIds)).map(
+        (t) => [t.ticketId, aTicket(t)] as const,
+      );
+      const porCobranza = (
+        await ticketsParaCuentas.paraMostrarPorCobranza(empresa, cobranzaIds)
+      ).map((t) => [t.cobranzaId, aTicket(t)] as const);
+      return { porTicket: new Map(porTicket), porCobranza: new Map(porCobranza) };
     },
     async nombresDeSucursales(tx, empresa, sucursalIds) {
       const { sucursales } = comoPiezas(tx);

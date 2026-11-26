@@ -40,6 +40,8 @@ export type ClienteConCuenta = Readonly<{
   excedido: boolean;
   /** Días de su cargo abierto más antiguo (a la fecha de negocio); `null` si no tiene cargos abiertos. */
   antiguedadEnDias: number | null;
+  /** La fecha de negocio (`AAAA-MM-DD`) de ese cargo abierto más antiguo; `null` si no tiene cargos abiertos. */
+  fechaDelCargoMasAntiguo: string | null;
 }>;
 
 export type ListaDeClientesConCuenta = Readonly<{
@@ -86,7 +88,11 @@ export function armarListarClientesConCuenta({
 
         const vencidos = new Map<string, Importe>();
         const edades = new Map<string, number>();
+        const masAntiguos = new Map<string, string>();
         for (const c of abiertos) {
+          const actual = masAntiguos.get(c.parteId);
+          if (actual === undefined || c.fechaNegocio < actual)
+            masAntiguos.set(c.parteId, c.fechaNegocio);
           if (c.vencida) {
             vencidos.set(
               c.parteId,
@@ -112,6 +118,7 @@ export function armarListarClientesConCuenta({
               disponible: importeAJson(disponible),
               excedido,
               antiguedadEnDias: edades.get(f.parteId) ?? null,
+              fechaDelCargoMasAntiguo: masAntiguos.get(f.parteId) ?? null,
             } satisfies ClienteConCuenta,
             saldo: saldo.unidades,
             vencido: (vencidos.get(f.parteId) ?? importeCero(ARS)).unidades,

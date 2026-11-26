@@ -165,6 +165,7 @@ const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
 /** Lo que de clientes y compras pueden el gerente y el administrador pero no el operador: desactivar y reactivar, aprobar la ficha, pagar, anular y corregir. */
 const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.anular_pago",
+  "comprobantes_de_proveedor.reemplazar",
   "comprobantes_de_proveedor.pagar",
   "compras.corregir",
   "compras.exportar",
@@ -342,9 +343,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 187 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 41 de clientes y compras y 16 de salón y comandas y 5 de cuenta corriente (2 de CC-1, 2 de CC-2 y 1 de CC-5)", () => {
+  it("hay 188 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 42 de clientes y compras y 16 de salón y comandas y 5 de cuenta corriente (2 de CC-1, 2 de CC-2 y 1 de CC-5)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(187);
+    expect(todas).toHaveLength(188);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -395,7 +396,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
       porPrefijo("conciliaciones"),
-    ]).toEqual([9, 2, 4, 5, 3, 3]);
+    ]).toEqual([9, 2, 4, 6, 3, 3]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {

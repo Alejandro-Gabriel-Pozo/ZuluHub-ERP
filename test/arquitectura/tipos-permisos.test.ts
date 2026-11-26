@@ -242,6 +242,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes_de_proveedor.registrar"
       | "comprobantes_de_proveedor.pagar"
       | "comprobantes_de_proveedor.anular_pago"
+      | "comprobantes_de_proveedor.reemplazar"
       | "compras.configurar"
       | "compras.corregir"
       | "compras.exportar"

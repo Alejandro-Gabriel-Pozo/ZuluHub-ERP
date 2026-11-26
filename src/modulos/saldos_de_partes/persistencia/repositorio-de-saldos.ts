@@ -41,6 +41,9 @@ export type LineaDeCuenta = Readonly<{
   referenciaId: string | null;
   detalle: string | null;
   anulaA: string | null;
+  /** De qué hecho sale el asiento (CC-5: el ticket o la cobranza que lo originó); el espejo de una anulación lleva el MISMO origen que el asiento que anula. */
+  origenTipo: string;
+  origenId: string;
 }>;
 
 export type {
@@ -165,6 +168,8 @@ export function crearRepositorioDeSaldos(db: Kysely<SaldosDb>): RepositorioDeSal
           "a.referencia_id as referencia_id",
           "a.detalle as detalle",
           "a.anula_a as anula_a",
+          "a.origen_tipo as origen_tipo",
+          sql<string>`a.origen_id::text`.as("origen_id"),
         ])
         .where("a.empresa_id", "=", empresa)
         .where("a.parte_id", "=", parteId)
@@ -189,6 +194,8 @@ export function crearRepositorioDeSaldos(db: Kysely<SaldosDb>): RepositorioDeSal
         referenciaId: f.referencia_id,
         detalle: f.detalle,
         anulaA: f.anula_a,
+        origenTipo: f.origen_tipo,
+        origenId: f.origen_id,
       }));
     },
 

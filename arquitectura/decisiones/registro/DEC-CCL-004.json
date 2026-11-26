@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-004",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Textos del listado y la ficha de cuenta corriente (CC-5 A1): los de la maqueta v2 aprobada, sin pies, con «Excedida», «Crédito disponible» y «Origen del movimiento».",
+  "que_cambia": "Si el dueño corrige un texto, se cambia su clave en el catálogo; ninguno cambia dinero ni permisos más allá de lo ya decidido.",
+  "donde": "src/capacidades/vocabulario/catalogo-cuenta_corriente.ts; el dueño, chat del 26/11/2026: «Apruebo» a los textos de las maquetas (cuenta-corriente-ficha-listado-y-cobro v2, f461c59); aceptación del orquestador por la delegación de la fila 173"
+}

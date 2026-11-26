@@ -21,6 +21,7 @@ import { armarWebDeClientes } from "./web-de-clientes";
 import { armarWebDeComandas } from "./web-de-comandas";
 import { armarWebDeCompras } from "./web-de-compras";
 import { armarWebDeLaExportacionDeCuentaCorriente } from "./web-de-exportacion-de-cuenta-corriente";
+import { armarWebDeCuentaCorriente } from "./web-de-cuenta_corriente";
 import { armarWebDeEmpresas } from "./web-de-empresas";
 import { armarWebDeFiscal } from "./web-de-fiscal";
 import { armarWebDeIdentidad } from "./web-de-identidad";
@@ -85,6 +86,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ...armarWebDeClientes(base),
     ...armarWebDeCompras(base),
     ...armarWebDeLaExportacionDeCuentaCorriente(base),
+    ...armarWebDeCuentaCorriente(base),
     ...armarWebDeIdentidad(base),
     ...armarWebDeFiscal(base),
   };
