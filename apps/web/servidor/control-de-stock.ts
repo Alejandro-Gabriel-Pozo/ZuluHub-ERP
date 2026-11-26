@@ -3,6 +3,8 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   fijarElControlDeStock,
   verElControlDeStock,
+  verLaExistenciaPropia,
+  type ExistenciaPropia,
   type DependenciasDeControlDeStockWeb,
   type ResultadoDeControlDeStock,
 } from "../../../src/composicion/control-de-stock-web";
@@ -37,4 +39,12 @@ export function fijarElControl(
   controlado: boolean,
 ): Promise<Respuesta<ResultadoDeControlDeStock>> {
   return fijarElControlDeStock(dependencias, contexto, { productoId, controlado });
+}
+
+/** La existencia propia de un producto con stock propio, o `null` si no se pudo saber (la franja no muestra número). Solo lectura. */
+export function cargarLaExistenciaPropia(
+  contexto: ContextoOperativo,
+  entrada: Readonly<{ productoId: string; nombre: string; unidadId: string }>,
+): Promise<Respuesta<ExistenciaPropia | null>> {
+  return verLaExistenciaPropia(dependencias, contexto, entrada);
 }

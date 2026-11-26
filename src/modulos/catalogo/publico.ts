@@ -96,6 +96,7 @@ export {
   esClaseDeUso,
   seConsumeLaClase,
   seControlaStockLaClase,
+  seProduceLaClase,
   vendeLaClase,
 } from "./dominio/clases";
 export type { AlcanceDePrecio, ErrorDeAlcanceDePrecio } from "./dominio/alcance-de-precio";
