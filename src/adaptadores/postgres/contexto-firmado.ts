@@ -281,7 +281,7 @@ export async function hayClavesDeContextoInstaladas(urlDueno: string): Promise<b
  * que nadie la copie a GitHub. El valor devuelto es secreto: quien llama lo tapa y no lo imprime.
  */
 export async function leerClaveDeContextoVigente(urlDueno: string): Promise<string | null> {
-  const cliente = new pg.Client({ connectionString: urlDueno });
+  const cliente = new pg.Client({ connectionString: urlDueno, connectionTimeoutMillis: 15_000 });
   await cliente.connect();
   try {
     const { rows } = await cliente.query<{ kid: number; hex: string }>(
