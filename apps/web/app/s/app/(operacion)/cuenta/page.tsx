@@ -4,7 +4,7 @@ import { pantallasDeCuenta } from "../../../../../servidor/modulos";
 import { PantallaDeCuenta } from "../../../../../ui/plantillas/sesion/PantallaDeCuenta";
 import { cerrarSesionAccion } from "../../acciones";
 
-// Cuenta: la empresa y el rol, la sucursal de este dispositivo, el acceso a Configuración fiscal, al Contacto de la sucursal, a Usuarios y a Roles (cada uno solo con su permiso) y
+// Cuenta: la empresa y el rol, la sucursal de este dispositivo, el acceso a Configuración fiscal, al Contacto de la sucursal, a Usuarios, a Roles y a Sucursales (cada uno solo con su permiso) y
 // cerrar sesión.
 export default function PaginaDeCuenta() {
   return pantallaDeOperacion(
@@ -19,6 +19,7 @@ export default function PaginaDeCuenta() {
       const contactoDeLaSucursal = pantallas.get("contacto");
       const usuarios = pantallas.get("usuarios");
       const roles = pantallas.get("roles");
+      const sucursalesDeLaEmpresa = pantallas.get("sucursales");
       return (
         <PantallaDeCuenta
           empresa={empresa}
@@ -27,6 +28,7 @@ export default function PaginaDeCuenta() {
           {...(contactoDeLaSucursal === undefined ? {} : { contactoDeLaSucursal })}
           {...(usuarios === undefined ? {} : { usuarios })}
           {...(roles === undefined ? {} : { roles })}
+          {...(sucursalesDeLaEmpresa === undefined ? {} : { sucursalesDeLaEmpresa })}
           accionDeCerrarSesion={cerrarSesionAccion}
         />
       );

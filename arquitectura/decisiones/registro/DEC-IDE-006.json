@@ -1,0 +1,10 @@
+{
+  "id": "DEC-IDE-006",
+  "fecha": "2026-11-27",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Pantalla «Sucursales» del gerente: lista de sucursales activas y alta por nombre; sin acción ni permiso nuevo (sucursales.ver y sucursales.crear). Un texto nuevo: «Nueva sucursal».",
+  "que_cambia": "Una pantalla nueva (lista y alta) sobre el caso de uso crearSucursal ya existente; sin migración ni modelo nuevo. Un texto nuevo (sucursales.lista.nueva); «Sucursales», «Nombre», «Guardar» y «Cancelar» reusan su clave. SUPUESTO: los permisos quedan como están (gerente y administrador).",
+  "donde": "Delegación filas 173 y 174, aceptación del orquestador 27/11/2026 (inventario de textos y ficha de la pantalla Sucursales; pedido del dueño)"
+}

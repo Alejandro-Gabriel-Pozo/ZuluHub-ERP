@@ -58,6 +58,18 @@ export const FILAS_DE_CUENTA = [
   },
   {
     tipo: "pantalla",
+    clave: "sucursales",
+    area: "cuenta",
+    grupo: "empresa",
+    modulo: "administracion",
+    accion: "sucursales.ver",
+    perilla: null,
+    href: RUTAS_DE_CUENTA.sucursales,
+    etiqueta: "usuarios.campo.sucursales",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "contacto",
     area: "cuenta",
     grupo: "sucursal",

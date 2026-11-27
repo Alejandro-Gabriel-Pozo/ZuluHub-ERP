@@ -384,6 +384,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "roles.lista.titulo",
       ],
       [
+        "sucursales",
+        "cuenta",
+        "empresa",
+        "administracion",
+        "sucursales.ver",
+        "/cuenta/sucursales",
+        "usuarios.campo.sucursales",
+      ],
+      [
         "contacto",
         "cuenta",
         "sucursal",
@@ -618,6 +627,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "medios-de-pago",
     "usuarios",
     "roles",
+    "sucursales",
     "contacto",
     "cerrar-sesion",
   ];
@@ -728,6 +738,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ["pantalla", "medios-de-pago", "/caja/medios-de-pago", "caja.medios.titulo"],
             ["pantalla", "usuarios", "/cuenta/usuarios", "usuarios.lista.titulo"],
             ["pantalla", "roles", "/cuenta/roles", "roles.lista.titulo"],
+            ["pantalla", "sucursales", "/cuenta/sucursales", "usuarios.campo.sucursales"],
           ],
         ],
         [
