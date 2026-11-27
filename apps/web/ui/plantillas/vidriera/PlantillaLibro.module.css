@@ -1,0 +1,150 @@
+/* El Libro ocupa toda la pantalla: la pista desliza de lado y cada página se desplaza hacia abajo por dentro. */
+.libro {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.pista {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.pista::-webkit-scrollbar {
+  display: none;
+}
+
+.pagina {
+  flex: 0 0 100%;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.portada {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  padding: var(--espacio-5) var(--espacio-4);
+}
+
+.desliza {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.indice {
+  padding: var(--espacio-4);
+}
+
+.tituloDelIndice {
+  margin: 0 0 var(--espacio-2);
+  font-size: 1em;
+  font-weight: var(--tipo-peso-fuerte);
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.listaDelIndice {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enlaceDelIndice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-1);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.cantidad {
+  color: var(--color-texto-suave);
+  font-weight: normal;
+}
+
+.pie {
+  margin: 0;
+  padding: var(--espacio-4);
+  color: var(--color-texto-suave);
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+
+.barra {
+  flex: none;
+  padding: var(--espacio-2) var(--espacio-4) var(--espacio-3);
+  border-top: var(--borde-grosor) solid var(--color-borde);
+  background: var(--color-superficie);
+}
+
+.contador {
+  min-height: 1.45em;
+  margin: 0 0 var(--espacio-1);
+  text-align: center;
+  color: var(--color-texto-suave);
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+
+.controles {
+  display: flex;
+  gap: var(--espacio-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flecha,
+.indiceBoton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+  cursor: pointer;
+}
+
+.indiceBoton {
+  flex: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flecha:disabled,
+.indiceBoton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.siguiente > * {
+  transform: scaleX(-1);
+}

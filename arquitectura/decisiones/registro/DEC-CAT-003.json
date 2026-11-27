@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CAT-003",
+  "fecha": "2026-11-27",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El modelo Libro de la carta pública se activa con la perilla de empresa «vidriera_modelo_libro» (apagada de base, requiere «vidriera_por_qr»; ningún plan base la incluye y se enciende por ajuste de la empresa). Textos nuevos de la capa Libro: «Desliza para ver el menú», «Índice», «Sección {n} de {m}», «Anterior», «Siguiente», «Ver como lista» y «Ver como libro»; el resto se reutiliza.",
+  "que_cambia": "Una carta con modelo LIBRO y la perilla encendida se ve como libro en el celular si el navegador lo permite; sin perilla, con ahorro de datos, red lenta, movimiento reducido o script tardío sigue siendo la Lista de siempre. SUPUESTO: el plan no la incluye y se enciende por ajuste (revertir: sumarla a un plan base). SUPUESTO: dentro del Libro la búsqueda no aparece (se usa «Ver como lista»). Los 7 textos no cambian dinero, permisos ni fiscal; revertir: sacar la capa y los 7 textos.",
+  "donde": "src/capacidades/planes/perillas.ts; src/capacidades/vocabulario/catalogo-carta-publica.ts; apps/web/ui/plantillas/vidriera/PlantillaLibro.tsx; 10-ux-ui/03-experiencia-de-la-carta.md §4 (decisión del dueño 13/10/2026) y prototipo carta-libro.html; inventario aceptado por el orquestador por delegación del 15/11 (decisiones-del-dueno-2026-11.md, fila 173), 27/11/2026"
+}

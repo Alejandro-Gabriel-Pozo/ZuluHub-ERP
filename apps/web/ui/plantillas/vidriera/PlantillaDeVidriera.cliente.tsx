@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { puedeMontarseElLibro } from "../../../../../src/capacidades/experiencia/vidriera/capa-de-libro";
 import {
   PRODUCTOS_PARA_BUSCAR,
   filtrarSecciones,
@@ -14,10 +15,12 @@ import { Boton } from "../../componentes/Boton.cliente";
 import { BuscarEnVidriera } from "./BuscarEnVidriera";
 import { ControlDeLetra } from "./ControlDeLetra";
 import escala from "./EscalaDeLetra.module.css";
-import { atributosDeLaCara, PlacaDeLaCarta } from "./IdentidadDeLaCarta";
+import { CabeceraDeLaCarta } from "./CabeceraDeLaCarta";
+import { atributosDeLaCara } from "./IdentidadDeLaCarta";
 import { BotonFlotanteDeSecciones, IndiceDeSecciones } from "./IndiceDeSecciones";
 import { ListaDeVidriera } from "./ListaDeVidriera";
 import estilos from "./PlantillaDeVidriera.module.css";
+import { PlantillaLibro } from "./PlantillaLibro";
 import { TarjetaDeProducto } from "./TarjetaDeProducto";
 import { usePasoDeLetra } from "./usePasoDeLetra";
 
@@ -35,6 +38,23 @@ function useHidratada(): boolean {
     () => true,
     () => false,
   );
+}
+
+/** Lo que el navegador informa de la conexión; no está en los tipos de `lib.dom`. */
+type ConexionDelNavegador = Readonly<{ saveData?: boolean; effectiveType?: string }>;
+
+/**
+ * ¿Se puede montar el Libro? Se mide una sola vez, cuando ya hay JavaScript: si llegó tarde, hay ahorro de datos,
+ * red lenta o movimiento reducido, la carta se queda en Lista (03 §4.4).
+ */
+function medirSiPuedeMontarseElLibro(): boolean {
+  const conexion = (navigator as Navigator & { connection?: ConexionDelNavegador }).connection;
+  return puedeMontarseElLibro({
+    msHastaElScript: performance.now(),
+    ahorroDeDatos: conexion?.saveData === true,
+    tipoDeRed: conexion?.effectiveType ?? null,
+    movimientoReducido: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  });
 }
 
 /** El segmento del producto que dejó `history.pushState` al abrir su tarjeta, o `null`. */
@@ -56,6 +76,16 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
   const hidratada = useHidratada();
   const [consulta, setConsulta] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
+  // `null` hasta medir; después, si el entorno deja montar el Libro. Solo importa si la carta es del modelo Libro.
+  const [libroPosible, setLibroPosible] = useState<boolean | null>(null);
+  // Lo que eligió quien mira con «Ver como lista» / «Ver como libro»; no se guarda: cada visita parte de cero.
+  const [eleccion, setEleccion] = useState<"LIBRO" | "LISTA" | null>(null);
+  useEffect(() => {
+    if (vista.modelo === "LIBRO") setLibroPosible(medirSiPuedeMontarseElLibro());
+  }, [vista.modelo]);
+  const esDeLibro = vista.modelo === "LIBRO";
+  const enLibro =
+    esDeLibro && hidratada && (eleccion ?? (libroPosible === true ? "LIBRO" : "LISTA")) === "LIBRO";
 
   const productos = useMemo(
     () => new Map(vista.secciones.flatMap((s) => s.productos).map((p) => [p.segmento, p])),
@@ -105,51 +135,72 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
       data-letra={paso}
       {...atributosDeLaCara(vista.identidad)}
     >
-      <header className={estilos["cabecera"]}>
-        <PlacaDeLaCarta identidad={vista.identidad} />
-        <div className={estilos["titulos"]}>
-          {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
-          <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
-          {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
-        </div>
-      </header>
-
-      <div className={estilos["herramientas"]} data-busqueda={conBusqueda ? "si" : "no"}>
-        {hidratada ? (
-          <>
-            <ControlDeLetra paso={paso} alElegir={cambiarPaso} textos={textos} />
-            {conBusqueda ? (
-              <BuscarEnVidriera
-                consulta={consulta}
-                alCambiar={setConsulta}
-                anuncio={anuncio}
-                textos={textos}
-              />
-            ) : null}
-          </>
-        ) : null}
-      </div>
-
-      {filtrado.secciones.length === 0 ? null : (
-        <IndiceDeSecciones secciones={filtrado.secciones} textos={textos} />
-      )}
-      <ListaDeVidriera secciones={filtrado.secciones} textos={textos} alAbrir={abrir} />
-      {buscando && filtrado.total === 0 ? (
-        <div className={estilos["vacio"]}>
-          <Boton
-            variante="secundaria"
-            alTocar={() => {
-              setConsulta("");
-              // El botón desaparece al limpiar: el foco vuelve al campo, que es donde se sigue.
-              document.querySelector<HTMLInputElement>('[role="search"] input')?.focus();
-            }}
+      {enLibro ? (
+        <PlantillaLibro
+          vista={vista}
+          textos={textos}
+          paso={paso}
+          alElegirLetra={cambiarPaso}
+          alAbrir={abrir}
+          alVerComoLista={() => {
+            setEleccion("LISTA");
+          }}
+        />
+      ) : (
+        <>
+          <CabeceraDeLaCarta vista={vista} />
+          <div
+            className={estilos["herramientas"]}
+            data-busqueda={conBusqueda ? "si" : "no"}
+            data-libro={esDeLibro ? "si" : undefined}
           >
-            {textos.buscarLimpiar}
-          </Boton>
-        </div>
-      ) : null}
-      <BotonFlotanteDeSecciones textos={textos} />
-      <p className={estilos["pie"]}>{textos.precioConIva}</p>
+            {hidratada ? (
+              <>
+                <ControlDeLetra paso={paso} alElegir={cambiarPaso} textos={textos} />
+                {esDeLibro ? (
+                  <Boton
+                    variante="secundaria"
+                    alTocar={() => {
+                      setEleccion("LIBRO");
+                    }}
+                  >
+                    {textos.libroVerComoLibro}
+                  </Boton>
+                ) : null}
+                {conBusqueda ? (
+                  <BuscarEnVidriera
+                    consulta={consulta}
+                    alCambiar={setConsulta}
+                    anuncio={anuncio}
+                    textos={textos}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </div>
+
+          {filtrado.secciones.length === 0 ? null : (
+            <IndiceDeSecciones secciones={filtrado.secciones} textos={textos} />
+          )}
+          <ListaDeVidriera secciones={filtrado.secciones} textos={textos} alAbrir={abrir} />
+          {buscando && filtrado.total === 0 ? (
+            <div className={estilos["vacio"]}>
+              <Boton
+                variante="secundaria"
+                alTocar={() => {
+                  setConsulta("");
+                  // El botón desaparece al limpiar: el foco vuelve al campo, que es donde se sigue.
+                  document.querySelector<HTMLInputElement>('[role="search"] input')?.focus();
+                }}
+              >
+                {textos.buscarLimpiar}
+              </Boton>
+            </div>
+          ) : null}
+          <BotonFlotanteDeSecciones textos={textos} />
+          <p className={estilos["pie"]}>{textos.precioConIva}</p>
+        </>
+      )}
 
       <TarjetaDeProducto
         producto={abierto === null ? null : (productos.get(abierto) ?? null)}

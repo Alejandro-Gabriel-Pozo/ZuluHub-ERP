@@ -9,10 +9,14 @@ import { armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 /**
  * EL MODELO DE LA CARTA (L1 del Libro), de punta a punta en la app REAL construida: con la perilla `vidriera_modelo_libro` APAGADA (como todas las empresas de hoy), una carta que guardó el modelo Libro
  * se ve EXACTAMENTE como la Lista de siempre, con o sin `Save-Data: on`, y no cambia ningún encabezado ni el estado de la respuesta. Es la garantía de que declarar la perilla y leerla en cada visita no
- * mueve nada para nadie: el Libro todavía no se dibuja (L2) y, cuando se dibuje, solo lo verán las empresas con la perilla encendida.
+ * mueve nada para nadie: solo las empresas con la perilla encendida ven el Libro (`carta-libro.recorrido.ts`). Se compara `<main>`: la cabecera del documento la arma Next y varía de un pedido a otro.
  */
 const base = inject("baseDePruebas");
 const HOST_COMPARTIDO = "carta.zulupan.localhost";
+
+/** La carta en sí (`<main>`): el resto del documento es la cabecera y el flujo de Next, que no es de la carta y varía de un pedido a otro. */
+const laCarta = (html: string): string =>
+  html.slice(html.indexOf("<main"), html.indexOf("</main>") + 7);
 
 /** Lo que cambia en cada pedido sin que sea de la carta: el nonce de la política de contenido. */
 const sinNonce = (html: string): string => html.replace(/nonce="[^"]*"/g, 'nonce=""');
@@ -91,9 +95,11 @@ describe.skipIf(base === null)("recorrido del modelo de la carta", () => {
 
   it("con la perilla apagada, la carta que guardó Libro es EXACTAMENTE la Lista de hoy: mismo estado, mismos encabezados y mismo HTML, con y sin Save-Data", async () => {
     await elegir("LISTA");
+    // El primer pedido de la app recién arrancada arma la cabecera de otra manera que los siguientes (Next): se descarta.
+    await pedir();
     const lista = await pedir();
     expect(lista.status()).toBe(200);
-    const htmlDeLista = sinNonce(await lista.text());
+    const htmlDeLista = laCarta(sinNonce(await lista.text()));
     expect(htmlDeLista).toContain("Milanesa a la napolitana");
     expect(htmlDeLista).toContain("Parador del Lago");
 
@@ -103,7 +109,8 @@ describe.skipIf(base === null)("recorrido del modelo de la carta", () => {
       expect(libro.status()).toBe(200);
       expect(libro.headers()["cache-control"]).toBe(lista.headers()["cache-control"]);
       expect(libro.headers()["content-type"]).toBe(lista.headers()["content-type"]);
-      expect(sinNonce(await libro.text())).toBe(htmlDeLista);
+      const htmlDeLibro = laCarta(sinNonce(await libro.text()));
+      expect(htmlDeLibro).toBe(htmlDeLista);
     }
   });
 });

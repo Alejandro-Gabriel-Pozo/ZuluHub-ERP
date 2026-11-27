@@ -1,3 +1,11 @@
+import type { UsoDeTexto } from "./uso-y-fuente-de-texto";
+
+const USO_EN_EL_LIBRO: UsoDeTexto = {
+  como: "FUNCION",
+  archivo: "apps/web/ui/plantillas/vidriera/PlantillaLibro.tsx",
+  nombre: "PlantillaLibro",
+};
+
 /**
  * Los textos de la carta pública (C-2): lo que lee el comensal. En su archivo para que `catalogo.ts` no pase el tope de líneas; `CATALOGO_DE_TEXTOS` los suma con un spread.
  */
@@ -41,5 +49,42 @@ export const TEXTOS_DE_CARTA_PUBLICA = {
     porDefecto: "Pegá el nombre de tu cuenta",
     usos: [{ como: "DATO", dato: "cuenta-de-foto" }],
     fuente: { decision: "DEC-CAT-001" },
+  },
+  // Capa Libro (L1+L2a): inventario aceptado por el orquestador, ver DEC-CAT-003.
+  "vidriera.libro.desliza": {
+    porDefecto: "Desliza para ver el menú",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.indice": {
+    porDefecto: "Índice",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.seccion_n_de_m": {
+    porDefecto: "Sección {n} de {m}",
+    marcadores: ["n", "m"],
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.anterior": {
+    porDefecto: "Anterior",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.siguiente": {
+    porDefecto: "Siguiente",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.ver_como_lista": {
+    porDefecto: "Ver como lista",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
+  },
+  "vidriera.libro.ver_como_libro": {
+    porDefecto: "Ver como libro",
+    usos: [USO_EN_EL_LIBRO],
+    fuente: { decision: "DEC-CAT-003" },
   },
 } as const;

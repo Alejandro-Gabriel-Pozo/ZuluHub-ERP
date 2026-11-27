@@ -152,9 +152,11 @@ export function vidrieraDePrueba(
     letraBase?: LetraBase;
     lugar?: string | null;
     rubro?: string | null;
+    modelo?: VistaDeVidriera["modelo"];
   } = {},
 ): VistaDeVidriera {
   const {
+    modelo = "LISTA",
     cantidad = 60,
     letraBase = "NORMAL",
     lugar = "Av. Belgrano 412 · todos los días de 7 a 21",
@@ -186,7 +188,7 @@ export function vidrieraDePrueba(
     return productos.length === 0 ? [] : [{ id, nombre, productos }];
   });
   return {
-    modelo: "LISTA",
+    modelo,
     nombre: "La Esquina Café",
     rubro,
     mensajeDePortada: null,
