@@ -30,6 +30,13 @@ const ASIGNAR_SUCURSALES_PROPOSITO: Proposito = {
     "Pedernal-docs/11-especificaciones/plan-de-pantallas-usuarios-2026-11-23.md §2 (flujo 6) y §9 (pregunta 8); maqueta usuarios.html (vUsuario)",
 };
 
+const ALTA_DE_SUCURSAL = "apps/web/ui/plantillas/sucursales/FormularioDeAltaDeSucursal.cliente.tsx";
+const SUCURSALES_PROPOSITO: Proposito = {
+  para: "El nombre de una sucursal nueva de la empresa (pantalla «Sucursales», alta).",
+  fuente:
+    "Pedernal-docs/11-especificaciones/decisiones-del-dueno-2026-11.md, pedido del dueño del 27/11/2026 (pantalla «Sucursales» para el gerente) y DEC-IDE-006",
+};
+
 const ALTA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeAltaDeRol.cliente.tsx";
 const FICHA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeFichaDeRol.cliente.tsx";
 const ROL_DE_USUARIO = "apps/web/ui/plantillas/roles/FormularioDeRolDeUsuario.cliente.tsx";
@@ -94,6 +101,13 @@ export const DATOS_DE_ADMINISTRACION = {
     propositos: [ROLES_PROPOSITO],
     consumidores: [ALTA_DE_ROL, FICHA_DE_ROL],
     ponerPor: ["roles.crear", "roles.editar"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "nombre-de-sucursal": {
+    ficha: "src/modulos/empresas/dominio/sucursal.ts",
+    propositos: [SUCURSALES_PROPOSITO],
+    consumidores: [ALTA_DE_SUCURSAL],
+    ponerPor: ["sucursales.crear"],
     requiere: REQUIERE_ADMINISTRACION,
   },
   "origen-de-rol": {

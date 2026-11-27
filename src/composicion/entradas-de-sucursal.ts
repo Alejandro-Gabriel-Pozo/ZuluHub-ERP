@@ -63,3 +63,18 @@ export function entradaDeEditarContacto(
     web: f.web,
   });
 }
+
+/**
+ * Dar de alta una sucursal (pantalla «Sucursales»): lo único que viaja del navegador es el NOMBRE. La empresa y quien actúa salen de la sesión; el contacto y la hora de corte no son de esta pantalla (el contacto se carga en
+ * «Contacto de la sucursal»). Esta capa dice si el nombre tiene la FORMA pedida (un texto acotado); qué nombre es válido (largo, caracteres) lo decide el dominio dentro de la transacción.
+ */
+const formaDeAlta = z.object({ nombre: texto });
+
+export type EntradaDeAltaDeSucursal = Readonly<{ nombre: string }>;
+
+export function entradaDeAltaDeSucursal(
+  crudo: unknown,
+): Resultado<EntradaDeAltaDeSucursal, ErrorDeEntrada> {
+  const forma = leer(formaDeAlta, crudo);
+  return forma.ok ? ok({ nombre: forma.valor.nombre }) : forma;
+}

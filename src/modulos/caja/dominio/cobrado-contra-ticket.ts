@@ -42,6 +42,28 @@ export function cobradoPorOrigen(cobros: readonly CobroDeUnOrigen[]): readonly C
   });
 }
 
+/** Lo devuelto (devoluciones vigentes) de una cobranza EN LA JORNADA que se concilia. */
+export type DevueltoDeUnOrigen = Readonly<{ origenId: string; devuelto: Importe }>;
+
+/**
+ * El cobrado de cada cobranza de ticket MENOS lo ya devuelto de ella (decisión del dueño, 26/11/2026: devolver plata de un ticket anulado o corregido a la baja no puede dejar una
+ * diferencia que ya se saldó). `cobrado` es una fila por origen (lo que devuelve `cobradoPorOrigen`); los orígenes que no son cobranzas de ticket no se tocan. Una cobranza sin
+ * devoluciones queda igual. Previene: el control «cobrado contra el ticket» marcando como diferencia un ticket anulado con $ 18.000 cobrados y $ 18.000 devueltos.
+ */
+export function descontarDevoluciones(
+  cobrado: readonly CobradoDeUnOrigen[],
+  devoluciones: readonly DevueltoDeUnOrigen[],
+): readonly CobradoDeUnOrigen[] {
+  const devuelto = new Map(devoluciones.map((d) => [d.origenId, d.devuelto]));
+  return cobrado.map((c) => {
+    const delOrigen =
+      c.origen.tipo === ORIGEN_DE_COBRANZA_DE_TICKET ? devuelto.get(c.origen.id) : undefined;
+    return delOrigen === undefined
+      ? c
+      : { origen: c.origen, cobrado: restar(c.cobrado, delOrigen) };
+  });
+}
+
 export type DiferenciaDeTicket = Readonly<{
   origen: ReferenciaOpaca;
   ticketId: string;

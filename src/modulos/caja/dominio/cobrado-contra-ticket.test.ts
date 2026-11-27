@@ -5,6 +5,7 @@ import {
   ORIGEN_DE_COBRANZA_DE_TICKET,
   cobradoPorOrigen,
   compararContraTickets,
+  descontarDevoluciones,
 } from "./cobrado-contra-ticket";
 
 const valor = (texto: string) => importeDesdeTexto(ARS, texto);
@@ -129,5 +130,44 @@ describe("cobrado contra el total del ticket (decisión 155)", () => {
       error: "TICKETS_NO_DISPONIBLES",
     });
     expect(compararContraTickets([cobro(A, "0.01")], [ticket(A, "0")]).ok).toBe(true);
+  });
+});
+
+describe("descontarDevoluciones", () => {
+  const cobrado = (id: string, importe: string, tipo: string = ORIGEN_DE_COBRANZA_DE_TICKET) => ({
+    origen: { tipo, id },
+    cobrado: valor(importe),
+  });
+  const devuelto = (origenId: string, importe: string) => ({ origenId, devuelto: valor(importe) });
+
+  it("resta de cada cobranza lo ya devuelto de ella y deja igual la que no tiene devoluciones", () => {
+    const r = descontarDevoluciones(
+      [cobrado(A, "18000.00"), cobrado(B, "500.00")],
+      [devuelto(A, "10000.00")],
+    );
+    expect(r.map((x) => x.cobrado.unidades)).toEqual([800000n, 50000n]);
+  });
+  it("un ticket anulado con todo devuelto queda sin diferencia contra su total 0", () => {
+    const neto = descontarDevoluciones([cobrado(A, "18000.00")], [devuelto(A, "18000.00")]);
+    expect(
+      compararContraTickets(
+        neto.map((c) => ({ origen: c.origen, importe: c.cobrado })),
+        [ticket(A, "0.00")],
+      ),
+    ).toEqual({
+      ok: true,
+      valor: [],
+    });
+  });
+  it("lo devuelto de una cobranza solo afecta a esa cobranza y a ningún otro tipo de origen que tenga el mismo id", () => {
+    const r = descontarDevoluciones(
+      [cobrado(A, "100.00", "otro.tipo"), cobrado(B, "100.00")],
+      [devuelto(A, "40.00"), devuelto(C, "1.00")],
+    );
+    expect(r.map((x) => x.cobrado.unidades)).toEqual([10000n, 10000n]);
+  });
+  it("devolver más que lo cobrado en la jornada da un neto negativo (no se esconde)", () => {
+    const r = descontarDevoluciones([cobrado(A, "100.00")], [devuelto(A, "150.00")]);
+    expect(r[0]?.cobrado.unidades).toBe(-5000n);
   });
 });
