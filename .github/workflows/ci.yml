@@ -124,14 +124,14 @@ jobs:
   pruebas:
     name: Pruebas (con Postgres real)
     runs-on: ubuntu-latest
-    # Tres fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
-    # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Por fragmento se esperan ~7 min con el arranque (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es casi 3 veces eso.
+    # Cuatro fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
+    # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Con tres fragmentos cada uno tardaba ~10,6 min (mediana de 90 corridas: `npm test` 558 s más ~80 s de arranque) y pasó a ser el camino crítico al partir `recorrido`; con cuatro se esperan ~7-8 min (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es más del doble.
     # Chequeo: `gate-coincide-con-ci.test.ts` fija la matriz y el comando; `pruebas-en-shards.test.ts` comprueba con vitest de verdad que los fragmentos cubren cada archivo una sola vez.
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
