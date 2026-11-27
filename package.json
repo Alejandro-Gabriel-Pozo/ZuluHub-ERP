@@ -82,7 +82,7 @@
     "kysely": "^0.29.6",
     "pdfkit": "0.20.2",
     "pg": "^8.23.1",
-    "pkijs": "3.4.1",
+    "pkijs": "4.0.1",
     "qrcode-generator": "2.0.4",
     "write-excel-file": "4.1.1",
     "zod": "4.6.7"
