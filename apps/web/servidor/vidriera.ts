@@ -46,11 +46,13 @@ export function rutaPublicaDe(codigo: string): string {
 export async function vidrieraParaLaPantalla(
   puerta: AlcanceDelHost,
   codigo: string,
+  /** El pedido trae `Save-Data: on` (`ahorroDeDatosDelPedido`): el modelo efectivo es Lista. */
+  ahorroDeDatos = false,
 ): Promise<VidrieraParaLaPantalla | null> {
   const vidriera = await vidrieras().porCodigo(puerta, codigo);
   if (vidriera === null) return null;
   return {
-    vista: armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo)),
+    vista: armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo), ahorroDeDatos),
     textos: textosDeVidriera({}),
   };
 }

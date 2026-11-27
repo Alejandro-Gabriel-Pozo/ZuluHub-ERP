@@ -1,5 +1,8 @@
 {
   "src/adaptadores/pdf/medidas-del-papel.test.ts": ["apps/web/ui/**/*.css"],
+  "src/capacidades/experiencia/vidriera/catalogo-probado.test.ts": [
+    "apps/web/ui/plantillas/vidriera/*"
+  ],
   "src/capacidades/experiencia/vidriera/color-de-la-carta.test.ts": [
     "apps/web/ui/plantillas/carta/*",
     "apps/web/ui/plantillas/vidriera/*"

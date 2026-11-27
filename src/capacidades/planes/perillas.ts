@@ -44,8 +44,8 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
  * por tamaño) y el nivel de combos del catálogo. Cada tramo que las verifica con `exigirPerilla` las
  * cubre; hasta entonces ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene
- * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) ya está declarada; las
- * demás de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
+ * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) y `vidriera_modelo_libro` ya están declaradas; las
+ * demás de la carta (fotos, otros modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
   empresas_por_tenant: {
@@ -131,6 +131,15 @@ export const CATALOGO_DE_PERILLAS = {
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "vidriera",
+  },
+  // Modelo Libro de la carta (extra de pago por empresa, apagado de base; dueño 13/10/2026: «el libro es paga»; el plan no la trae: se enciende por ajuste de la empresa). La verifica
+  // `guardarCartaPublica` al ELEGIR el modelo; qué modelo se DIBUJA lo decide la lectura pública por visita (`modeloEfectivo`): una baja de plan deja la carta en Lista, nunca caída.
+  vidriera_modelo_libro: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "vidriera",
+    requiere: "vidriera_por_qr",
   },
   // Compras N3 y N4 (E9 §3.8, D141; decisión del dueño del 16/11/2026: el bloque de stock, compras y recetas incluye N4): extras de pago apagados de base. La
   // verifica `configurarCompras` al pasar la empresa a ese nivel y, desde ahí, cada caso de uso de N3 o N4. Bajar de plan no toca lo ya cargado (cada recepción

@@ -1,10 +1,14 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODELOS_DE_VIDRIERA } from "./modelos";
 
+const RAIZ = join(import.meta.dirname, "..", "..", "..", "..");
+
 /**
  * C-16 (esqueleto): todo modelo del catálogo declara qué tramo trae su e2e y su axe. Hoy no existe
- * `apps/web`, así que se declara el tramo responsable; cuando exista el e2e, C-2/C-5/C-6 reemplazan el
- * valor por el archivo real y la prueba pasa a comprobar que el archivo existe. Un modelo nuevo en el
+ * `apps/web`, así que se declara el tramo responsable; cuando existe el e2e, el valor es el archivo real y la prueba
+ * comprueba que el archivo existe (el Libro ya lo tiene). Un modelo nuevo en el
  * catálogo sin entrada acá hace fallar la primera prueba; una entrada sin modelo, la segunda.
  */
 const PRUEBAS_POR_MODELO: Readonly<
@@ -12,7 +16,10 @@ const PRUEBAS_POR_MODELO: Readonly<
 > = {
   LISTA: { e2e: "C-2", axe: "C-2" },
   CUADRICULA: { e2e: "C-5", axe: "C-5" },
-  LIBRO: { e2e: "C-6", axe: "C-6" },
+  LIBRO: {
+    e2e: "test/recorrido/carta-libro.recorrido.ts",
+    axe: "apps/web/ui/plantillas/vidriera/PlantillaLibro.test.tsx",
+  },
 };
 
 describe("todo modelo tiene su prueba (C-16, esqueleto)", () => {
@@ -28,10 +35,12 @@ describe("todo modelo tiene su prueba (C-16, esqueleto)", () => {
     );
   });
 
-  it("los tramos declarados son de la experiencia de la carta", () => {
+  it("lo declarado es un tramo (C-n) o un archivo de prueba que existe", () => {
     for (const { e2e, axe } of Object.values(PRUEBAS_POR_MODELO)) {
-      expect(e2e).toMatch(/^C-\d+$/);
-      expect(axe).toMatch(/^C-\d+$/);
+      for (const valor of [e2e, axe]) {
+        if (/^C-\d+$/.test(valor)) continue;
+        expect(existsSync(join(RAIZ, valor)), valor).toBe(true);
+      }
     }
   });
 });

@@ -122,6 +122,13 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "vidriera",
       },
+      vidriera_modelo_libro: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "vidriera",
+        requiere: "vidriera_por_qr",
+      },
       salon: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
@@ -175,6 +182,7 @@ describe("el catálogo de perillas real", () => {
       | "calidad_de_lote"
       | "produccion"
       | "vidriera_por_qr"
+      | "vidriera_modelo_libro"
       | "salon"
       | "venta_por_fracciones_y_peso"
       | "recepcion_separada"
@@ -197,12 +205,11 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("las de la carta que todavía no se construyeron no se declaran: ni las de fotos, modelos ni estadísticas (`vidriera_por_qr` sí, desde T2)", () => {
+  it("las de la carta que todavía no se construyeron no se declaran: ni las de fotos, otros modelos ni estadísticas (`vidriera_por_qr` desde T2 y `vidriera_modelo_libro` sí)", () => {
     for (const clave of [
       "productos_con_foto",
       "fotos_alojadas",
       "vidriera_modelo_cuadricula",
-      "vidriera_modelo_libro",
       "vidriera_modelo_tablero",
       "vidriera_estadisticas",
     ]) {
@@ -225,6 +232,7 @@ describe("el catálogo de perillas real", () => {
       produccion: "produccion",
       cajas_por_sucursal: "caja",
       vidriera_por_qr: "vidriera",
+      vidriera_modelo_libro: "vidriera",
       salon: "salon",
       venta_por_fracciones_y_peso: "catalogo",
       recepcion_separada: "compras",
