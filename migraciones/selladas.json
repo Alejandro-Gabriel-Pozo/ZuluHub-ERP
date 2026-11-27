@@ -90,5 +90,6 @@
   "0110_clase_de_asiento_nota_de_debito_de_compra.sql": "308df19b2c51fbfe35f3d33ed1f91ca561a9ca2d22ef25fcf9c2a945a13dc750",
   "0111_compras_notas_de_debito.sql": "3505d462d715f4415000304f3f4748ddf7852a00b6c0b25a26f8961c5cfc5112",
   "0112_compras_reemplazo_de_factura.sql": "efec225243be84cf73f5938a6d14b46601066a9007de0be0fbb45574b8f8060e",
-  "0113_soporte_lee_los_roles_propios.sql": "0a6a6164b991730b6b56bf5de87cb54ce1e5a928f1fe9d530f285481225b39f6"
+  "0113_soporte_lee_los_roles_propios.sql": "0a6a6164b991730b6b56bf5de87cb54ce1e5a928f1fe9d530f285481225b39f6",
+  "0114_devolucion_de_un_cobro_de_ticket.sql": "f5ab1bd0517b7629a3ecd5efce627bebefb51aaa910c18d377226f67cb617374"
 }
