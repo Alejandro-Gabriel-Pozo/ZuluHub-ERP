@@ -1,13 +1,18 @@
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import {
   cargarLaFichaDeRol,
+  cargarElHistorialDelRol,
   cargarLasAccionesParaElegir,
   ofertasDeRoles,
 } from "../../../../../../../servidor/roles";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { AccionDeEstadoDeRol } from "../../../../../../../ui/plantillas/roles/AccionDeEstadoDeRol.cliente";
+import { HistorialDelRol } from "../../../../../../../ui/plantillas/roles/HistorialDelRol";
 import { FormularioDeFichaDeRol } from "../../../../../../../ui/plantillas/roles/FormularioDeFichaDeRol.cliente";
-import { armarLaFichaDeRol } from "../../../../../../../ui/plantillas/roles/modelo-de-roles";
+import {
+  armarElHistorialDelRol,
+  armarLaFichaDeRol,
+} from "../../../../../../../ui/plantillas/roles/modelo-de-roles";
 import { RUTAS_DE_CUENTA } from "../../../../../../../ui/plantillas/sesion/rutas-de-cuenta";
 import {
   archivarRolAccion,
@@ -17,7 +22,7 @@ import {
 
 // `/cuenta/roles/[rolId]`: la ficha de un rol propio. El id es lo único que viene de la dirección: la empresa y quien mira salen de la sesión, y el servidor lo busca entre los roles de ESA empresa. Un id mal escrito, de
 // otra empresa o inexistente sale igual (el genérico). Guardar lleva el rol y la versión que se vio ligados con `.bind` (Next los cifra): si otra persona lo cambió antes, el servidor rechaza y la ficha vuelve a leer.
-// «Archivar» y «Reactivar» se ofrecen solo a quien puede editar; el servidor lo vuelve a exigir.
+// «Archivar» y «Reactivar» se ofrecen solo a quien puede editar; el servidor lo vuelve a exigir. Al pie, el historial del rol (solo el gerente: `roles.ver`, el mismo permiso de la ficha).
 export default async function PaginaDeFichaDeRol({
   params,
 }: {
@@ -29,6 +34,8 @@ export default async function PaginaDeFichaDeRol({
     if (!rol.ok) return <ErrorDelDetalle error={rol.error} />;
     const modulos = await cargarLasAccionesParaElegir(contexto);
     if (!modulos.ok) return <ErrorDelDetalle error={modulos.error} />;
+    const historial = await cargarElHistorialDelRol(contexto, rolId);
+    if (!historial.ok) return <ErrorDelDetalle error={historial.error} />;
     const ofertas = await ofertasDeRoles(contexto);
     const ficha = armarLaFichaDeRol(rol.dato, modulos.dato, {}, { editar: ofertas.editar });
     return conTitulo(
@@ -51,6 +58,7 @@ export default async function PaginaDeFichaDeRol({
             texto={ficha.reactivar}
           />
         )}
+        <HistorialDelRol historial={armarElHistorialDelRol(historial.dato, {})} />
       </>,
     );
   });

@@ -13,6 +13,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   // H4b T4: los roles propios (solo el gerente).
   listarRoles: { accion: "roles.ver" },
   verRol: { accion: "roles.ver" },
+  // El historial de un rol (T6, B3b): se ve con el permiso de ver roles (solo el gerente); no hay acción nueva.
+  historialDelRol: { accion: "roles.ver" },
   rolesAsignables: { accion: "usuarios.asignar_rol" },
   // Las casillas del formulario de un rol (T6): se ven con el permiso de verlos; guardar lo decide `roles.crear`/`roles.editar`.
   accionesParaElegir: { accion: "roles.ver" },

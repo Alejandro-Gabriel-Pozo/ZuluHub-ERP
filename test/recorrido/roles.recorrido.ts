@@ -1,5 +1,6 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { crearMembresiaDeBase, crearPersonaDeBase } from "../integracion/fixtures-identidad";
 import { crearMundoDeMarca } from "../integracion/marcas-apoyo";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
@@ -8,8 +9,10 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * «Roles» de punta a punta en la app REAL construida, con un navegador real y una base real. El gerente entra a Cuenta → «Roles» y:
  *  R1 toca «Nuevo rol», escribe el nombre y toca «Guardar» dos veces seguidas: queda UN rol y va a su ficha;
  *  R2 en la ficha tilda una acción y guarda: queda guardada (una versión nueva) y al volver a abrir sigue tildada; lo cerrado (solo gerente) no se puede tildar;
- *  R3 archiva el rol: la lista lo muestra «Archivado»; lo reactiva y vuelve a figurar activo;
+ *  R3 archiva el rol: la lista lo muestra «Archivado»; lo reactiva y vuelve a figurar activo; y el «Historial» al pie de la ficha cuenta las cuatro cosas que le pasaron (alta, edición con la acción agregada, archivado y reactivado), del más nuevo al más viejo;
  *  R4 la ficha de un rol de otra empresa dice lo mismo que una inexistente.
+ *  R5 abre la ficha de un empleado y le cambia el rol a uno propio con «Guardar» (dos toques seguidos: un solo cambio): queda guardado y la ficha lo muestra; el gerente no tiene ese bloque.
+ *  R5 abre la ficha de un empleado y le cambia el rol a uno propio con «Guardar» (dos toques seguidos: un solo cambio): queda guardado y la ficha lo muestra; en la ficha del gerente no hay ese bloque.
  * Además: la entrada «Roles» figura en el menú de Cuenta para el gerente y sin violaciones graves de accesibilidad.
  * Lo que esta prueba ve y las de componentes y las de integración no: las acciones de servidor en el navegador (cifrado del id y de la versión ligados con `.bind`, la navegación tras crear) y la lista que se vuelve a leer.
  */
@@ -114,7 +117,7 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     ).resolves.toBe(true);
   });
 
-  it("R3: archivar lo muestra «Archivado» en la lista y reactivar lo vuelve a dejar activo", async () => {
+  it("R3: archivar lo muestra «Archivado» en la lista, reactivar lo vuelve a dejar activo y el historial lo cuenta", async () => {
     const [rol] = await rolesLlamados("Cajero");
     await ir(`/cuenta/roles/${rol?.id}`);
     await pagina.getByRole("button", { name: "Archivar" }).click();
@@ -128,6 +131,19 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     await ir(`/cuenta/roles/${rol?.id}`);
     await pagina.getByRole("button", { name: "Reactivar" }).click();
     await expect.poll(async () => (await rolesLlamados("Cajero"))[0]?.activo).toBe(true);
+
+    // El historial al pie de la ficha: lo último primero, con la acción que se agregó en R2.
+    await ir(`/cuenta/roles/${rol?.id}`);
+    const historial = pagina.getByRole("region", { name: "Historial" });
+    await historial.getByRole("listitem").nth(3).waitFor();
+    const filas = await historial.getByRole("listitem").allTextContents();
+    expect(filas).toHaveLength(4);
+    expect(filas[0]).toContain("Rol reactivado");
+    expect(filas[1]).toContain("Rol archivado");
+    expect(filas[2]).toContain("Rol editado");
+    expect(filas[2]).toContain("Acciones agregadas: Invitar usuarios");
+    expect(filas[3]).toContain("Rol creado");
+    await sinViolacionesDeAxe();
   });
 
   it("R4: la ficha de un rol de otra empresa dice lo mismo que una inexistente, sin el nombre", async () => {
@@ -136,6 +152,45 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     expect(await pagina.content()).not.toContain("Ajeno");
     await ir("/cuenta/roles/0c0c0c0c-1111-4222-8333-444444444499");
     await pagina.getByText(GENERICO).waitFor();
+  });
+
+  it("R5: en la ficha de un empleado el gerente cambia su rol a uno propio con «Guardar» (dos toques, un solo cambio) y queda guardado; la ficha del gerente no ofrece cambiar el rol", async () => {
+    const c = mundo.mundo.dueno;
+    const persona = await crearPersonaDeBase(c, "empleado@lacteos.test");
+    await crearMembresiaDeBase(c, mundo.empresa, persona.id, "OPERADOR");
+    const [cajero] = await rolesLlamados("Cajero");
+    await ir(`/cuenta/usuarios/${persona.id}`);
+    const selector = pagina.getByLabel("Rol", { exact: true });
+    await selector.waitFor();
+    await sinViolacionesDeAxe();
+    await selector.selectOption(`PROPIO:${cajero?.id}`);
+    await pagina.getByRole("button", { name: "Guardar" }).first().dblclick();
+    await expect
+      .poll(
+        async () =>
+          (
+            await consulta<{ rol: string; rol_propio_id: string | null }>(
+              "select rol, rol_propio_id from membresia where empresa_id = $1 and persona_id = $2",
+              [mundo.empresa, persona.id],
+            )
+          )[0],
+      )
+      .toEqual({ rol: "PROPIO", rol_propio_id: cajero?.id });
+    const asignaciones = await consulta<{ n: string }>(
+      "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'ROL_ASIGNADO' and entidad_id = $2",
+      [mundo.empresa, persona.id],
+    );
+    expect(Number(asignaciones[0]?.n)).toBe(1);
+
+    await ir(`/cuenta/usuarios/${persona.id}`);
+    await pagina.getByText("Cajero").first().waitFor();
+    const gerente = await consulta<{ persona_id: string }>(
+      "select persona_id from membresia where empresa_id = $1 and rol = 'GERENTE'",
+      [mundo.empresa],
+    );
+    await ir(`/cuenta/usuarios/${gerente[0]?.persona_id}`);
+    await pagina.getByRole("heading").first().waitFor();
+    expect(await pagina.getByLabel("Rol", { exact: true }).count()).toBe(0);
   });
 
   it("la entrada «Roles» figura en el menú de Cuenta del gerente", async () => {
