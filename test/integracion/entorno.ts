@@ -479,7 +479,13 @@ export async function crearPropietario(
  */
 export async function crearBaseAparte(
   base: BaseDePruebas,
-  opciones: { migrar?: boolean; sinClave?: boolean; sinMarcaDePrueba?: boolean } = {},
+  opciones: {
+    migrar?: boolean;
+    sinClave?: boolean;
+    sinMarcaDePrueba?: boolean;
+    /** `false`: la base queda con la semilla de las migraciones tal cual, sin la sincronización de plantillas (lo que deja correr el ejecutor sin pedirla). Por defecto sincroniza, como el ejecutor real. */
+    sincronizarPlantillas?: boolean;
+  } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
   const nombre = `pedernal_it_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
@@ -505,7 +511,7 @@ export async function crearBaseAparte(
   };
   if (opciones.migrar !== false) {
     await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"), {
-      sincronizarPlantillas: true,
+      sincronizarPlantillas: opciones.sincronizarPlantillas !== false,
     });
     if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
     await sembrarAdminsDePrueba(propia.dueno);

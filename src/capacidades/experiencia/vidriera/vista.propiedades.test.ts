@@ -50,6 +50,7 @@ const vidriera: fc.Arbitrary<VidrieraPublicada> = fc.record({
   rubro: nombre,
   lugar: fc.constant(null),
   mensajeDePortada: fc.constantFrom(null, "Desliza para ver el menú"),
+  perillasDeModelo: fc.constant([]),
   identidad: fc.constant({
     modelo: "LISTA" as const,
     cara: null,

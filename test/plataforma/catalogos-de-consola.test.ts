@@ -310,6 +310,14 @@ describe("catalogoDePerillas", () => {
         modulo: "catalogo",
       },
       {
+        perilla: "vidriera_modelo_libro",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: "vidriera_por_qr",
+        modulo: "vidriera",
+      },
+      {
         perilla: "vidriera_por_qr",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
