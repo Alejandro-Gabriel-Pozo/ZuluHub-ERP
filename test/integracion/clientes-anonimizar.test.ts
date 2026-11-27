@@ -49,6 +49,12 @@ import { numeroUnico } from "./unicos";
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 const MOTIVO = "PEDIDO_DEL_TITULAR";
+/**
+ * Los ids de lo guardado son UUID al azar: un dato de prueba corto y hexadecimal («4555») puede aparecer dentro de uno por casualidad y dar un falso rojo (Estabilidad del gate completo
+ * del #641, 26/11/2026). Para buscar datos personales se sacan los UUID del texto: ningún dato personal tiene forma de UUID.
+ */
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const sinIds = (texto: string): string => texto.replace(UUID, "<id>");
 const CARGO = "CARGO_DE_FACTURA_DE_COMPRA";
 const PAGO = "PAGO_A_PROVEEDOR";
 const PERSONALES = [
@@ -76,6 +82,17 @@ const IMPEDIDA = {
   error: "ANONIMIZACION_IMPEDIDA",
   impedimentos: [{ modulo: "saldos_de_partes", motivo: "SALDO_DISTINTO_DE_CERO" }],
 };
+
+describe("sinIds (el texto donde se buscan datos personales)", () => {
+  it("saca los UUID y deja todo lo demás: un UUID con «4555» ya no da un falso positivo y un dato personal filtrado se sigue viendo", () => {
+    const id = "c7783baa-f05d-425c-82c3-1645551eb57e";
+    expect(id).toContain("4555");
+    expect(sinIds(JSON.stringify({ id }))).not.toContain("4555");
+    const filtrado = sinIds(JSON.stringify({ id, nota: "tel 4555 de Quiroga" }));
+    expect(filtrado).toContain("4555");
+    expect(filtrado).toContain("Quiroga");
+  });
+});
 
 describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
   let c: MontajeDeClientes;
@@ -304,7 +321,7 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
     expect(trabajos).toMatchObject([
       { tipo: TRABAJO_PARTE_ANONIMIZADA, datos: { parteId: id }, estado: "PENDIENTE" },
     ]);
-    const guardado = JSON.stringify([registros, trabajos]);
+    const guardado = sinIds(JSON.stringify([registros, trabajos]));
     for (const dato of [
       nombre,
       "Quiroga",
