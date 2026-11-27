@@ -1,3 +1,4 @@
+import { RUTA_DE_LA_CARTA_EN_LINEA } from "../plantillas/carta/modelo-de-carta-en-linea";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
@@ -47,6 +48,20 @@ export const FILAS_DE_CATALOGO = [
     perilla: null,
     href: RUTA_DE_SECCIONES,
     etiqueta: "catalogo.seccion.titulo",
+    departamento: null,
+  },
+  // «Carta en línea» (C1; dueño, 27/11/2026: la pantalla existía y no tenía entrada): en Catálogo, grupo «Carta», con el módulo y la acción de su consulta (`vidrieras.ver`) y la perilla que
+  // la habilita (`vidriera_por_qr`, un extra de pago: sin ella no se ofrece). Rótulo: el título aprobado de la pantalla. «Cuentas de fotos» NO lleva entrada (DEC-CAT-002): se llega por la dirección.
+  {
+    tipo: "pantalla",
+    clave: "carta-en-linea",
+    area: "catalogo",
+    grupo: "carta",
+    modulo: "vidriera",
+    accion: "vidrieras.ver",
+    perilla: "vidriera_por_qr",
+    href: RUTA_DE_LA_CARTA_EN_LINEA,
+    etiqueta: "catalogo.carta.titulo",
     departamento: null,
   },
   {

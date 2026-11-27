@@ -63,6 +63,7 @@ describe("armarLaLista: la fila", () => {
       avisosDeOculto: [],
       id: "p1",
       nombre: "Milanesa",
+      href: "/catalogo/productos/p1",
       marca: null,
       clase: "Producto vendible",
       seccion: null,
@@ -142,10 +143,11 @@ describe("armarLaLista: la fila", () => {
     ).toBe("$ 12.345.678.901.234.567.890,12");
   });
 
-  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección, si le falta, precio y dónde está oculto", () => {
+  it("nada de más: la fila tiene solo id, nombre, la dirección de su ficha, marca, clase, sección, si le falta, precio y dónde está oculto", () => {
     expect(Object.keys(fila(producto())).sort()).toEqual([
       "avisosDeOculto",
       "clase",
+      "href",
       "id",
       "marca",
       "nombre",

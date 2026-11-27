@@ -21,7 +21,7 @@ export type PropsDePantallaDeListaDeProductos = Readonly<{
 
 /**
  * La lista de productos (A1, T1; maqueta `productos.html`, 12/11/2026), solo lectura: los filtros y una tarjeta por producto, también los desactivados. Cada tarjeta dice el
- * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. «Nuevo producto» (al final, como el pie de la maqueta) solo si llega armado, es decir, si la persona puede crear. Sin enlace a la ficha ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
+ * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. «Nuevo producto» (al final, como el pie de la maqueta) solo si llega armado, es decir, si la persona puede crear. El nombre enlaza a la ficha del producto (`/catalogo/productos/[id]`; sin él solo se llegaba por la redirección al crear); sin «Ocultar» acá: es de otro tramo. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeProductos({
   filtros,
@@ -52,7 +52,9 @@ export function PantallaDeListaDeProductos({
               {lista.filas.map((fila) => (
                 <li key={fila.id} className={estilos["tarjeta"]}>
                   <div className={estilos["renglon"]}>
-                    <strong className={estilos["nombre"]}>{fila.nombre}</strong>
+                    <a className={estilos["enlaceDelNombre"]} href={fila.href}>
+                      <strong className={estilos["nombre"]}>{fila.nombre}</strong>
+                    </a>
                     {fila.marca === null ? null : (
                       <Insignia tono={fila.marca.tono}>{fila.marca.texto}</Insignia>
                     )}

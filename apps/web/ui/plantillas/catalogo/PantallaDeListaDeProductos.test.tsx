@@ -152,6 +152,22 @@ describe("lista de productos", () => {
     expect(lista().querySelectorAll("[data-tono]")).toHaveLength(2);
   });
 
+  it("el nombre de cada tarjeta es un enlace a la ficha del producto, tocable (48 px o más)", async () => {
+    await render(pantalla());
+    const enlace = page.getByRole("link", { name: "Milanesa napolitana" }).element();
+    expect(enlace.getAttribute("href")).toBe("/catalogo/productos/a1");
+    expect(enlace.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+    expect(
+      [...lista().querySelectorAll("li")].map((li) => li.querySelector("a")?.getAttribute("href")),
+    ).toEqual([
+      "/catalogo/productos/a1",
+      "/catalogo/productos/a2",
+      "/catalogo/productos/a3",
+      "/catalogo/productos/a4",
+    ]);
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+  });
+
   it("los importes no desbordan y se leen con peso fuerte", async () => {
     await render(pantalla());
     const importe = [...lista().querySelectorAll<HTMLElement>("span")].find((el) =>
@@ -228,7 +244,7 @@ describe("lista de productos", () => {
     ]);
   });
 
-  it("el foco por teclado se ve en el buscador, los selectores, el botón, «Página siguiente» y «Nuevo producto»", async () => {
+  it("el foco por teclado se ve en el buscador, los selectores, el botón, el nombre de cada producto, «Página siguiente» y «Nuevo producto»", async () => {
     await render(pantalla());
     const buscar = page.getByLabelText("Buscar").element() as HTMLElement;
     buscar.focus();
@@ -236,6 +252,7 @@ describe("lista de productos", () => {
       page.getByLabelText("¿Qué es?").element(),
       page.getByLabelText("Estado").element(),
       page.getByRole("button", { name: "Aplicar filtros" }).element(),
+      ...[...lista().querySelectorAll("li a")],
       page.getByRole("link", { name: "Página siguiente" }).element(),
       page.getByRole("link", { name: "Nuevo producto" }).element(),
     ]) {
