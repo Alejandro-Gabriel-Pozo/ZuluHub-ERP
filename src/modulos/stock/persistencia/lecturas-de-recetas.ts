@@ -113,7 +113,7 @@ export function crearLecturasDeRecetas(db: Kysely<StockDb>): LecturasDeRecetas {
                    exists (select 1 from componente_de_composicion k
                             where k.empresa_id = c.empresa_id and k.composicion_id = c.id) as con_componentes
               from composicion c
-             where c.empresa_id = p.empresa_id and c.producto_id = p.id
+             where c.empresa_id = p.empresa_id and c.producto_id = p.id and c.sucursal_id is null
              order by c.numero desc
              limit 1) v on true
          where ${unirY(condiciones)}

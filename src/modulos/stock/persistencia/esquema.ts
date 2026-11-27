@@ -167,6 +167,13 @@ export type StockDb = TablasDeCatalogoQueLeeStock &
       registrada_en: Generated<Date>;
       /** E6 (0032): los pasos de la ficha de cocina (texto de una línea) o `null`. */
       pasos: string | null;
+      /**
+       * Receta propia por sucursal (0116): la sucursal de una receta propia; `null` = receta de la central (la de la empresa, todo lo que había antes). Toda lectura de «la vigente» elige el ámbito:
+       * hasta el tramo que crea propias, la aplicación solo lee y escribe la central (la aplicación no tiene permiso de escribir esta columna).
+       */
+      sucursal_id: Generated<string | null>;
+      /** 0116: en una propia, el número de la versión de la central que se vio al crearla o guardarla; `null` en la central. */
+      origen_numero: Generated<number | null>;
     };
     componente_de_composicion: {
       empresa_id: string;
@@ -322,6 +329,8 @@ export const COLUMNAS_DE_STOCK = {
     "creada_en",
     "registrada_en",
     "pasos",
+    "sucursal_id",
+    "origen_numero",
   ],
   componente_de_composicion: [
     "empresa_id",
