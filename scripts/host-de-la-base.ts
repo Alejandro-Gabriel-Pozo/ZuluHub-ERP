@@ -6,6 +6,7 @@
  */
 export const VARIABLE_DEL_HOST_DE_LA_BASE = "PEDERNAL_HOST_DE_LA_BASE";
 
+const PARAMETROS_QUE_PISAN_EL_DESTINO: ReadonlySet<string> = new Set(["host", "hostaddr", "port"]);
 const FORMA_DE_HOST = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/;
 
 export function hostDeLaBaseCoincide(
@@ -15,7 +16,12 @@ export function hostDeLaBaseCoincide(
   const declarado = (esperado ?? "").trim().toLowerCase();
   if (!FORMA_DE_HOST.test(declarado)) return false;
   try {
-    return new URL((cadena ?? "").trim()).hostname.toLowerCase() === declarado;
+    const url = new URL((cadena ?? "").trim());
+    // `host`, `hostaddr` y `port` en la query pisan el host de la URL en `pg-connection-string`: con alguno de ellos el candado se esquivaría, así que la cadena se rechaza.
+    for (const clave of url.searchParams.keys()) {
+      if (PARAMETROS_QUE_PISAN_EL_DESTINO.has(clave.toLowerCase())) return false;
+    }
+    return url.hostname.toLowerCase() === declarado;
   } catch {
     return false;
   }

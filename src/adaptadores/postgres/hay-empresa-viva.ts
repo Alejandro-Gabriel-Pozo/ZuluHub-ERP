@@ -9,6 +9,16 @@ export async function hayEmpresaViva(cadena: string): Promise<boolean> {
   const cliente = new pg.Client({ connectionString: cadena, connectionTimeoutMillis: 15_000 });
   await cliente.connect();
   try {
+    // `empresa` tiene RLS forzada: con un rol sin `rolsuper` ni `rolbypassrls` la consulta devolvería 0 filas aunque haya empresas, y «no hay empresa» rotaría el secreto de invitaciones con el alta
+    // ya hecha. Por eso se exige poder ver todo; si no, falla (no devuelve «no hay»).
+    const rol = await cliente.query<{ ve_todo: boolean }>(
+      "SELECT (rolsuper OR rolbypassrls) AS ve_todo FROM pg_roles WHERE rolname = current_user",
+    );
+    if (rol.rows[0]?.ve_todo !== true) {
+      throw new Error(
+        "el rol de la cadena no ve todas las filas de `empresa` (sin rolsuper ni rolbypassrls): no se puede saber si hay una empresa",
+      );
+    }
     const { rows } = await cliente.query<{ existe: boolean }>(
       "SELECT EXISTS (SELECT 1 FROM empresa WHERE estado <> 'CANCELLED') AS existe",
     );

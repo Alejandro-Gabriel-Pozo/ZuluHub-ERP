@@ -59,4 +59,20 @@ describe.skipIf(base === null)("hay empresa viva", () => {
     );
     expect(await leerClaveDeContextoVigente(propia.base.dueno)).toBe(`9:${"bb".repeat(32)}`);
   });
+
+  it("con un rol que no ve todas las filas (RLS forzada) falla en vez de decir «no hay empresa»", async () => {
+    const rol = `sin_bypass_${Math.random().toString(36).slice(2, 10)}`;
+    const clave = `clave-${Math.random().toString(36).slice(2, 14)}`;
+    await dueno.query(`CREATE ROLE ${rol} LOGIN PASSWORD '${clave}' NOSUPERUSER NOBYPASSRLS`);
+    try {
+      await dueno.query(`GRANT SELECT ON empresa TO ${rol}`);
+      const url = new URL(propia.base.dueno);
+      url.username = rol;
+      url.password = clave;
+      await expect(hayEmpresaViva(url.toString())).rejects.toThrow(/no ve todas las filas/);
+    } finally {
+      await dueno.query(`REVOKE ALL ON empresa FROM ${rol}`);
+      await dueno.query(`DROP ROLE ${rol}`);
+    }
+  });
 });

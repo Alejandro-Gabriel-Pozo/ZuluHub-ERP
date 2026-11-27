@@ -364,6 +364,22 @@ describe("alta de un cliente: cierra ante la duda", () => {
     }
   });
 
+  it("candado de host: una cadena con host, hostaddr o port en la query (pisan el host de la URL) se rechaza", async () => {
+    for (const parametro of [
+      "host=otro.test",
+      "hostaddr=10.0.0.1",
+      "port=5433",
+      "HOST=otro.test",
+    ]) {
+      const t = armar({
+        entorno: { PEDERNAL_DB_MIGRACIONES: `${SECRETOS.PEDERNAL_DB_MIGRACIONES}?${parametro}` },
+      });
+      expect(await altaDeCliente(t.entrada)).toBe(2);
+      expect(t.sembrar).not.toHaveBeenCalled();
+      expect(t.llamadas).toEqual([]);
+    }
+  });
+
   it("el administrador y el gerente con el mismo email: se rechaza antes de sembrar nada", async () => {
     const t = armar({
       paquete: {
