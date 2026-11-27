@@ -7,7 +7,8 @@
 --      central que la persona vio al crearla o guardarla (de ahí sale el aviso «la central cambió», que se calcula; no se escribe). `(sucursal_id IS NULL) = (origen_numero IS NULL)`.
 --   2. La única `composicion_numero_uk` pasa de (empresa, producto, numero) a (empresa, producto, sucursal, numero) con NULLS NOT DISTINCT: cada ámbito numera la suya desde 1. Mismo nombre
 --      (la traducción de errores del código lo usa); para las filas de hoy (todas con sucursal nula) la regla es la misma.
---   3. `composicion_vigente_id(empresa, producto, sucursal)`: la receta que rige para una sucursal (su propia vigente y NO vacía; si no, la última de la central). Una sola regla, un lugar.
+--   3. `composicion_vigente_id(empresa, producto, sucursal)`: la receta que rige para una sucursal (su propia vigente y NO vacía; si no, la última de la central). Una sola regla, un lugar. `pedernal_app` puede EJECUTARLA
+--      (la llama el disparador de ciclos con el rol de la aplicación; el repo quita ese permiso por defecto).
 --   4. Tres funciones de disparador se reescriben con el ámbito (mismos nombres y mismos disparadores: CREATE OR REPLACE):
 --      * composicion_validar: el número es el siguiente al último DEL ÁMBITO; una propia nace de una versión de la central que existe.
 --      * articulo_de_stock_validar: un artículo en la composición vigente de CUALQUIER ámbito no se puede apagar.
@@ -62,6 +63,9 @@ $$
       WHERE c.empresa_id = p_empresa AND c.producto_id = p_producto AND c.sucursal_id IS NULL
       ORDER BY c.numero DESC LIMIT 1))
 $$;
+
+-- El repo quita el permiso de ejecutar funciones a todos por defecto (0001): la llama el disparador de ciclos y corre con el rol de la aplicación, así que se lo damos (solo ejecutar; no escribe nada).
+GRANT EXECUTE ON FUNCTION composicion_vigente_id(uuid, uuid, uuid) TO pedernal_app;
 
 -- 4. Las tres funciones, con el ámbito.
 
