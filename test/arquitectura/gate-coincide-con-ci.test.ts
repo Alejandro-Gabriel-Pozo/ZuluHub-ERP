@@ -306,6 +306,8 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
 
   // (h) `pruebas` en cuatro fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
   problemas.push(...problemasDeLosFragmentos(texto, "ci.yml"));
+  // (h3) Los locks del Postgres de las pruebas (ver `PIEZAS_DE_LOS_LOCKS`).
+  problemas.push(...problemasDeLosLocks(texto, "ci.yml", ["pruebas", "estabilidad"]));
   // (h2) `recorrido` en tres fragmentos (ver `RECORRIDO_EN_FRAGMENTOS`).
   problemas.push(
     ...problemasDeLosFragmentos(texto, "ci.yml", "recorrido", RECORRIDO_EN_FRAGMENTOS),
@@ -460,6 +462,42 @@ function problemasDeLosFragmentos(
     lineas.some((l) => l.trim() === "image: postgres:18"),
     "cada fragmento tiene su propio Postgres 18 (service container del job)",
   );
+  return problemas;
+}
+
+/**
+ * El Postgres de las pruebas de integración sube `max_locks_per_transaction` a 256 (el valor por defecto, 64, agotó la tabla de locks compartida: `53200 out of shared memory`, #648, 27/11/2026,
+ * cuando la prueba de 500 cobros contra el cierre coincidió en el mismo servidor con otras). Solo se aplica al arrancar: el paso reinicia el contenedor del servicio y comprueba el valor.
+ * Con solo `max_locks_per_transaction` el 53200 siguió (#651): las transacciones SERIALIZABLE usan otra tabla, la de locks de predicado (`max_pred_locks_per_transaction`, 512).
+ * Falla si un job que corre las pruebas de integración (`pruebas`, `estabilidad`) pierde alguna de esas cuatro piezas: el ajuste, el reinicio, la espera o la comprobación.
+ */
+const PIEZAS_DE_LOS_LOCKS: readonly (readonly [string, string])[] = [
+  ["ALTER SYSTEM SET max_locks_per_transaction = 256", "el ajuste a 256"],
+  [
+    "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+    "el ajuste de los locks de predicado a 512 (transacciones SERIALIZABLE)",
+  ],
+  [
+    'docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")',
+    "el reinicio del contenedor",
+  ],
+  ['pg_isready -d "$PRUEBAS_DATABASE_URL"', "la espera a que vuelva a aceptar conexiones"],
+  [
+    'SHOW max_locks_per_transaction")" = "256"',
+    "la comprobación del valor (sin ella el job correría con la tabla chica sin saberlo)",
+  ],
+  ['SHOW max_pred_locks_per_transaction")" = "512"', "la comprobación de los locks de predicado"],
+];
+
+function problemasDeLosLocks(texto: string, archivo: string, jobs: readonly string[]): string[] {
+  const problemas: string[] = [];
+  for (const job of jobs) {
+    const cuerpo = leerJobs(texto).get(job)?.texto ?? "";
+    for (const [pieza, que] of PIEZAS_DE_LOS_LOCKS) {
+      if (!cuerpo.includes(pieza))
+        problemas.push(`${archivo}: ${job}: falta ${que} (max_locks_per_transaction)`);
+    }
+  }
   return problemas;
 }
 
@@ -814,6 +852,53 @@ const CASOS: Caso[] = [
     esperado: ["recorrido", "el comando de pruebas"],
   },
   {
+    nombre:
+      "«pruebas» pierde el ajuste de max_locks_per_transaction (volvería la tabla de locks chica)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "ALTER SYSTEM SET max_locks_per_transaction = 256",
+          "ALTER SYSTEM SET max_locks_per_transaction = 64",
+        ),
+      ),
+    esperado: ["pruebas", "el ajuste a 256"],
+  },
+  {
+    nombre:
+      "«pruebas» pierde el ajuste de los locks de predicado (el 53200 de las transacciones SERIALIZABLE volvería)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 64",
+        ),
+      ),
+    esperado: ["pruebas", "locks de predicado a 512"],
+  },
+  {
+    nombre:
+      "«estabilidad» ajusta los locks pero no reinicia el contenedor (el ajuste no se aplicaría)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) => reemplazarUnico(b, /^ +docker restart .*\n/m, "")),
+    esperado: ["estabilidad", "el reinicio del contenedor"],
+  },
+  {
+    nombre: "«pruebas» no comprueba que el valor quedó (correría con la tabla chica sin saberlo)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(b, /^ +test "\$\(psql .*SHOW max_locks_per_transaction.*\n/m, ""),
+      ),
+    esperado: ["pruebas", "la comprobación del valor"],
+  },
+  {
+    nombre: "«pruebas» no espera a que el Postgres vuelva a aceptar conexiones tras el reinicio",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, /^ +for i in \$\(seq 1 60\).*\n/m, "")),
+    esperado: ["pruebas", "la espera"],
+  },
+  {
     nombre: "«pruebas» cambia de Postgres (la versión de Neon es la 18)",
     alterar: (t) =>
       enJob(t, "pruebas", (b) => reemplazarUnico(b, "image: postgres:18", "image: postgres:17")),
@@ -1154,6 +1239,16 @@ describe("gate-rapido.yml: sus pruebas se reparten igual que las de ci.yml", () 
   );
   it("cumple la misma estructura de fragmentos", () => {
     expect(problemasDeLosFragmentos(RAPIDO, "gate-rapido.yml")).toEqual([]);
+  });
+  it("su job `pruebas` también sube los locks del Postgres (misma mecánica que ci.yml)", () => {
+    expect(problemasDeLosLocks(RAPIDO, "gate-rapido.yml", ["pruebas"])).toEqual([]);
+    expect(
+      problemasDeLosLocks(
+        RAPIDO.replace("ALTER SYSTEM SET max_locks_per_transaction = 256", "SELECT 1"),
+        "gate-rapido.yml",
+        ["pruebas"],
+      ),
+    ).toHaveLength(1);
   });
   it("sin la matriz o con otro tope, falla", () => {
     expect(

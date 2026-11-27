@@ -112,7 +112,12 @@ jobs:
           psql "$PRUEBAS_DATABASE_URL" \
             -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
-            -c "SELECT pg_reload_conf()"
+            -c "ALTER SYSTEM SET max_locks_per_transaction = 256" \
+            -c "ALTER SYSTEM SET max_pred_locks_per_transaction = 512"
+          docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")
+          for i in $(seq 1 60); do pg_isready -d "$PRUEBAS_DATABASE_URL" && break; sleep 1; done
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_locks_per_transaction")" = "256"
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_pred_locks_per_transaction")" = "512"
       - run: npm test
         env:
           # El fragmento de este job (`i/n`): lo lee `vitest.config.ts` (`arquitectura/fragmento-de-pruebas.cjs`) y corre solo sus archivos; el total sale del tamaño de la matriz.
