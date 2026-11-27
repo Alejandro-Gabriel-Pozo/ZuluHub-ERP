@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   REGISTRO_DE_EJEMPLO,
   RAIZ,
@@ -30,6 +30,11 @@ import {
  * casos de punta a punta usan árboles temporales y el CLI real (con su proceso hijo) para probar que la
  * base detecta lo que un verificador debilitado del PR ya no vería.
  */
+
+// Cada prueba de este archivo levanta el guardián real como proceso aparte sobre copias de árboles: ~1 s en una máquina libre (la más lenta mide 978 ms contra los 5 000 ms de tope por defecto). En un runner
+// cargado (la mutación del guardián corre muchas copias a la vez) se pasó de los 5 s sin que nada estuviera roto (CI de #669, 27/11/2026: «dos árboles sanos … pasan la vigilancia de la versión anterior»).
+// Un tope explícito de 30 s absorbe esa carga y sigue cortando un proceso colgado. NO baja ningún umbral de mutación ni afloja ninguna aserción: solo el tiempo que se espera.
+vi.setConfig({ testTimeout: 30_000 });
 
 const require = createRequire(import.meta.url);
 

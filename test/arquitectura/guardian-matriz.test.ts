@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CODIGOS_DE_FALLA, formatearFalla, type Falla } from "./guardian-apoyo";
 import {
   APLICADORES,
@@ -51,6 +51,11 @@ import {
  * Esta prueba no puede saltarse a sí misma: M4 escanea `guardian-*.test.ts` (incluida esta) y no admite
  * saltos fuera de la lista de `SALTOS_PERMITIDOS`. Por eso acá no hay ninguno.
  */
+
+// Cada prueba de este archivo levanta el guardián real como proceso aparte sobre copias de árboles: ~1 s en una máquina libre (la más lenta mide 1 071 ms contra los 5 000 ms de tope por defecto). En un runner
+// cargado (la mutación del guardián corre muchas copias a la vez) se pasó de los 5 s sin que nada estuviera roto (CI de #669, 27/11/2026: «dos árboles sanos … pasan la vigilancia de la versión anterior»).
+// Un tope explícito de 30 s absorbe esa carga y sigue cortando un proceso colgado. NO baja ningún umbral de mutación ni afloja ninguna aserción: solo el tiempo que se espera.
+vi.setConfig({ testTimeout: 30_000 });
 
 const require = createRequire(import.meta.url);
 const REGISTRO_REAL = require("../../arquitectura/contratos/contratos.cjs") as unknown[];
