@@ -4,6 +4,7 @@ import { leerClaveDeContextoVigente } from "../../src/adaptadores/postgres/conte
 import { hayEmpresaViva } from "../../src/adaptadores/postgres/hay-empresa-viva";
 import { crearMarcaLista, crearTenantConPlan } from "./altas-apoyo";
 import { crearBaseAparte, cuitUnico } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * «¿Ya hay una empresa viva con ese CUIT?» (el alta de un cliente decide con esto si el secreto de invitaciones se puede generar de nuevo): una empresa activa cuenta, una cancelada no, y un
@@ -61,8 +62,8 @@ describe.skipIf(base === null)("hay empresa viva", () => {
   });
 
   it("con un rol que no ve todas las filas (RLS forzada) falla en vez de decir «no hay empresa»", async () => {
-    const rol = `sin_bypass_${Math.random().toString(36).slice(2, 10)}`;
-    const clave = `clave-${Math.random().toString(36).slice(2, 14)}`;
+    const rol = `sin_bypass_${sufijoUnico()}`;
+    const clave = `clave-${sufijoUnico()}`;
     await dueno.query(`CREATE ROLE ${rol} LOGIN PASSWORD '${clave}' NOSUPERUSER NOBYPASSRLS`);
     try {
       await dueno.query(`GRANT SELECT ON empresa TO ${rol}`);
