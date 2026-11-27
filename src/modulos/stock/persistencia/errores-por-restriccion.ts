@@ -182,6 +182,10 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   composicion_rinde_ck: "RINDE_INVALIDO",
   composicion_producto_no_vendible: "PRODUCTO_NO_LLEVA_RECETA",
   composicion_numero_salteado: "COMPOSICION_DESACTUALIZADA",
+  // Receta propia por sucursal (0116): la aplicación todavía no puede escribir estas columnas (no tiene el permiso); cuando el tramo que crea propias lo abra, estas restricciones se traducen.
+  composicion_sucursal_fkey: "NO_TRADUCIDA",
+  composicion_origen_ck: "NO_TRADUCIDA",
+  composicion_origen_inexistente: "NO_TRADUCIDA",
   // componente_de_composicion
   componente_de_composicion_pkey: "NO_TRADUCIDA",
   componente_de_composicion_empresa_id_fkey: "NO_TRADUCIDA",

@@ -117,6 +117,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0112_compras_reemplazo_de_factura.sql",
         "0113_soporte_lee_los_roles_propios.sql",
         "0114_devolucion_de_un_cobro_de_ticket.sql",
+        "0116_receta_propia_por_sucursal.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -215,6 +216,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0112_compras_reemplazo_de_factura.sql",
           "0113_soporte_lee_los_roles_propios.sql",
           "0114_devolucion_de_un_cobro_de_ticket.sql",
+          "0116_receta_propia_por_sucursal.sql",
         ],
       });
     } finally {
@@ -419,6 +421,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0112_compras_reemplazo_de_factura.sql",
         "0113_soporte_lee_los_roles_propios.sql",
         "0114_devolucion_de_un_cobro_de_ticket.sql",
+        "0116_receta_propia_por_sucursal.sql",
       ]);
     } finally {
       await aparte.destruir();
