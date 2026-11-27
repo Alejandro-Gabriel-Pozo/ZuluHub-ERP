@@ -6,7 +6,7 @@ import {
   METADATOS_DE_CARTA_NO_DISPONIBLE,
   metadatosDeLaCarta,
 } from "../../../../servidor/metadatos-de-carta";
-import { exigirPuerta, nonceDelPedido } from "../../../../servidor/pedido";
+import { ahorroDeDatosDelPedido, exigirPuerta, nonceDelPedido } from "../../../../servidor/pedido";
 import { cssDelTemaDeLaCarta } from "../../../../../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
 import { EstiloDeMarca } from "../../../../ui/componentes/EstiloDeMarca";
 
@@ -24,7 +24,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PaginaDeLaVidriera({ params }: Props) {
   const puerta = await exigirPuerta("CARTA");
-  const vidriera = await vidrieraParaLaPantalla(puerta, (await params).codigo);
+  const vidriera = await vidrieraParaLaPantalla(
+    puerta,
+    (await params).codigo,
+    await ahorroDeDatosDelPedido(),
+  );
   if (vidriera === null) notFound();
   const { tema } = vidriera.vista.identidad;
   return (
