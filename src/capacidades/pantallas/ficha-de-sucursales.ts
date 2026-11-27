@@ -9,7 +9,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
  * BOTONES: «Nueva sucursal» (navega al alta) y «Guardar» (crea). Sin permiso ningún botón se dibuja (`AUSENTE`); es solo una ayuda, el servidor vuelve a exigir el permiso. «Cancelar» es un enlace de vuelta a la lista.
  * MODALES: ninguno. ESTADOS: la lista muestra solo las sucursales activas, sin estados ni insignias; repetir el alta con el mismo nombre devuelve la misma sucursal (vuelve a la lista sin error); un nombre igual al de
  * una sucursal desactivada, cualquier otra falla y la falta de permiso salen con el mensaje genérico.
- * SUPUESTO (declarado, reversible): los permisos de crear quedan como están (gerente y administrador). Casa Central no lleva marca de «no vende»: es una sucursal más.
+ * SUPUESTO (DEC-IDE-006, declarado, reversible): los permisos de crear quedan como están (gerente y administrador). Casa Central no lleva marca de «no vende»: es una sucursal más.
  *
  * Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  */
