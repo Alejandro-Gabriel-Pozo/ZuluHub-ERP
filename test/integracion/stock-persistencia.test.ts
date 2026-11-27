@@ -56,7 +56,7 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    // Los disparadores de 0030, los de 0031 (costos), los de 0032 (lotes y recetas) y los de 0042 (conteo con hora): todas son migraciones de stock.
+    // Los disparadores de 0030, los de 0031 (costos), los de 0032 (lotes y recetas) los de 0042 (conteo con hora) y los de 0116 (receta propia por sucursal): todas son migraciones de stock.
     const migraciones = await Promise.all(
       [
         "0030_stock.sql",
@@ -65,6 +65,7 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
         "0042_conteo_con_hora.sql",
         "0049_producto_oculto_en_stock.sql",
         "0056_receta_sin_insumos.sql",
+        "0116_receta_propia_por_sucursal.sql",
       ].map((archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8")),
     );
     const deDisparadores = migraciones.flatMap((texto) =>
