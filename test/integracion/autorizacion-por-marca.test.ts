@@ -379,6 +379,8 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         ops.consultasDeIdentidad.personasParaMostrar(ctx, { ids: [e.otra] }),
       listarRoles: (_e, ctx) => ops.consultasDeIdentidad.listarRoles(ctx),
       verRol: (_e, ctx) => ops.consultasDeIdentidad.verRol(ctx, { rolId: randomUUID() }),
+      historialDelRol: (_e, ctx) =>
+        ops.consultasDeIdentidad.historialDelRol(ctx, { rolId: randomUUID() }),
       rolesAsignables: (_e, ctx) => ops.consultasDeIdentidad.rolesAsignables(ctx),
       accionesParaElegir: (_e, ctx) => ops.consultasDeIdentidad.accionesParaElegir(ctx),
     };

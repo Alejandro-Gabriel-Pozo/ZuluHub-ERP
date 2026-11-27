@@ -1,5 +1,7 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
@@ -132,19 +134,23 @@ const CASOS = [
   ...casosDeDeclaraciones("ventas", "consulta", DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
 ];
 
-/** Las fichas de `src/capacidades/pantallas/ficha-de-*.ts`: cada una exporta una constante `FICHA_DE_…` con `rutas` y `acceso`. */
-async function leerFichas(): Promise<readonly EntradaDeFicha[]> {
-  const carpeta = join(RAIZ, "src/capacidades/pantallas");
+/**
+ * Las fichas de `src/capacidades/pantallas/ficha-de-*.ts`: cada una exporta una constante `FICHA_DE_…` con `rutas` y `acceso`.
+ * Cada ficha se importa por la URL de su archivo y no por una ruta relativa con variable: esa forma la resuelve vite como un glob al transformar el test y, con el transformado
+ * cacheado de antes de que entrara una ficha nueva (un merge de la integración), fallaba con «Unknown variable dynamic import» en el sandbox local y pasaba en el CI sin caché.
+ */
+async function leerFichas(
+  carpeta: string = join(RAIZ, "src/capacidades/pantallas"),
+): Promise<readonly EntradaDeFicha[]> {
   const archivos = readdirSync(carpeta)
     .filter((a) => /^ficha-de-.*\.ts$/.test(a) && !a.endsWith(".test.ts"))
     .sort();
   const fichas: EntradaDeFicha[] = [];
   for (const archivo of archivos) {
     const base = archivo.replace(/\.ts$/, "");
-    const modulo = (await import(`../../src/capacidades/pantallas/${base}.ts`)) as Record<
-      string,
-      unknown
-    >;
+    const modulo = (await import(
+      /* @vite-ignore */ pathToFileURL(join(carpeta, archivo)).href
+    )) as Record<string, unknown>;
     for (const [nombre, valor] of Object.entries(modulo)) {
       if (!nombre.startsWith("FICHA_DE_") || typeof valor !== "object" || valor === null) continue;
       const ficha = valor as { rutas?: unknown; acceso?: unknown };
@@ -298,5 +304,37 @@ describe("el grafo del sistema: el código real (solo mide)", async () => {
     expect(cuenta("accion_con_pantalla") + cuenta("accion_sin_pantalla")).toBe(
       informe.medidas.acciones,
     );
+  });
+});
+
+describe("leerFichas ve las fichas que aparecen después de la primera lectura (caché de vite)", () => {
+  const FICHA = (nombre: string): string =>
+    `export const FICHA_DE_${nombre} = { rutas: ["/${nombre.toLowerCase()}"], acceso: "ventas.ver" };\n`;
+
+  it("una ficha agregada entre dos lecturas aparece en la segunda, sin depender de un glob cacheado", async () => {
+    const carpeta = mkdtempSync(join(tmpdir(), "fichas-"));
+    try {
+      writeFileSync(join(carpeta, "ficha-de-uno.ts"), FICHA("UNO"));
+      const primera = await leerFichas(carpeta);
+      expect(primera.map((f) => f.id)).toEqual(["uno"]);
+      writeFileSync(join(carpeta, "ficha-de-dos.ts"), FICHA("DOS"));
+      const segunda = await leerFichas(carpeta);
+      expect(segunda.map((f) => f.id)).toEqual(["dos", "uno"]);
+      expect(segunda.find((f) => f.id === "dos")?.rutas).toEqual(["/dos"]);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
+  it("un archivo que no es una ficha (otro nombre o una prueba) no entra", async () => {
+    const carpeta = mkdtempSync(join(tmpdir(), "fichas-"));
+    try {
+      writeFileSync(join(carpeta, "ficha-de-uno.ts"), FICHA("UNO"));
+      writeFileSync(join(carpeta, "ficha-de-uno.test.ts"), FICHA("PRUEBA"));
+      writeFileSync(join(carpeta, "otra-cosa.ts"), FICHA("OTRA"));
+      expect((await leerFichas(carpeta)).map((f) => f.id)).toEqual(["uno"]);
+    } finally {
+      rmSync(carpeta, { recursive: true, force: true });
+    }
   });
 });

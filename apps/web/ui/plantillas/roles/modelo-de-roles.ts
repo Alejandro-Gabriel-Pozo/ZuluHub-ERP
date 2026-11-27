@@ -4,6 +4,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { claveDelNombreDeLaAccion } from "../../../../../src/capacidades/vocabulario/nombre-de-la-accion";
+import { fechaYHoraParaMostrar } from "../../../../../src/primitivas/tiempo/instante-para-mostrar";
 import type { TonoDeEstado } from "../../componentes/Insignia";
 import { RUTAS_DE_CUENTA, rutaDeLaFichaDeRol } from "../sesion/rutas-de-cuenta";
 
@@ -259,5 +260,81 @@ export function armarElEditorDeRolDeUsuario(
     valorInicial,
     opciones,
     guardar: texto(diccionario, "caja.accion.guardar"),
+  };
+}
+
+/** Lo que entrega el servidor para cada cambio del historial (`src/composicion/roles-web.ts`): la fecha como instante ISO y quién lo hizo como correo (`null`: sin persona). */
+export type EventoDelHistorialDelRol = Readonly<{
+  id: string;
+  tipo: "CREADO" | "EDITADO" | "ARCHIVADO" | "REACTIVADO";
+  cuando: string;
+  por: string | null;
+  nombreAnterior: string | null;
+  nombreNuevo: string | null;
+  agregadas: readonly string[];
+  quitadas: readonly string[];
+}>;
+
+export type HistorialDelRolArmado = Readonly<{
+  titulo: string;
+  filas: readonly Readonly<{
+    id: string;
+    /** «17/11/2026 21:14», en hora de Argentina. */
+    cuando: string;
+    por: string | null;
+    que: string;
+    /** El detalle de una edición: nombre anterior, acciones agregadas y acciones quitadas (solo lo que cambió). */
+    cambios: readonly Readonly<{ rotulo: string; texto: string }>[];
+  }>[];
+}>;
+
+const CLAVE_DEL_EVENTO = {
+  CREADO: "roles.historial.creado",
+  EDITADO: "roles.historial.editado",
+  ARCHIVADO: "roles.historial.archivado",
+  REACTIVADO: "roles.historial.reactivado",
+} as const;
+
+/** El historial de un rol propio, en el orden del servidor (el más nuevo primero), con todo el texto resuelto. Las acciones se dicen con su nombre aprobado (`roles.accion.<id>`). */
+export function armarElHistorialDelRol(
+  eventos: readonly EventoDelHistorialDelRol[],
+  diccionario: DiccionarioResuelto,
+): HistorialDelRolArmado {
+  const nombres = (acciones: readonly string[]) =>
+    acciones.map((a) => textoDeLaAccion(diccionario, a)).join(", ");
+  return {
+    titulo: texto(diccionario, "roles.historial.titulo"),
+    filas: eventos.map((e) => ({
+      id: e.id,
+      cuando: fechaYHoraParaMostrar(e.cuando),
+      por: e.por,
+      que: texto(diccionario, CLAVE_DEL_EVENTO[e.tipo]),
+      cambios: [
+        ...(e.nombreAnterior === null
+          ? []
+          : [
+              {
+                rotulo: texto(diccionario, "roles.historial.nombre_anterior"),
+                texto: e.nombreAnterior,
+              },
+            ]),
+        ...(e.agregadas.length === 0
+          ? []
+          : [
+              {
+                rotulo: texto(diccionario, "roles.historial.agregadas"),
+                texto: nombres(e.agregadas),
+              },
+            ]),
+        ...(e.quitadas.length === 0
+          ? []
+          : [
+              {
+                rotulo: texto(diccionario, "roles.historial.quitadas"),
+                texto: nombres(e.quitadas),
+              },
+            ]),
+      ],
+    })),
   };
 }

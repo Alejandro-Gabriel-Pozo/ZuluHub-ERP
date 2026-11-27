@@ -8,11 +8,14 @@ import { AccionDeEstadoDeRol } from "./AccionDeEstadoDeRol.cliente";
 import { FormularioDeAltaDeRol } from "./FormularioDeAltaDeRol.cliente";
 import { FormularioDeFichaDeRol } from "./FormularioDeFichaDeRol.cliente";
 import { FormularioDeRolDeUsuario } from "./FormularioDeRolDeUsuario.cliente";
+import { HistorialDelRol } from "./HistorialDelRol";
 import {
   armarElEditorDeRolDeUsuario,
   armarElFormularioDeAlta,
+  armarElHistorialDelRol,
   armarLaFichaDeRol,
   armarLaListaDeRoles,
+  type EventoDelHistorialDelRol,
   type ModuloParaElegir,
   type RolParaLaPantalla,
 } from "./modelo-de-roles";
@@ -303,5 +306,69 @@ describe("FormularioDeRolDeUsuario", () => {
     expect(
       armarElEditorDeRolDeUsuario(asignables, { tipo: "BASE", rol: "ADMINISTRADOR" }, {}),
     ).not.toBeNull();
+  });
+});
+
+describe("HistorialDelRol", () => {
+  const evento = (
+    id: string,
+    tipo: EventoDelHistorialDelRol["tipo"],
+    extra: Partial<EventoDelHistorialDelRol> = {},
+  ): EventoDelHistorialDelRol => ({
+    id,
+    tipo,
+    // 00:30 UTC es 21:30 del día anterior en Argentina.
+    cuando: "2026-11-18T00:30:00.000Z",
+    por: "ana@x.test",
+    nombreAnterior: null,
+    nombreNuevo: null,
+    agregadas: [],
+    quitadas: [],
+    ...extra,
+  });
+
+  it("dice cuándo (hora de Argentina), quién y qué; una edición lleva el nombre anterior y las acciones agregadas y quitadas con su nombre aprobado; sin violaciones graves de accesibilidad", async () => {
+    const eventos = [
+      evento("4", "REACTIVADO"),
+      evento("3", "ARCHIVADO"),
+      evento("2", "EDITADO", {
+        nombreAnterior: "Cajero",
+        nombreNuevo: "Cajera",
+        agregadas: ["usuarios.ver"],
+        quitadas: ["usuarios.invitar"],
+      }),
+      evento("1", "CREADO", { por: null }),
+    ];
+    await render(conArmazon(<HistorialDelRol historial={armarElHistorialDelRol(eventos, {})} />));
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    await expect.element(page.getByRole("heading", { name: "Historial" })).toBeVisible();
+    const filas = page.getByRole("region", { name: "Historial" }).getByRole("listitem");
+    expect(filas.elements()).toHaveLength(4);
+    expect(filas.nth(0).element().textContent).toMatch(
+      /Rol reactivado.*17\/11\/2026 21:30 · ana@x\.test/,
+    );
+    expect(filas.nth(1).element().textContent).toMatch(
+      /Rol archivado.*17\/11\/2026 21:30 · ana@x\.test/,
+    );
+    const editado = filas.nth(2);
+    expect(editado.element().textContent).toMatch(/Rol editado/);
+    expect(editado.element().textContent).toMatch(/Nombre anterior: Cajero/);
+    expect(editado.element().textContent).toMatch(/Acciones agregadas: Ver los usuarios/);
+    expect(editado.element().textContent).toMatch(/Acciones quitadas: Invitar usuarios/);
+    // Sin persona (actor de sistema) no se inventa un «quién».
+    expect(filas.nth(3).element().textContent).toMatch(/Rol creado.*17\/11\/2026 21:30/);
+    expect(filas.nth(3).element().textContent).not.toContain("·");
+  });
+
+  it("solo dice lo que cambió: una edición sin cambio de nombre ni de acciones no lleva detalle", () => {
+    const armado = armarElHistorialDelRol([evento("1", "EDITADO")], {});
+    expect(armado.filas[0]?.cambios).toEqual([]);
+    expect(armado.titulo).toBe("Historial");
+  });
+
+  it("una acción que el catálogo de textos no tiene falla en vez de mostrar un id (error de programación, lo atrapa la prueba del catálogo)", () => {
+    expect(() =>
+      armarElHistorialDelRol([evento("1", "EDITADO", { agregadas: ["no.existe"] })], {}),
+    ).toThrow(/no tiene nombre/);
   });
 });

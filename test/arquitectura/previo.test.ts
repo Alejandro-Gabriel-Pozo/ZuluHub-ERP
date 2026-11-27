@@ -16,7 +16,25 @@ import { describe, expect, it } from "vitest";
 const RAIZ = join(import.meta.dirname, "../..");
 const require = createRequire(import.meta.url);
 const previo = require("../../arquitectura/previo.cjs") as {
-  PASOS_FIJOS: { id: string; comando: string[] }[];
+  PASOS_FIJOS: Paso[];
+  MEMORIA_MINIMA_PARA_PARALELO: number;
+  tandasDeLaCorrida: (pasos: Paso[], memoriaTotal: number) => Paso[][];
+  correrTandas: (
+    tandas: Paso[][],
+    correrPaso: (
+      paso: Paso,
+      opciones: { envivo: boolean },
+    ) => {
+      promesa: Promise<{
+        ok: boolean;
+        segundos: number;
+        cacheLimpiada?: boolean;
+        cancelado?: boolean;
+      }>;
+      cancelar: () => void;
+    },
+    escribir: (texto: string) => void,
+  ) => Promise<{ ok: boolean; fallo: Paso | null; resumen: string[] }>;
   planDeLasPruebas: (entrada: {
     archivos: string[] | null;
     modulo?: string;
@@ -33,20 +51,23 @@ const previo = require("../../arquitectura/previo.cjs") as {
 };
 
 const PASOS_ESPERADOS = [
-  "tipos",
   "formato",
-  "lint",
   "codigo-muerto",
   "arquitectura",
   "arquitectura-con-la-base",
-  "pruebas-de-arquitectura",
+  "tipos",
+  "lint",
   "composicion",
+  "pruebas-de-arquitectura",
 ] as const;
+/** Los pasos pesados que corren a la vez (si hay memoria): exactamente estos dos y ningún otro. */
+const PASOS_EN_PARALELO = ["tipos", "lint"] as const;
 const SCRIPT_ESPERADO = "node arquitectura/previo.cjs";
 
 interface Paso {
   id: string;
   comando: string[];
+  paralelo?: string;
 }
 
 /** Lo que está mal en un `previo` (el script de `package.json` y sus pasos). Vacío = bien. */
@@ -63,6 +84,12 @@ function problemas(scripts: Record<string, string>, pasos: Paso[]): string[] {
   const enOrden = PASOS_ESPERADOS.filter((e) => presentes.includes(e));
   if (presentes.join() !== enOrden.join()) {
     salida.push(`los pasos están en otro orden (esperado: ${PASOS_ESPERADOS.join(" > ")})`);
+  }
+  const enParalelo = pasos.filter((p) => p.paralelo !== undefined).map((p) => p.id);
+  if (enParalelo.join() !== PASOS_EN_PARALELO.join()) {
+    salida.push(
+      `los pasos en paralelo tienen que ser exactamente ${PASOS_EN_PARALELO.join(" y ")}`,
+    );
   }
   for (const paso of pasos) {
     const [bin, sub, nombre] = paso.comando;
@@ -105,7 +132,10 @@ describe("npm run previo", () => {
 
     it.each(PASOS_ESPERADOS)("sin el paso «%s» falla", (id) => {
       const sin = previo.PASOS_FIJOS.filter((p) => p.id !== id);
-      expect(problemas(SCRIPTS, sin)).toEqual([`falta el paso «${id}»`]);
+      const enParalelo = (PASOS_EN_PARALELO as readonly string[]).includes(id)
+        ? [`los pasos en paralelo tienen que ser exactamente ${PASOS_EN_PARALELO.join(" y ")}`]
+        : [];
+      expect(problemas(SCRIPTS, sin)).toEqual([`falta el paso «${id}»`, ...enParalelo]);
     });
 
     it("con los pasos en otro orden falla", () => {
@@ -287,5 +317,122 @@ describe("la excepción de tiempo solo alcanza al último tramo", () => {
     expect(texto).toContain("20 minutos");
     expect(texto).toContain("`vitest related`");
     expect(texto).toContain("Sin repetir `previo` después de reintegrar");
+  });
+});
+
+describe("orden por costo y pasos pesados en paralelo", () => {
+  const ids = (tandas: Paso[][]) => tandas.map((t) => t.map((p) => p.id));
+  const MUCHA = 16 * 1024 ** 3;
+  const POCA = 8 * 1024 ** 3;
+
+  it("los baratos que más fallan van antes que los pesados", () => {
+    const orden = previo.PASOS_FIJOS.map((p) => p.id);
+    for (const barato of ["formato", "codigo-muerto", "arquitectura", "arquitectura-con-la-base"]) {
+      for (const pesado of PASOS_EN_PARALELO) {
+        expect(orden.indexOf(barato)).toBeLessThan(orden.indexOf(pesado));
+      }
+    }
+  });
+
+  it("con memoria suficiente, tipos y lint van juntos en una tanda y el resto de a uno", () => {
+    expect(ids(previo.tandasDeLaCorrida(previo.PASOS_FIJOS, MUCHA))).toEqual([
+      ["formato"],
+      ["codigo-muerto"],
+      ["arquitectura"],
+      ["arquitectura-con-la-base"],
+      ["tipos", "lint"],
+      ["composicion"],
+      ["pruebas-de-arquitectura"],
+    ]);
+  });
+
+  it("con poca memoria (menos de 14 GB) corren de a uno y en el mismo orden", () => {
+    expect(previo.MEMORIA_MINIMA_PARA_PARALELO).toBe(14 * 1024 ** 3);
+    const tandas = previo.tandasDeLaCorrida(previo.PASOS_FIJOS, POCA);
+    expect(tandas.every((t) => t.length === 1)).toBe(true);
+    expect(tandas.map((t) => t[0]?.id)).toEqual(PASOS_ESPERADOS);
+  });
+
+  /** Un paso falso que termina cuando se lo indica o cuando lo cancelan. */
+  function falsos() {
+    const resolvers = new Map<string, (r: { ok: boolean; segundos: number }) => void>();
+    const cancelados: string[] = [];
+    const correrPaso = (paso: Paso) => {
+      let resolver!: (r: { ok: boolean; segundos: number; cancelado?: boolean }) => void;
+      const promesa = new Promise<{ ok: boolean; segundos: number; cancelado?: boolean }>((res) => {
+        resolver = res;
+      });
+      resolvers.set(paso.id, resolver);
+      return {
+        promesa,
+        cancelar: () => {
+          cancelados.push(paso.id);
+          resolver({ ok: false, segundos: 0, cancelado: true });
+        },
+      };
+    };
+    return { correrPaso, resolvers, cancelados };
+  }
+  const paso = (id: string, paralelo?: string): Paso => ({
+    id,
+    comando: ["x"],
+    ...(paralelo === undefined ? {} : { paralelo }),
+  });
+
+  it("la primera falla de una tanda en paralelo corta a la otra y la corrida termina en falla", async () => {
+    const f = falsos();
+    const corrida = previo.correrTandas(
+      [[paso("tipos", "p"), paso("lint", "p")]],
+      f.correrPaso,
+      () => undefined,
+    );
+    f.resolvers.get("lint")?.({ ok: false, segundos: 3 });
+    const r = await corrida;
+    expect(r.ok).toBe(false);
+    expect(r.fallo?.id).toBe("lint");
+    expect(f.cancelados).toEqual(["tipos"]);
+    expect(r.resumen.some((l) => l.startsWith("CORTADO") && l.includes("tipos"))).toBe(true);
+  });
+
+  it("una falla corta: las tandas siguientes no corren", async () => {
+    const f = falsos();
+    const lanzados: string[] = [];
+    const correrPaso = (p: Paso) => {
+      lanzados.push(p.id);
+      return f.correrPaso(p);
+    };
+    const corrida = previo.correrTandas(
+      [[paso("formato")], [paso("tipos", "p"), paso("lint", "p")]],
+      correrPaso,
+      () => undefined,
+    );
+    f.resolvers.get("formato")?.({ ok: false, segundos: 1 });
+    const r = await corrida;
+    expect(r.ok).toBe(false);
+    expect(lanzados).toEqual(["formato"]);
+  });
+
+  it("si todo pasa, corre todas las tandas en orden y termina en verde", async () => {
+    const lanzados: string[] = [];
+    const correrPaso = (p: Paso) => {
+      lanzados.push(p.id);
+      return { promesa: Promise.resolve({ ok: true, segundos: 1 }), cancelar: () => undefined };
+    };
+    const r = await previo.correrTandas(
+      [[paso("a")], [paso("b", "p"), paso("c", "p")], [paso("d")]],
+      correrPaso,
+      () => undefined,
+    );
+    expect(r.ok).toBe(true);
+    expect(lanzados).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("violación inyectada: un paso pesado más en paralelo se detecta", () => {
+    const conUnoMas = previo.PASOS_FIJOS.map((p) =>
+      p.id === "composicion" ? { ...p, paralelo: "pesados" } : p,
+    );
+    expect(problemas(SCRIPTS, conUnoMas)).toEqual([
+      `los pasos en paralelo tienen que ser exactamente ${PASOS_EN_PARALELO.join(" y ")}`,
+    ]);
   });
 });
