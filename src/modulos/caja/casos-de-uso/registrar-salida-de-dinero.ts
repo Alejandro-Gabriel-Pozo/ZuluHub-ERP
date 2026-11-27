@@ -19,9 +19,8 @@ import {
 } from "../dominio/movimiento-de-dinero";
 import type { ErrorDeParDeCobro } from "../dominio/medios";
 import type { TipoDeMedio } from "../estados";
-import { registrarEgresoEnTx } from "../egreso/egreso-por-origen";
+import { origenDeSalidaPorClave, registrarEgresoEnTx } from "../egreso/egreso-por-origen";
 import type { ErrorAlEgresar } from "../egreso/contrato";
-import { createHash } from "node:crypto";
 import {
   dejarConstancia,
   exigirAlcance,
@@ -107,12 +106,6 @@ const UNICAS_DE_LA_SALIDA = [
   "movimiento_de_dinero_clave_uk",
   "movimiento_de_dinero_movimiento_uk",
 ] as const;
-
-/** El egreso de caja de una salida es UNO por pedido: su origen es el hash de la clave de idempotencia (la clave cruda cabe en 128 y el prefijo del egreso la pasaría). */
-const origenDeLaSalida = (clave: string) => ({
-  tipo: "SALIDA_DE_DINERO" as const,
-  id: createHash("sha256").update(clave).digest("hex"),
-});
 
 /**
  * Registrar que salió plata de la caja sin una compra (PR-S2; dueño 19/11 y 26/11/2026, Q-D8 A: por CUALQUIER medio activo). En UNA transacción serializable, con el
@@ -246,7 +239,7 @@ function armarPuerta(
           const egreso = await registrarEgresoEnTx(tx, contexto, {
             cajaId: entrada.cajaId,
             sucursalId: caja.sucursalId,
-            origen: origenDeLaSalida(clave.valor),
+            origen: origenDeSalidaPorClave(clave.valor),
             importe: entrada.importe,
             motivo: armada.motivo,
             medio: {

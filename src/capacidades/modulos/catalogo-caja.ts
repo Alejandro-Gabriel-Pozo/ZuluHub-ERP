@@ -41,5 +41,6 @@ export const MODULO_DE_CAJA = {
     "cobros.corregir_medio": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "declaraciones_de_total.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "salidas_de_dinero.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "devoluciones.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
   },
 } as const;

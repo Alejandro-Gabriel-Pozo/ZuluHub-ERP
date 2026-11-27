@@ -80,6 +80,15 @@ export interface RepositorioDeMovimientosDeDinero {
   ): Promise<MovimientoDeDineroGuardado[]>;
   /** Lo ya devuelto de una entrada: Σ de sus devoluciones vigentes (las que no se anularon el mismo día). */
   devueltoDe(empresa: EmpresaId, entradaId: string): Promise<Importe>;
+  /** El acto que apunta a ese egreso de caja (a lo sumo uno: `movimiento_de_dinero_movimiento_uk`), si hay. Solo lectura. */
+  delMovimiento(
+    empresa: EmpresaId,
+    movimientoId: string,
+  ): Promise<MovimientoDeDineroGuardado | null>;
+  /** Las líneas (actos) de un pedido de devolución, por orden de registro. Vacío si no existe en la empresa. Solo lectura. */
+  deLaDevolucion(empresa: EmpresaId, devolucionId: string): Promise<MovimientoDeDineroGuardado[]>;
+  /** Lo ya devuelto de una cobranza: Σ de sus devoluciones vigentes (las que no tienen su egreso anulado). */
+  devueltoDeOrigen(empresa: EmpresaId, tipo: OrigenDevoluble, id: string): Promise<Importe>;
   /** Lo que queda por devolver de un origen (una entrada de dinero o una cobranza de ticket): la función de la base, la regla única del tope. */
   devolvibleDeOrigen(empresa: EmpresaId, tipo: string, id: string): Promise<Importe>;
 }
@@ -237,6 +246,55 @@ export function crearRepositorioDeMovimientosDeDinero(
         .where("d.empresa_id", "=", empresa)
         .where("d.devuelve_a", "=", entradaId)
         // Vigente = su egreso no tiene una anulación espejo (misma regla que `movimiento_de_dinero_devolvible` en la base).
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("movimiento_caja as a")
+                .select("a.id")
+                .whereRef("a.empresa_id", "=", "d.empresa_id")
+                .whereRef("a.anula_a", "=", "d.movimiento_id")
+                .where("a.clase", "=", "ANULACION"),
+            ),
+          ),
+        )
+        .executeTakeFirstOrThrow();
+      return importeDesdeTexto(ARS, fila.total);
+    },
+
+    async delMovimiento(empresa, movimientoId) {
+      if (!esUuid(movimientoId)) return null;
+      const fila = await db
+        .selectFrom("movimiento_de_dinero as d")
+        .select(columnas)
+        .where("d.empresa_id", "=", empresa)
+        .where("d.movimiento_id", "=", movimientoId)
+        .executeTakeFirst();
+      return fila === undefined ? null : aGuardado(fila);
+    },
+
+    async deLaDevolucion(empresa, devolucionId) {
+      if (!esUuid(devolucionId)) return [];
+      const filas = await db
+        .selectFrom("movimiento_de_dinero as d")
+        .select(columnas)
+        .where("d.empresa_id", "=", empresa)
+        .where("d.devolucion_id", "=", devolucionId)
+        .orderBy("d.registrado_en")
+        .orderBy("d.id")
+        .execute();
+      return filas.map(aGuardado);
+    },
+
+    async devueltoDeOrigen(empresa, tipo, id) {
+      if (!esUuid(id)) return importeDesdeTexto(ARS, "0.00");
+      const fila = await db
+        .selectFrom("movimiento_de_dinero as d")
+        .select(sql<string>`coalesce(sum(d.importe), 0)::text`.as("total"))
+        .where("d.empresa_id", "=", empresa)
+        .where("d.devuelve_origen_tipo", "=", tipo)
+        .where("d.devuelve_origen_id", "=", id)
+        // Vigente = su egreso no tiene una anulación espejo (la misma regla que `movimiento_de_dinero_devolvible_de_origen` en la base).
         .where((eb) =>
           eb.not(
             eb.exists(

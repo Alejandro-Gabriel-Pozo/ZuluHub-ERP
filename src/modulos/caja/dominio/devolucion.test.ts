@@ -4,11 +4,13 @@ import { ARS } from "../../../primitivas/dinero/moneda";
 import {
   MAXIMO_DE_LINEAS_DE_UNA_DEVOLUCION,
   ORIGENES_DEVOLUBLES,
+  claveDeAnulacionDeLinea,
   claveDeLinea,
   decidirDevolucion,
   devolucionIdDe,
   huellaDeLaDevolucion,
   type LineaDeDevolucion,
+  validarLineasDeDevolucion,
 } from "./devolucion";
 
 const ars = (monto: string) => ({ moneda: "ARS", monto });
@@ -132,5 +134,45 @@ describe("huella, clave de línea e id del pedido", () => {
   });
   it("los orígenes devolubles son solo la cobranza de ticket", () => {
     expect([...ORIGENES_DEVOLUBLES]).toEqual(["ventas.cobranza_de_ticket"]);
+  });
+});
+
+describe("validarLineasDeDevolucion", () => {
+  it("valida solo la forma: no mira lo devolvible, así una repetición ya hecha no falla por el tope", () => {
+    const r = validarLineasDeDevolucion([linea("m1", "999999.00")]);
+    expect(r.ok && importeATexto(r.valor.total)).toBe("999999.00");
+  });
+  it("rechaza sin líneas, con demasiadas, repetidas, en cero, en otra moneda o con tres decimales", () => {
+    expect(validarLineasDeDevolucion([])).toEqual({ ok: false, error: "LINEAS_INVALIDAS" });
+    expect(validarLineasDeDevolucion([linea("m1", "1.00"), linea("m1", "2.00")])).toEqual({
+      ok: false,
+      error: "LINEA_REPETIDA",
+    });
+    for (const monto of ["0.00", "10.005", "-1.00"]) {
+      expect(validarLineasDeDevolucion([linea("m1", monto)]).ok, monto).toBe(false);
+    }
+    expect(
+      validarLineasDeDevolucion([
+        { ...linea("m1", "1.00"), importe: { moneda: "USD", monto: "1.00" } },
+      ]).ok,
+    ).toBe(false);
+  });
+  it("el mismo medio con otra cuenta no es una línea repetida", () => {
+    expect(validarLineasDeDevolucion([linea("m1", "1.00"), linea("m1", "2.00", "c1")]).ok).toBe(
+      true,
+    );
+  });
+});
+
+describe("claveDeAnulacionDeLinea", () => {
+  it("es determinística, cambia con el pedido y con el orden, tiene la forma de las claves de la base y no choca con la de devolver", () => {
+    const k = claveDeAnulacionDeLinea("clave-de-anular-0001", 1);
+    expect(k).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
+    expect(claveDeAnulacionDeLinea("clave-de-anular-0001", 1)).toBe(k);
+    expect(claveDeAnulacionDeLinea("clave-de-anular-0001", 2)).not.toBe(k);
+    expect(claveDeAnulacionDeLinea("clave-de-anular-0002", 1)).not.toBe(k);
+    expect(claveDeAnulacionDeLinea("clave-de-anular-0001", 1)).not.toBe(
+      claveDeLinea("clave-de-anular-0001", 1),
+    );
   });
 });

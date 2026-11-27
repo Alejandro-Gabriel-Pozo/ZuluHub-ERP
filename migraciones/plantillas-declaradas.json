@@ -56,6 +56,7 @@
     "depositos.desactivar": ["ADMINISTRADOR", "GERENTE"],
     "depositos.editar": ["ADMINISTRADOR", "GERENTE"],
     "depositos.reactivar": ["ADMINISTRADOR", "GERENTE"],
+    "devoluciones.registrar": ["ADMINISTRADOR", "GERENTE"],
     "devoluciones_a_proveedor.anular": ["ADMINISTRADOR", "GERENTE"],
     "devoluciones_a_proveedor.registrar": ["ADMINISTRADOR", "GERENTE"],
     "devoluciones_a_proveedor.ver": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],

@@ -113,6 +113,7 @@ const DEL_ADMINISTRADOR_DE_CAJA = [
   "medios_de_pago.reactivar",
   "movimientos_caja.ajustar",
   "salidas_de_dinero.registrar",
+  "devoluciones.registrar",
   "movimientos_caja.anular_de_otros",
 ] as const;
 
@@ -344,9 +345,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 189 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 36 de caja, cierre y ventas (una de PR-S2), 42 de clientes y compras y 16 de salón y comandas y 5 de cuenta corriente (2 de CC-1, 2 de CC-2 y 1 de CC-5)", () => {
+  it("hay 190 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 36 de caja, cierre y ventas (una de PR-S2), 42 de clientes y compras y 16 de salón y comandas y 5 de cuenta corriente (2 de CC-1, 2 de CC-2 y 1 de CC-5)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(189);
+    expect(todas).toHaveLength(190);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -519,11 +520,11 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     for (const accion of tabla.ADMINISTRADOR) expect(tabla.GERENTE).toContain(accion);
   });
 
-  it("E0-T1: caja, cierre y ventas dan lo que dice la especificación, rol por rol (36 acciones)", () => {
+  it("E0-T1: caja, cierre y ventas dan lo que dice la especificación, rol por rol (37 acciones)", () => {
     const de = (modulo: "caja" | "cierre" | "ventas") =>
       Object.keys(CATALOGO_DE_MODULOS[modulo].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[];
     const nuevas = [...de("caja"), ...de("cierre"), ...de("ventas")];
-    expect(nuevas).toHaveLength(36);
+    expect(nuevas).toHaveLength(37);
     expect([...nuevas].sort()).toEqual(
       [
         ...SOLO_DEL_GERENTE_DE_CAJA,
