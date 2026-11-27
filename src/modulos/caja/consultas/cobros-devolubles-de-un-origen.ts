@@ -5,7 +5,6 @@ import {
   importeAJson,
   importeCero,
   sumar,
-  type Importe,
   type ImporteJson,
 } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
