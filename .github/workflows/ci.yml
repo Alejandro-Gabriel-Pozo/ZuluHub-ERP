@@ -197,7 +197,25 @@ jobs:
         # Reemplaza a `npm audit --audit-level=high`: igual de estricta, pero admite excepciones con id, motivo, fuente y vencimiento (`arquitectura/auditoria-excepciones.json`).
         run: node arquitectura/auditoria-de-dependencias.cjs
       - name: Firmas de los paquetes
-        run: npm audit signatures
+        # El registro de npm a veces contesta «OK» en vez de JSON al pedir las atestaciones (23/11/2026: FETCH_ERROR en 3 de 5 corridas del día, con main verde).
+        # Se repite UNA sola vez y SOLO ese error de red (dueño, 27/11/2026, «Apruebo a y c»), con una caché de npm limpia (con la caché compartida el mismo «OK» se volvía a leer). Una firma inválida o cualquier otro error falla de inmediato, y si el segundo intento también falla, falla.
+        # Chequeo: `test/arquitectura/firmas-de-paquetes.test.ts` corre este paso contra un `npm` simulado.
+        run: |
+          for intento in 1 2; do
+            if npm audit signatures --cache "$RUNNER_TEMP/npm-firmas-$intento" > "$RUNNER_TEMP/firmas.txt" 2>&1; then
+              cat "$RUNNER_TEMP/firmas.txt"
+              exit 0
+            fi
+            cat "$RUNNER_TEMP/firmas.txt"
+            if ! grep -q "FETCH_ERROR" "$RUNNER_TEMP/firmas.txt"; then
+              exit 1
+            fi
+            echo "El registro de npm respondió mal (intento $intento de 2)."
+            if [ "$intento" -lt 2 ]; then
+              sleep 20
+            fi
+          done
+          exit 1
       - name: Secretos en el historial (gitleaks)
         run: >-
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo"
