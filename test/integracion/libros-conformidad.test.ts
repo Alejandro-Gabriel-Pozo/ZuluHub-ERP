@@ -4,7 +4,12 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { LIBROS_REGISTRADOS, type LibroRegistrado } from "../../src/primitivas/libro/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
-import { comoEmpresa, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
+import {
+  baseDeEsteArchivo,
+  comoEmpresa,
+  crearEmpresaActiva,
+  crearEntornoDePrueba,
+} from "./entorno";
 import {
   INVARIANTE_QUE_EXIME,
   evaluarLibro,
@@ -23,7 +28,11 @@ import { ddlDeLibroEfimero, libroEfimero } from "./libros-conformidad-efimeros";
  * `TRUNCATE` o la RLS (la violación inyectada de cada invariante prueba que la conformidad la detecta).
  */
 
-const base = inject("baseDePruebas");
+/**
+ * Base propia del archivo: el esquema efímero se crea y se borra con DDL (`DROP SCHEMA ... CASCADE`), que en la base compartida toma bloqueos que chocan con los de otros archivos en paralelo
+ * y cayó con `deadlock detected` en la corrida nocturna (Estabilidad, copias 8 y 12, 25 y 26/11/2026).
+ */
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 /** Un esquema por corrida: dos corridas contra la misma base (o un archivo repetido) no se pisan. */
 const ESQUEMA_EFIMERO = `libros_efimeros_${sufijoUnico()}`;
 
