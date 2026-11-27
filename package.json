@@ -40,6 +40,7 @@
     "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts",
     "plataforma:preparar-prueba": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/preparar-empresa-de-pruebas.ts",
     "desplegar-cliente": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/desplegar-cliente.ts",
+    "plataforma:reemitir-invitacion": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/reemitir-invitacion-de-cliente.ts",
     "plataforma:alta-de-cliente": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/alta-de-cliente.ts",
     "plataforma:secreto-de-invitaciones": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/secreto-de-invitaciones-de-cliente.ts",
     "consola:cargar-entorno": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/cargar-entorno-consola.ts",

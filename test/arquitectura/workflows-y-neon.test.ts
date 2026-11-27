@@ -33,6 +33,7 @@ const CON_CADENA_DEL_DUENO: readonly string[] = [
   "desplegar-cliente.yml",
   "migrar.yml",
   "preparar-empresa-de-pruebas.yml",
+  "reemitir-invitacion-de-cliente.yml",
 ];
 
 /** Los únicos workflows con la clave de la API de Neon y el identificador del proyecto: crean la rama de respaldo antes de migrar. */

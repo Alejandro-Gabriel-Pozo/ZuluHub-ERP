@@ -1,0 +1,191 @@
+name: Reemitir la invitación del gerente de un cliente
+
+# Reemite la invitación del primer gerente de un cliente con base propia cuando el mail salió con un secreto de invitaciones que la web ya no tiene: Actions → «Reemitir la invitación del gerente de un cliente» → Run workflow.
+# Solo a mano, solo desde main, solo para un cliente de la lista cerrada, con su frase y con la aprobación del dueño (Environment del cliente). Caso real (27/11/2026): el cron mandó el mail con el despliegue viejo
+# (secreto anterior): el enlace no coincide con el hash guardado y el trabajo de envío quedó HECHO (inmutable).
+#
+#  - En UNA corrida y en este orden: (1) revisa que haya una empresa en alta pendiente (nadie aceptó), UNA sola invitación pendiente (la del gerente: rotar el secreto dejaría inválida cualquier otra) y UN administrador;
+#    (2) genera un secreto de invitaciones NUEVO en el runner (enmascarado) y lo escribe en el proyecto de Vercel del cliente; (3) despliega la web con la CLI de Vercel (espera a que quede lista); (4) recién ahí reemite la
+#    invitación con ese secreto (otro id y otro token, 24 h; la anterior se revoca). El workflow NUNCA pasa `emailNuevo` (la invitación va siempre al mismo email). Cada aprobación también despliega el HEAD de `main` a producción del cliente. Así el cron manda el mail con un despliegue que ya tiene el secreto nuevo.
+#  - Repetir es seguro: la clave de idempotencia sale de la invitación que se reemplaza. Una corrida que se repite sin que cambie nada devuelve la misma invitación; después de reemplazada, otra corrida reemite de nuevo a propósito.
+#  - Antes de emitir comprueba con la API de Vercel que el último despliegue de producción es el recién hecho y está listo (READY). NO verifica `/api/salud`: la dirección técnica está protegida por Vercel (guía H.5) y se mira por la dirección pública.
+#  - Mismas cerraduras que el alta: grupo de concurrencia `migrar-<ambiente>`, candado de host de la base, login temporal del rol de plataforma (clave al azar, vence a los 30 minutos, el cierre corre SIEMPRE y falla si no
+#    quedó cerrado; firma con la clave de contexto que ya tiene la base). Sin datos personales en el flujo: el email del administrador se lee de la base y se tapa.
+#  - Secretos del Environment del cliente (nunca en el repositorio): PEDERNAL_DB_DUENO_DIRECTA y PEDERNAL_VERCEL_TOKEN. Variable (no secreta): PEDERNAL_HOST_DE_LA_BASE. Ningún paso imprime un secreto.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Qué cliente"
+        type: choice
+        required: true
+        options:
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>`, la misma de `migrar.yml`.
+          - cliente-hdn
+      confirmacion:
+        description: "Escribir REEMITIR CLIENTE-HDN"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # El MISMO grupo que `migrar.yml`, el alta y el despliegue de ese cliente. Lo que ya corre nunca se cancela: el nuevo espera.
+  group: migrar-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se reemite desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            # Un cliente con base propia (lista cerrada), con su frase: `cliente-<codigo>) esperado="REEMITIR CLIENTE-<CODIGO>" ;;`
+            cliente-hdn) esperado="REEMITIR CLIENTE-HDN" ;;
+            *) echo "::error::Ambiente no permitido."; exit 1 ;;
+          esac
+          if [ "$CONFIRMACION" != "$esperado" ]; then
+            echo "::error::Para reemitir en $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+            exit 1
+          fi
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  reemitir:
+    name: Reemitir en ${{ needs.validar.outputs.ambiente }}
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: ${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_HOST_DE_LA_BASE:-}" ] || faltan="$faltan PEDERNAL_HOST_DE_LA_BASE"
+          [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos o variables en el Environment del cliente (Settings → Environments → Secrets y Variables):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Revisar el estado del alta (solo lectura; no cambia nada)
+        run: npm run plataforma:reemitir-invitacion -- "$AMBIENTE" --validar
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: La base tiene que estar al día
+        # Este flujo no migra: eso es de `migrar.yml`. Fail closed (igual que `migrar.yml`): solo pasa con el texto «la base está al día». `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if ! grep -q "la base está al día" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::No se pudo confirmar que la base esté al día (hay migraciones pendientes o la salida de «ver» no tiene un resultado conocido). Corré antes «Migrar» para este cliente y volvé a correr este flujo."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Secreto de invitaciones nuevo (se genera en el runner y se escribe en Vercel)
+        run: npm run plataforma:secreto-de-invitaciones -- "$AMBIENTE" --reemitir
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: Confirmar el proyecto del cliente en Vercel (sale de la lista cerrada)
+        run: npm run desplegar-cliente -- datos "$AMBIENTE"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - name: Desplegar a producción con el secreto nuevo (CLI de Vercel, versión fija; espera a que quede lista)
+        id: desplegar
+        shell: bash
+        run: |
+          unset PEDERNAL_SECRETO_INVITACIONES
+          # El paso del secreto lo exporta por GITHUB_ENV: la CLI y sus dependencias no tienen por qué verlo.
+          set -eu
+          # La CLI espera a que el despliegue esté listo y imprime su dirección por la salida estándar y su registro por la de error. Sin la dirección no hay despliegue: se corta ANTES de reemitir.
+          direccion="$(npx --yes vercel@65.15.0 deploy --prod --yes 2>"$RUNNER_TEMP/vercel.log")" || {
+            echo "::error::El despliegue falló. Últimas líneas del registro de la CLI:"
+            tail -n 20 "$RUNNER_TEMP/vercel.log"
+            exit 1
+          }
+          if [ -z "$direccion" ]; then
+            echo "::error::La CLI no devolvió la dirección del despliegue: no se reemite."
+            exit 1
+          fi
+          echo "direccion=$direccion" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          # La CLI se baja con `npx` y no corre los scripts de instalación de sus dependencias. NO VERIFICADO que la CLI funcione así: si falla, el registro lo dice (H.5).
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
+
+      - name: Comprobar que el último despliegue de producción es el recién hecho y está listo
+        # Es el modo de falla del incidente (mail con un despliegue sin el secreto nuevo). `/api/salud` está protegida: se mira la API de Vercel. Si no se confirma, no se emite.
+        run: npm run desplegar-cliente -- comprobar "$AMBIENTE" "$DIRECCION"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          DIRECCION: ${{ steps.desplegar.outputs.direccion }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - name: Abrir el login temporal del rol de plataforma (clave al azar de esta corrida)
+        id: abrir
+        run: npm run plataforma:login-temporal -- abrir sin-clave-propia
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Reemitir la invitación (sin mostrar secretos ni datos personales)
+        run: npm run plataforma:reemitir-invitacion -- "$AMBIENTE"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)
+        # Corre aunque un paso anterior haya fallado o la corrida se cancele. Solo se saltea si «Abrir» nunca llegó a correr.
+        if: always() && steps.abrir.conclusion != 'skipped'
+        run: npm run plataforma:login-temporal -- cerrar
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}

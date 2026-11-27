@@ -411,7 +411,7 @@ describe("armarCasosDeLaLista: cada nombre corre su caso", () => {
         "desactivarDominio",
         "retirarDominio",
       ]),
-    casosDeUsoDeAltas: () => espia("altas", ["altaDeEmpresa"]),
+    casosDeUsoDeAltas: () => espia("altas", ["altaDeEmpresa", "reenviarInvitacionDelAlta"]),
   } as unknown as Parameters<typeof armarCasosDeLaLista>[0];
 
   const ESPERADO: Record<NombreDeCaso, string> = {
@@ -430,6 +430,7 @@ describe("armarCasosDeLaLista: cada nombre corre su caso", () => {
     altaDeEmpresa: "altas.altaDeEmpresa",
     activarModuloDeEmpresa: "marcasYPlanes.activarModuloDeEmpresa",
     desactivarModuloDeEmpresa: "marcasYPlanes.desactivarModuloDeEmpresa",
+    reenviarInvitacionDelAlta: "altas.reenviarInvitacionDelAlta",
   };
 
   it("tiene exactamente los casos de la lista cerrada", () => {

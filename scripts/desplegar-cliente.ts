@@ -1,8 +1,12 @@
 import { appendFileSync } from "node:fs";
-import { datosDelDespliegue, verificarDespliegue } from "./ejecutar-despliegue-de-cliente";
+import {
+  comprobarUltimoDespliegue,
+  datosDelDespliegue,
+  verificarDespliegue,
+} from "./ejecutar-despliegue-de-cliente";
 
 /**
- * `npm run desplegar-cliente -- datos <ambiente>` y `npm run desplegar-cliente -- verificar <dirección>`: lo corre `desplegar-cliente.yml`; ver `ejecutar-despliegue-de-cliente.ts`.
+ * `npm run desplegar-cliente -- datos <ambiente>`, `-- verificar <dirección>` y `-- comprobar <ambiente> <dirección>`: lo corre `desplegar-cliente.yml`; ver `ejecutar-despliegue-de-cliente.ts`.
  */
 const PLAZO_EN_MS = 15_000;
 const TOPE_DEL_CUERPO_EN_BYTES = 65_536;
@@ -46,8 +50,19 @@ if (process.argv[2] === "datos") {
     info,
     error,
   });
+} else if (process.argv[2] === "comprobar") {
+  process.exitCode = await comprobarUltimoDespliegue({
+    ambiente: process.argv[3],
+    direccion: process.argv[4],
+    entorno: process.env,
+    pedir,
+    info,
+    error,
+  });
 } else {
-  error("Uso: npm run desplegar-cliente -- datos <ambiente> | verificar <dirección>");
+  error(
+    "Uso: npm run desplegar-cliente -- datos <ambiente> | verificar <dirección> | comprobar <ambiente> <dirección>",
+  );
   process.exitCode = 2;
 }
 setTimeout(() => process.exit(process.exitCode ?? 1), 10_000).unref();
