@@ -367,13 +367,9 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
       ).toBe(1);
     });
 
-    it("LIBRO y CUADRICULA exigen su perilla (hoy sin declarar en esta rama: se cierran); volver a LISTA no la pide", async () => {
+    it("CUADRICULA exige su perilla (hoy sin declarar: se cierra); volver a LISTA no la pide (LIBRO: ver más abajo, su perilla ya está declarada)", async () => {
       const e = await c.escenario();
-      expect(await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "LIBRO" }))).toEqual({
-        ok: false,
-        error: "MODELO_DE_CARTA_INVALIDO",
-      });
-      // CUADRICULA también cierra mientras su perilla no esté declarada (todo nace cerrado).
+      // CUADRICULA cierra mientras su perilla no esté declarada (todo nace cerrado).
       expect(
         await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "CUADRICULA" })),
       ).toEqual({ ok: false, error: "MODELO_DE_CARTA_INVALIDO" });
