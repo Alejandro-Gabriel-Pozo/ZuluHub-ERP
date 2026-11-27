@@ -26,6 +26,9 @@ function problemas(ci: string, workflows: readonly string[], claude: string): st
   if (!claude.includes("la nocturna de `main` (`ci.yml`, `schedule` 06:17 UTC")) {
     salida.push("CLAUDE.md no nombra la nocturna de `main` en «Parar la línea»");
   }
+  if (!claude.includes("entre las 14:35 y las\n  18:09 UTC (media tarde)")) {
+    salida.push("CLAUDE.md no dice que el schedule de GitHub sale a media tarde y no a las 06:17");
+  }
   return salida;
 }
 
@@ -49,6 +52,16 @@ describe("parar la línea mira la nocturna de main", () => {
   it("violación inyectada: reaparece la nocturna de integración", () => {
     expect(problemas(CI, [...WORKFLOWS, "nocturna-de-integracion.yml"], CLAUDE)).toEqual([
       "hay un workflow de nocturna de integración: la rama de integración se retiró",
+    ]);
+  });
+
+  it("violación inyectada: CLAUDE.md deja de decir que el schedule sale a media tarde (demora de GitHub)", () => {
+    const sinAviso = CLAUDE.replace(
+      "entre las 14:35 y las\n  18:09 UTC (media tarde)",
+      "a las 06:17",
+    );
+    expect(problemas(CI, WORKFLOWS, sinAviso)).toEqual([
+      "CLAUDE.md no dice que el schedule de GitHub sale a media tarde y no a las 06:17",
     ]);
   });
 

@@ -33,7 +33,8 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   `liviano`) y `relajaciones-de-pruebas.test.ts` (el registro dice lo que hace el código y `codeql.yml` corre en todos los PR).
 - **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026; reescrita el 26/11/2026 al retirar la integración).** Si la nocturna de `main` (`ci.yml`, `schedule` 06:17 UTC: mutación
   completa, incluido el guardián, y 12 copias de Estabilidad) está roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana
-  (`gh run list --workflow ci.yml --event schedule --branch main --limit 1`). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
+  (`gh run list --workflow ci.yml --event schedule --branch main --limit 1`). GitHub dispara ese `schedule` con 8 a 12 horas de demora: las corridas del 22 al 26/11/2026 salieron entre las 14:35 y las
+  18:09 UTC (media tarde), no a las 06:17; la corrida que cuenta cada mañana es la de la tarde anterior, y por eso se mira la más reciente que haya terminado. Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
   merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo) y `test/arquitectura/parar-la-linea.test.ts` (que `ci.yml` tenga el `schedule` diario y que no haya una nocturna de integración que
   se dispare sola sobre una rama que ya no existe); que el orquestador la mire es proceso, no un test.
 - **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
