@@ -15,7 +15,7 @@ import {
  *  2. `verificarDespliegue`: contra la dirección técnica que imprimió la CLI (solo `https://<algo>.vercel.app`), pide `/api/salud` con reintentos (un despliegue recién hecho tarda en responder).
  *     Resultado: LISTO (200 con `{"ok":true}`), PROTEGIDO (401 o 403: Vercel protege la dirección técnica y no se pudo mirar; NO es un OK) o FALLA.
  *
- * El token viaja solo en un encabezado y nunca se imprime. Salida: 0 hecho, 1 falla, 2 datos incorrectos, 3 protegido (NO VERIFICADO).
+ * El token y el secreto de bypass viajan solo en un encabezado y nunca se imprime. Salida: 0 hecho, 1 falla, 2 datos incorrectos, 3 protegido (NO VERIFICADO).
  */
 
 export const PEDIDOS_DE_SALUD = 12;
@@ -92,6 +92,8 @@ export async function datosDelDespliegue(entrada: EntradaDeDatosDelDespliegue): 
 export type EntradaDeVerificacion = Readonly<{
   /** Lo que imprimió la CLI de Vercel como dirección del despliegue. */
   url: string | undefined;
+  /** Secreto de «Protection Bypass for Automation» del proyecto (opcional): con él la dirección técnica protegida se puede mirar sin aflojar la protección. */
+  bypass?: string | undefined;
   pedir: Pedido;
   esperar: (milisegundos: number) => Promise<void>;
   info: (linea: string) => void;
@@ -106,10 +108,20 @@ export async function verificarDespliegue(entrada: EntradaDeVerificacion): Promi
     );
     return 2;
   }
+  const bypass = entrada.bypass?.trim() ?? "";
+  if (bypass !== "" && !/^[\x21-\x7e]+$/.test(bypass)) {
+    entrada.error(
+      "ERROR: el secreto de bypass tiene espacios o letras raras: copialo de nuevo. No se verificó nada.",
+    );
+    return 2;
+  }
   let ultimo: number | null = null;
   for (let intento = 1; intento <= PEDIDOS_DE_SALUD; intento += 1) {
     try {
-      const respuesta = await entrada.pedir(`${url}/api/salud`);
+      const respuesta = await entrada.pedir(
+        `${url}/api/salud`,
+        bypass === "" ? undefined : { "x-vercel-protection-bypass": bypass },
+      );
       ultimo = respuesta.estado;
       if (respuesta.estado === 200) {
         let ok = false;
@@ -125,7 +137,7 @@ export async function verificarDespliegue(entrada: EntradaDeVerificacion): Promi
       }
       if (respuesta.estado === 401 || respuesta.estado === 403) {
         entrada.error(
-          "NO VERIFICADO: Vercel protege la dirección técnica del despliegue (401/403) y no se pudo mirar /api/salud. Esto NO es un OK: abrí la dirección pública cuando el dominio ya apunte, o desactivá la protección del proyecto.",
+          "NO VERIFICADO: Vercel protege la dirección técnica del despliegue (401/403) y no se pudo mirar /api/salud. Esto NO es un OK: cargá el secreto PEDERNAL_VERCEL_BYPASS (Protection Bypass for Automation del proyecto) en el Environment, o mirá la dirección pública cuando el dominio ya apunte. La protección no se afloja.",
         );
         return 3;
       }

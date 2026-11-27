@@ -180,12 +180,9 @@ function problemasDelAlta(texto: string): string[] {
   exigir(
     "solo-los-secretos-del-cliente",
     secretos.every((s) =>
-      [
-        "PEDERNAL_DB_DUENO_DIRECTA",
-        "PEDERNAL_CLAVE_CONTEXTO",
-        "PEDERNAL_VERCEL_TOKEN",
-        "PEDERNAL_ALTA_DE_CLIENTE",
-      ].includes(s),
+      ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN", "PEDERNAL_ALTA_DE_CLIENTE"].includes(
+        s,
+      ),
     ),
   );
   exigir("comparte-el-grupo-de-migrar", /group: migrar-\$\{\{ inputs\.ambiente \}\}/.test(limpio));
@@ -239,7 +236,9 @@ function problemasDelDespliegue(texto: string): string[] {
   const secretos = [...limpio.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1] as string);
   exigir(
     "solo-los-secretos-del-cliente",
-    secretos.every((s) => ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN"].includes(s)),
+    secretos.every((s) =>
+      ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN", "PEDERNAL_VERCEL_BYPASS"].includes(s),
+    ),
   );
   exigir("grupo-propio-por-cliente", /group: desplegar-\$\{\{ inputs\.ambiente \}\}/.test(limpio));
   return problemas;
@@ -330,8 +329,8 @@ const VIOLACIONES_ALTA: Array<[string, (t: string) => string]> = [
     "solo-los-secretos-del-cliente",
     (t) =>
       t.replace(
+        "secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN",
         "secrets.PEDERNAL_CLAVE_CONTEXTO }}\n          PEDERNAL_VERCEL_TOKEN",
-        "secrets.NEON_API_KEY }}\n          PEDERNAL_VERCEL_TOKEN",
       ),
   ],
   [

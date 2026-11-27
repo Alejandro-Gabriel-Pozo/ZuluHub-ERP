@@ -16,13 +16,12 @@ name: Alta de un cliente (administrador de plataforma, empresa, marca, plan y do
 #    una entrada) y lo pasa al alta, SOLO si la empresa no existe todavía. Si ya existe, no toca nada. Si el proyecto ya estaba desplegado, hay que volver a
 #    desplegarlo después (`desplegar-cliente.yml`) para que tome el valor.
 #  - LOGIN TEMPORAL del rol `pedernal_plataforma`: se abre con una clave al azar que vive solo en el runner (enmascarada) y vence solo a los 30 minutos (`VALID UNTIL`).
-#    En este flujo NO se instala ninguna clave de contexto nueva: se firma con la `PEDERNAL_CLAVE_CONTEXTO` del Environment (la que ya instaló `migrar.yml`). El paso
+#    En este flujo NO se instala ninguna clave de contexto nueva: se firma con la que ya tiene la base (la instaló `cargar-entorno`), que el paso «Abrir» LEE con la cadena del dueño, tapa y entrega al alta. No hay ninguna copia en GitHub. El paso
 #    «Cerrar» corre SIEMPRE (`if: always()`), deja el rol `NOLOGIN` y sin clave, VERIFICA el estado final y falla fuerte si no quedó cerrado.
 #  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`).
 #  - Concurrencia: comparte el grupo `migrar-<ambiente>` con `migrar.yml` (misma base).
 #  - El Environment del cliente exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, H.2). Secretos del Environment:
 #      PEDERNAL_DB_DUENO_DIRECTA     cadena DIRECTA del dueño de la base del cliente (la de `migrar.yml`).
-#      PEDERNAL_CLAVE_CONTEXTO       la clave de contexto del cliente (la que usa su web; `migrar.yml` la instala en la base).
 #      PEDERNAL_VERCEL_TOKEN         token de Vercel con alcance al proyecto del cliente (el mismo del despliegue).
 #      PEDERNAL_ALTA_DE_CLIENTE      los datos del alta (JSON en una línea).
 #    VARIABLE (no secreta) del Environment: PEDERNAL_HOSTS_PROTEGIDOS, los hosts de los proyectos de la plataforma, separados por comas y sin `https://`.
@@ -100,7 +99,6 @@ jobs:
           set -eu
           faltan=""
           [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
-          [ -n "${PEDERNAL_CLAVE_CONTEXTO:-}" ] || faltan="$faltan PEDERNAL_CLAVE_CONTEXTO"
           [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
           [ -n "${PEDERNAL_ALTA_DE_CLIENTE:-}" ] || faltan="$faltan PEDERNAL_ALTA_DE_CLIENTE"
           [ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan="$faltan PEDERNAL_HOSTS_PROTEGIDOS"
@@ -110,7 +108,6 @@ jobs:
           fi
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
-          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}
           PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
           PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
@@ -160,14 +157,12 @@ jobs:
         run: npm run plataforma:login-temporal -- abrir sin-clave-propia
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
-          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}
 
       - name: Dar el alta (sin mostrar secretos ni datos personales)
         run: npm run plataforma:alta-de-cliente -- "$AMBIENTE"
         env:
           AMBIENTE: ${{ needs.validar.outputs.ambiente }}
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
-          PEDERNAL_CLAVE_CONTEXTO: ${{ secrets.PEDERNAL_CLAVE_CONTEXTO }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
           PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
 

@@ -2,6 +2,7 @@ import { randomInt, randomBytes } from "node:crypto";
 import {
   PEDERNAL_CLAVE_CONTEXTO,
   instalarClaveDeContexto,
+  leerClaveDeContextoVigente,
   leerClaveDeContexto,
 } from "../src/adaptadores/postgres/contexto-firmado";
 import {
@@ -25,8 +26,8 @@ import { leerCadenaDeDueno } from "./ejecutar-instalar-clave";
  *    `PEDERNAL_CLAVE_CONTEXTO` por el archivo `GITHUB_ENV`, cada valor enmascarado antes. Fuera de GitHub Actions
  *    no hay `GITHUB_ENV`: no hace nada (cierra).
  *  - `abrir sin-clave-propia` (alta de un CLIENTE con base propia, PRIMER-DESPLIEGUE.md H.4): igual, pero NO instala ninguna clave de contexto en la base (la del cliente ya la instaló `migrar.yml`
- *    y es la que firma, la del Environment: `PEDERNAL_CLAVE_CONTEXTO`) y solo entrega `PEDERNAL_DB_PLATAFORMA` a los pasos siguientes. Previene: dejar en la base de un cliente una clave de contexto
- *    que nadie conoce (la de «Preparar la empresa de pruebas» es solo para preview). Sin una clave válida en el entorno falla antes de abrir nada.
+ *    y es la que firma: la LEE de la base con la cadena del dueño) y entrega a los pasos siguientes `PEDERNAL_DB_PLATAFORMA` y esa clave, tapadas; en GitHub no hay ninguna copia. Previene: dejar en la base de un cliente una clave de contexto
+ *    que nadie conoce (la de «Preparar la empresa de pruebas» es solo para preview). Sin una clave vigente y legible en la base falla antes de abrir nada.
  *  - `cerrar`: deja el rol `NOLOGIN` y sin clave y verifica el estado final; falla fuerte si no quedó cerrado.
  *
  * La cadena del dueño (`PEDERNAL_DB_MIGRACIONES`, directa) es lo único que se necesita. Nada de lo secreto se imprime.
@@ -54,6 +55,8 @@ export type EntradaDeLoginTemporal = Readonly<{
   abrir?: typeof abrirLoginDePlataforma;
   cerrar?: typeof cerrarLoginDePlataforma;
   instalarClave?: typeof instalarClaveDeContexto;
+  /** Solo `sin-clave-propia`: la clave de contexto vigente de la base (por defecto, la real). */
+  leerClaveVigente?: typeof leerClaveDeContextoVigente;
   bytesAlAzar?: (cuantos: number) => Buffer;
   kidAlAzar?: () => number;
 }>;
@@ -110,17 +113,25 @@ export async function ejecutarLoginTemporal(entrada: EntradaDeLoginTemporal): Pr
       return 1;
     }
     if (entrada.modo === MODO_SIN_CLAVE_PROPIA) {
-      // La clave que firma es la del cliente (ya instalada en su base): tiene que venir del Environment y servir; nada se instala.
-      const delCliente = entorno[PEDERNAL_CLAVE_CONTEXTO]?.trim() ?? "";
-      tapados.push(delCliente, delCliente.split(":")[1]);
+      // La clave que firma es la del cliente, ya instalada en su base (`cargar-entorno`): la lee el DUEÑO de la base, se tapa y se entrega al resto de la corrida. Nada se instala ni se copia a GitHub.
+      let delCliente: string | null = null;
       try {
-        leerClaveDeContexto(delCliente);
+        delCliente = await (entrada.leerClaveVigente ?? leerClaveDeContextoVigente)(cadena);
+        if (delCliente !== null) {
+          tapados.push(delCliente, delCliente.split(":")[1]);
+          leerClaveDeContexto(delCliente);
+        }
       } catch {
+        delCliente = null;
+      }
+      if (delCliente === null) {
         error(
-          `ERROR: falta ${PEDERNAL_CLAVE_CONTEXTO} del cliente o no tiene la forma <kid>:<64 hexadecimales>. No se abrió nada.`,
+          `ERROR: la base no tiene una clave de contexto vigente que se pueda leer (¿corrió «Cargar entorno» de este cliente?). No se abrió nada.`,
         );
         return 1;
       }
+      entrada.comando(`::add-mask::${delCliente}`);
+      entrada.comando(`::add-mask::${delCliente.split(":")[1] ?? ""}`);
       const loginDelCliente = await (entrada.abrir ?? abrirLoginDePlataforma)(cadena);
       for (const secreto of [loginDelCliente.clave, loginDelCliente.cadena]) {
         tapados.push(secreto);
@@ -128,10 +139,10 @@ export async function ejecutarLoginTemporal(entrada: EntradaDeLoginTemporal): Pr
       }
       await entrada.agregarAlEntorno(
         archivo,
-        `${PEDERNAL_DB_PLATAFORMA}=${loginDelCliente.cadena}\n`,
+        `${PEDERNAL_DB_PLATAFORMA}=${loginDelCliente.cadena}\n${PEDERNAL_CLAVE_CONTEXTO}=${delCliente}\n`,
       );
       info(
-        "ABIERTO: el rol de plataforma tiene login temporal con una clave de esta corrida. No se instaló ninguna clave de contexto: firma la del cliente. El cierre es obligatorio.",
+        "ABIERTO: el rol de plataforma tiene login temporal con una clave de esta corrida. No se instaló ninguna clave de contexto: firma la que ya tiene la base del cliente. El cierre es obligatorio.",
       );
       return 0;
     }
