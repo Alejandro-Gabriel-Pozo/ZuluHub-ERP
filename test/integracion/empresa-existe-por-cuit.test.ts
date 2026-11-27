@@ -1,5 +1,6 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { leerClaveDeContextoVigente } from "../../src/adaptadores/postgres/contexto-firmado";
 import { empresaExistePorCuit } from "../../src/adaptadores/postgres/empresa-existe-por-cuit";
 import { crearMarcaLista, crearTenantConPlan } from "./altas-apoyo";
 import { crearBaseAparte, cuitUnico } from "./entorno";
@@ -57,5 +58,15 @@ describe.skipIf(base === null)("empresa existe por CUIT", () => {
     await expect(
       empresaExistePorCuit("postgres://nadie:nada@127.0.0.1:1/ninguna", cuitUnico()),
     ).rejects.toThrow();
+  });
+
+  it("la clave de contexto vigente se lee con la cadena del dueño (la de mayor kid) y una revocada no cuenta", async () => {
+    await dueno.query("delete from contexto_clave");
+    expect(await leerClaveDeContextoVigente(propia.base.dueno)).toBeNull();
+    await dueno.query(
+      "insert into contexto_clave (kid, secreto, vigente) values (7, decode($1, 'hex'), true), (9, decode($2, 'hex'), true), (11, decode($3, 'hex'), false)",
+      ["aa".repeat(32), "bb".repeat(32), "cc".repeat(32)],
+    );
+    expect(await leerClaveDeContextoVigente(propia.base.dueno)).toBe(`9:${"bb".repeat(32)}`);
   });
 });
