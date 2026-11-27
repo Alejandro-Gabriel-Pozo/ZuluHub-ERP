@@ -82,6 +82,8 @@
   --objetivo-minimo-operacion: 3rem;
   --objetivo-minimo-administracion: 2.75rem;
   --objetivo-minimo: var(--objetivo-minimo-operacion);
+  /* El alto de la barra inferior del menú (celular; medido, ella no lo fija): las barras fijas de una pantalla (venta, cobro) se apoyan encima de ella en vez de taparla. */
+  --alto-de-la-barra-inferior: 4rem;
 
   /* Carta pública (C-2): «Agotado» es un estado y tiene que llegar a 7:1 sobre los fondos de la carta
      (nunca toma la marca). Lo verifica `plantillas/vidriera/contraste.test.ts`. */
