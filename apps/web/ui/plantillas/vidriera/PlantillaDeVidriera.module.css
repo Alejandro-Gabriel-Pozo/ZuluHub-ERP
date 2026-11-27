@@ -78,6 +78,15 @@
   min-height: 11rem;
 }
 
+/* Una carta del modelo Libro que cae a Lista suma «Ver como libro» al hidratar: su lugar ya está reservado (sin salto de diseño). */
+.herramientas[data-libro="si"] {
+  min-height: calc(4.5rem + var(--objetivo-minimo) + var(--espacio-3));
+}
+
+.herramientas[data-libro="si"][data-busqueda="si"] {
+  min-height: calc(11rem + var(--objetivo-minimo) + var(--espacio-3));
+}
+
 .vacio {
   display: flex;
   flex-direction: column;
