@@ -4,11 +4,13 @@ import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
  * Los textos de la pantalla «Roles» de Cuenta (prefijo `roles.`; los nombres de cada acción están aparte, en `catalogo-acciones-de-roles.ts`). Fuentes:
  *  - DEC-IDE-002: lo que el dueño aprobó el 26/11/2026 (Excel de roles propios): el título «Roles» (menú Cuenta, solo gerente), los nombres de módulo de la tabla de acciones, «Qué puede hacer», «Solo el gerente» y «No incluida en el plan».
  *  - DEC-IDE-003: los ocho textos de etiqueta que aceptó el orquestador por delegación (fila 173, 26/11/2026; inventario de textos de la pantalla).
+ *  - DEC-IDE-005: los ocho textos del bloque «Historial» de la ficha de un rol (misma delegación, 26/11/2026).
  * Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Nombre» (`caja.campo.nombre`), «Guardar» (`caja.accion.guardar`), «Cancelar»
  * (`caja.accion.cancelar`), «Reactivar» (`caja.accion.reactivar`) y los roles base (`rol.*.nombre`).
  */
 const APROBADO: FuenteDeTexto = { decision: "DEC-IDE-002" };
 const ACEPTADO: FuenteDeTexto = { decision: "DEC-IDE-003" };
+const ACEPTADO_PARA_EL_HISTORIAL: FuenteDeTexto = { decision: "DEC-IDE-005" };
 const MODELO = "apps/web/ui/plantillas/roles/modelo-de-roles.ts";
 const usoDe = (nombre: string): readonly [UsoDeTexto] => [
   { como: "FUNCION", archivo: MODELO, nombre },
@@ -157,5 +159,45 @@ export const TEXTOS_DE_ROLES = {
     porDefecto: "Vidriera (cartas)",
     usos: usoDe("armarElFormularioDeRol"),
     fuente: APROBADO,
+  },
+  "roles.historial.titulo": {
+    porDefecto: "Historial",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.creado": {
+    porDefecto: "Rol creado",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.editado": {
+    porDefecto: "Rol editado",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.archivado": {
+    porDefecto: "Rol archivado",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.reactivado": {
+    porDefecto: "Rol reactivado",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.agregadas": {
+    porDefecto: "Acciones agregadas",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.quitadas": {
+    porDefecto: "Acciones quitadas",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
+  },
+  "roles.historial.nombre_anterior": {
+    porDefecto: "Nombre anterior",
+    usos: usoDe("armarElHistorialDelRol"),
+    fuente: ACEPTADO_PARA_EL_HISTORIAL,
   },
 } as const;

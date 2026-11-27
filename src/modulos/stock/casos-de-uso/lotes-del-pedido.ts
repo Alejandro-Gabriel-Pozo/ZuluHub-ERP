@@ -103,11 +103,19 @@ export function lotesParaLaHuella(lotes: readonly LoteLeido[]): string {
     l.fechaDeElaboracion,
     cantidadConSignoATexto(cantidadConSignoDesdeCantidad(l.cantidad)),
   ]);
-  const clave = (fila: readonly (string | null)[]): string =>
-    JSON.stringify(fila.map((campo) => campo ?? ""));
-  return JSON.stringify(
-    filas.sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0)),
-  );
+  return JSON.stringify(filas.sort(compararFilasDeLotes));
+}
+
+/** La clave de orden de una fila de lote: sus campos como texto, con el campo ausente (`null`) como vacío. */
+const claveDeFila = (fila: readonly (string | null)[]): string =>
+  JSON.stringify(fila.map((campo) => campo ?? ""));
+
+/** El orden de las filas de lotes en la huella: menor clave primero (−1), mayor después (1), iguales (0). Aparte para probarlo directo: el `sort` solo mira el signo negativo, así que desde afuera no se ve el resto. */
+export function compararFilasDeLotes(
+  a: readonly (string | null)[],
+  b: readonly (string | null)[],
+): number {
+  return claveDeFila(a) < claveDeFila(b) ? -1 : claveDeFila(a) > claveDeFila(b) ? 1 : 0;
 }
 
 /** Un lote de una entrada manual en la unidad de stock del artículo: lo que `asignarLotesDelLibro` busca o crea (cantidad en texto decimal fijo). */

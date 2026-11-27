@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * `pruebas` corre en TRES fragmentos de la suite (`PEDERNAL_FRAGMENTO=i/3`, que `vitest.config.ts` pasa a la opción `shard` de Vitest; ver `arquitectura/fragmento-de-pruebas.cjs`, `ci.yml` y
+ * `pruebas` corre en CUATRO fragmentos de la suite (`PEDERNAL_FRAGMENTO=i/4`, que `vitest.config.ts` pasa a la opción `shard` de Vitest; ver `arquitectura/fragmento-de-pruebas.cjs`, `ci.yml` y
  * `gate-rapido.yml`). Lo que NO puede pasar: que una prueba quede sin correr (un fragmento que no existe, un reparto que se pisa o deja huecos), que dos fragmentos corran la misma, o que un valor
  * mal escrito se ignore y el job corra la suite entera (o nada). Acá se comprueba con Vitest DE VERDAD sobre un proyecto de juguete cuya configuración usa EL MISMO módulo que la real (el reparto es el
  * de Vitest: por archivo, ordenados por el hash de su ruta y cortados en tramos parejos): la unión de los fragmentos es exactamente el conjunto de archivos, sin repetidos; un fragmento fuera de rango o
@@ -190,9 +190,9 @@ describe("lo que declaran la configuración real, los workflows y package.json",
   }, 120_000);
 
   it.each([".github/workflows/ci.yml", ".github/workflows/gate-rapido.yml"])(
-    "%s: la matriz es 1, 2, 3 (índices consecutivos desde 1, ninguno repetido)",
+    "%s: la matriz es 1, 2, 3, 4 (índices consecutivos desde 1, ninguno repetido)",
     (ruta) => {
-      expect(matriz(leer(ruta))).toEqual([1, 2, 3]);
+      expect(matriz(leer(ruta))).toEqual([1, 2, 3, 4]);
     },
   );
 

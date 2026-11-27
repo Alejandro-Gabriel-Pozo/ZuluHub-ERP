@@ -1,6 +1,6 @@
 /**
  * El fragmento de la suite que corre este proceso de pruebas, desde `PEDERNAL_FRAGMENTO` (`indice/total`, p. ej. `2/3`): lo lee `vitest.config.ts` y lo pasa a la opción `shard` de Vitest,
- * que reparte los archivos de prueba por el hash de su ruta en tramos parejos. Lo fija el CI en el job `pruebas`, que corre la suite en tres fragmentos en paralelo (cada uno con su propio Postgres).
+ * que reparte los archivos de prueba por el hash de su ruta en tramos parejos. Lo fija el CI en el job `pruebas`, que corre la suite en cuatro fragmentos en paralelo (cada uno con su propio Postgres).
  *
  * Previene: el timeout de un job monolítico al borde del límite (run 43989591478 del 17/11/2026: 20 min 16 s y 20 min 5 s cancelados) y que un fragmento mal escrito se ignore y corra la
  * suite entera (o nada): lo que no es exactamente `indice/total` con 1 <= indice <= total <= 99 hace fallar la carga de la configuración. Vacío o ausente = sin fragmentos (la suite entera, como en local).
