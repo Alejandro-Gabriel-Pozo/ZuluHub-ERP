@@ -10,7 +10,7 @@ export const MS_MAXIMOS_PARA_MONTAR_EL_LIBRO = 2500;
 const REDES_LENTAS: ReadonlySet<string> = new Set(["slow-2g", "2g"]);
 
 export type EntornoDelLibro = Readonly<{
-  /** Milisegundos desde que arrancó la navegación hasta que el script del Libro corrió (`performance.now()`). */
+  /** Milisegundos desde que arrancó la navegación hasta que el script del Libro corrió. */
   msHastaElScript: number;
   /** `navigator.connection.saveData`, o `false` si el navegador no lo informa. */
   ahorroDeDatos: boolean;
