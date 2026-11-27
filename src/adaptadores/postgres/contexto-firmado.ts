@@ -274,3 +274,22 @@ export async function hayClavesDeContextoInstaladas(urlDueno: string): Promise<b
     await cliente.end();
   }
 }
+
+/**
+ * La clave de contexto VIGENTE de la base, en la forma `<kid>:<64 hexadecimales>` (la de `PEDERNAL_CLAVE_CONTEXTO`), o `null` si no hay ninguna vigente. Lectura con la conexión del DUEÑO, que es el
+ * único que puede leer `contexto_clave`. Si hay varias vigentes (una rotación en curso), la de mayor `kid`. La usa el alta de un cliente para firmar con la clave que ya instaló `cargar-entorno`, sin
+ * que nadie la copie a GitHub. El valor devuelto es secreto: quien llama lo tapa y no lo imprime.
+ */
+export async function leerClaveDeContextoVigente(urlDueno: string): Promise<string | null> {
+  const cliente = new pg.Client({ connectionString: urlDueno, connectionTimeoutMillis: 15_000 });
+  await cliente.connect();
+  try {
+    const { rows } = await cliente.query<{ kid: number; hex: string }>(
+      "SELECT kid, encode(secreto, 'hex') AS hex FROM contexto_clave WHERE vigente ORDER BY kid DESC LIMIT 1",
+    );
+    const fila = rows[0];
+    return fila === undefined ? null : `${String(fila.kid)}:${fila.hex}`;
+  } finally {
+    await cliente.end();
+  }
+}

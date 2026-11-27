@@ -96,7 +96,7 @@ export const VARIABLES_OBLIGATORIAS = [
 const MENSAJE_ADMIN_Y_GERENTE =
   "adminEmail y empresa.emailGerente tienen que ser DISTINTOS: el administrador de plataforma no puede ser gerente ni miembro de ninguna empresa (hacen falta dos cuentas de correo)";
 
-type Objeto = Readonly<Record<string, unknown>>;
+export type Objeto = Readonly<Record<string, unknown>>;
 
 export type Paquete = Readonly<{
   adminEmail: string;
@@ -126,11 +126,11 @@ export type Paquete = Readonly<{
   }>;
 }>;
 
-const esObjeto = (valor: unknown): valor is Objeto =>
+export const esObjeto = (valor: unknown): valor is Objeto =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
 
 /** Lee un objeto con exactamente estos campos de texto (y estos opcionales de objeto): lo que sobra o falta se anota. */
-function leerSeccion(
+export function leerSeccion(
   valor: unknown,
   ruta: string,
   textos: readonly string[],
@@ -314,7 +314,7 @@ type Paso = Readonly<{
   leer?: (datos: ReadonlyMap<string, string>, c: Contexto) => boolean;
 }>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const clave = (nombre: string) => `preparar-prueba-v1-${nombre}`;
 
 function pasosDe(p: Paquete): readonly Paso[] {
@@ -474,7 +474,7 @@ function pasosDe(p: Paquete): readonly Paso[] {
 
 export type ResultadoDeUnCaso = Readonly<{ codigo: number; datos: ReadonlyMap<string, string> }>;
 
-type Salida = Readonly<{ info: (linea: string) => void; error: (linea: string) => void }>;
+export type Salida = Readonly<{ info: (linea: string) => void; error: (linea: string) => void }>;
 
 export type EjecutorDeCaso = (
   caso: NombreDeCaso,
@@ -540,7 +540,7 @@ export type EntradaDePreparacion = Readonly<{
  */
 export const ESPERA_MAXIMA_DE_VIGENCIA_EN_MS = 10 * 60_000;
 /** Un margen sobre `vigenteDesde`: el reloj del servidor de la base y el del runner no coinciden al segundo. */
-const MARGEN_DE_VIGENCIA_EN_MS = 2_000;
+export const MARGEN_DE_VIGENCIA_EN_MS = 2_000;
 
 /** La dirección del cron de la app, solo si el host es un nombre de host de verdad (nada de rutas, puertos ni usuarios). */
 export function urlDelCron(host: string): string | null {
@@ -554,7 +554,7 @@ export function urlDelCron(host: string): string | null {
   }
 }
 
-const ID_DE_RELLENO = "00000000-0000-4000-8000-000000000000";
+export const ID_DE_RELLENO = "00000000-0000-4000-8000-000000000000";
 
 export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): Promise<number> {
   const { entorno } = entrada;
