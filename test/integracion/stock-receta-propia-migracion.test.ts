@@ -440,6 +440,14 @@ describe.skipIf(base === null)(
         ).rows[0]?.p;
       expect(await permiso("pasos")).toBe(true);
       expect(await permiso("producto_id")).toBe(true);
+      // La función que llama el disparador de ciclos con el rol de la aplicación: sin este permiso NINGUNA receta se podría guardar (el repo quita EXECUTE a todos por defecto).
+      expect(
+        (
+          await cliente.query<{ p: boolean }>(
+            "select has_function_privilege('pedernal_app', 'composicion_vigente_id(uuid, uuid, uuid)', 'EXECUTE') as p",
+          )
+        ).rows[0]?.p,
+      ).toBe(true);
       expect(await permiso("sucursal_id")).toBe(false);
       expect(await permiso("origen_numero")).toBe(false);
       const esquemaNuevo = await huellaDeCatalogo(cliente);
