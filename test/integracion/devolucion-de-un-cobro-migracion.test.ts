@@ -596,7 +596,7 @@ describe.skipIf(base === null)(
               [sesion],
             );
             const a = await abrirApp();
-            let rechazada = false;
+            let rechazada: boolean | undefined;
             try {
               const egreso = await movimiento(a, esc, sesion, {
                 clase: "EGRESO_MANUAL",
