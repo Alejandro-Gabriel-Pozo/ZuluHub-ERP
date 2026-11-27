@@ -26,10 +26,10 @@ permissions:
 # al minuto del merge (queda a ≤ 24 h, en la nocturna); lo que NO se pierde: las pruebas, el estático y el recorrido sí corren en cada push.
 # El Gate acepta saltados `mutacion-plan`, `mutacion` y `estabilidad` solo en `push` (ver `arquitectura/evaluar-gate.cjs`).
 #
-# CI liviano (dueño, 25/11/2026): un pull request hacia `integracion/modulos-v2` NO corre mutación, Estabilidad ni la web (compilación, componentes y recorrido) salvo que el cambio
-# toque la web; lo decide `mutacion-plan` (`perfilDelPullRequest` y `tocaLaWeb`, con la rama base que llega por el entorno) y el Gate acepta esos saltos solo así (`evaluar-gate.cjs`).
-# La corrida nocturna (`nocturna-de-integracion.yml`) corre todo sobre esa rama y el pull request final hacia `main` corre el gate completo. Registrado en
-# `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`). Previene: unos 60 chequeos y 30 a 60 minutos por pull request con muchas sesiones en paralelo.
+# El CI liviano (dueño, 25/11/2026: un pull request hacia `integracion/modulos-v2` sin mutación, Estabilidad ni la web salvo que el cambio la tocara) se RETIRÓ el 27/11/2026 con la rama de
+# integración: los pull requests van a `main` con su mutación por grafo, la corrida nocturna de `main` (el `schedule` de este archivo) corre todo y el pull request final corría el gate completo.
+# `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`, RESTAURADA). El Gate conserva, inertes, las salidas `liviano` y `toca_web` del plan (siempre `false` y
+# `true`): su limpieza es un cambio aparte.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
@@ -124,14 +124,14 @@ jobs:
   pruebas:
     name: Pruebas (con Postgres real)
     runs-on: ubuntu-latest
-    # Tres fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
-    # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Por fragmento se esperan ~7 min con el arranque (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es casi 3 veces eso.
+    # Cuatro fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
+    # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Con tres fragmentos cada uno tardaba ~10,6 min (mediana de 90 corridas: `npm test` 558 s más ~80 s de arranque) y pasó a ser el camino crítico al partir `recorrido`; con cuatro se esperan ~7-8 min (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es más del doble.
     # Chequeo: `gate-coincide-con-ci.test.ts` fija la matriz y el comando; `pruebas-en-shards.test.ts` comprueba con vitest de verdad que los fragmentos cubren cada archivo una sola vez.
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
@@ -160,11 +160,19 @@ jobs:
         # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
         # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
         # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
+        # También sube `max_locks_per_transaction` (64 → 256) y `max_pred_locks_per_transaction` (64 → 512, la tabla de locks de predicado de las transacciones SERIALIZABLE: con solo la primera el `53200 out of shared memory` siguió, #651): la tabla de locks compartida se agotaba cuando coincidían en un mismo Postgres la prueba de 500
+        # cobros contra el cierre y otras (#648, 27/11/2026). Ese ajuste solo se aplica al arrancar el servidor: se reinicia el contenedor del servicio (la base y sus ajustes sobreviven) y se
+        # comprueba que el valor quedó (si no, el paso falla y el job también: nunca se corre con la tabla chica sin saberlo).
         run: |
           psql "$PRUEBAS_DATABASE_URL" \
             -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
-            -c "SELECT pg_reload_conf()"
+            -c "ALTER SYSTEM SET max_locks_per_transaction = 256" \
+            -c "ALTER SYSTEM SET max_pred_locks_per_transaction = 512"
+          docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")
+          for i in $(seq 1 60); do pg_isready -d "$PRUEBAS_DATABASE_URL" && break; sleep 1; done
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_locks_per_transaction")" = "256"
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_pred_locks_per_transaction")" = "512"
       - run: npm test
         env:
           # El fragmento de este job (`i/n`): lo lee `vitest.config.ts` (`arquitectura/fragmento-de-pruebas.cjs`) y corre solo sus archivos; el total sale del tamaño de la matriz.
@@ -270,11 +278,19 @@ jobs:
         # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
         # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
         # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
+        # También sube `max_locks_per_transaction` (64 → 256) y `max_pred_locks_per_transaction` (64 → 512, la tabla de locks de predicado de las transacciones SERIALIZABLE: con solo la primera el `53200 out of shared memory` siguió, #651): la tabla de locks compartida se agotaba cuando coincidían en un mismo Postgres la prueba de 500
+        # cobros contra el cierre y otras (#648, 27/11/2026). Ese ajuste solo se aplica al arrancar el servidor: se reinicia el contenedor del servicio (la base y sus ajustes sobreviven) y se
+        # comprueba que el valor quedó (si no, el paso falla y el job también: nunca se corre con la tabla chica sin saberlo).
         run: |
           psql "$PRUEBAS_DATABASE_URL" \
             -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
-            -c "SELECT pg_reload_conf()"
+            -c "ALTER SYSTEM SET max_locks_per_transaction = 256" \
+            -c "ALTER SYSTEM SET max_pred_locks_per_transaction = 512"
+          docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")
+          for i in $(seq 1 60); do pg_isready -d "$PRUEBAS_DATABASE_URL" && break; sleep 1; done
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_locks_per_transaction")" = "256"
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_pred_locks_per_transaction")" = "512"
       - run: npx vitest run test/integracion
 
   mutacion-plan:
@@ -307,7 +323,7 @@ jobs:
       - id: plan
         run: node arquitectura/planificar-mutacion.cjs
         env:
-          # La rama base y la de origen del pull request deciden el perfil (liviano hacia la rama de integración; ver `perfilDelPullRequest`). Van por el entorno, nunca dentro del comando.
+          # La rama de origen del pull request decide el perfil (completo si viene de la rama de integración; ver `perfilDelPullRequest`). Va por el entorno, nunca dentro del comando.
           BASE_DEL_PR: ${{ github.base_ref }}
           ORIGEN_DEL_PR: ${{ github.head_ref }}
       # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
@@ -393,7 +409,7 @@ jobs:
           # Estabilidad saltada por el plan solo vale en un pull request; en push a main se aceptan saltados el plan, la mutación y Estabilidad (y solo
           # ahí); en la nocturna y a pedido, ninguno.
           EVENTO: ${{ github.event_name }}
-          # La rama base del pull request: el CI liviano (jobs saltados) solo se acepta hacia la rama de integración.
+          # La rama base del pull request: el Gate todavía conserva, inerte, la aceptación del CI liviano (retirado) hacia la rama de integración.
           BASE_DEL_PR: ${{ github.base_ref }}
           # Con la cabeza actual y la de esta corrida, el Gate distingue «reemplazada por un push nuevo» de una falla real.
           CABEZA_ACTUAL: ${{ steps.cabeza.outputs.actual }}
@@ -474,8 +490,15 @@ jobs:
     needs: mutacion-plan
     if: ${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}
     runs-on: ubuntu-latest
-    # 20 min: mediana 13,7 y máximo 15,0 sobre 25 corridas verdes; en c03db61a (26/11/2026) se canceló dos veces seguidas a los 15 min con 40 de 42 archivos ya en verde, sin tocar la web.
-    timeout-minutes: 20
+    # Tres fragmentos de los recorridos en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres y su propia compilación). Como un solo job serial tardaba 13,7 min de mediana
+    # (máximo 15,0) y en c03db61a (26/11/2026) se canceló dos veces seguidas por su tope con 40 de 42 archivos ya en verde. Por fragmento se esperan ~6-7 min (~4 min de pruebas, medido con el reparto real:
+    # 252, 228 y 249 s, de 15, 14 y 14 archivos) más el arranque; el tope de 15 es más del doble.
+    # Chequeo: `gate-coincide-con-ci.test.ts` fija la matriz, el total tomado de la matriz y el tope; el Gate ve el agregado de la matriz (success solo si TODOS los fragmentos dieron success).
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
@@ -514,3 +537,6 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
       - run: npm run test:recorrido
+        env:
+          # El fragmento de este job (`i/n`): lo lee `vitest.config.ts` (`arquitectura/fragmento-de-pruebas.cjs`) y corre solo sus archivos; el total sale del tamaño de la matriz.
+          PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}

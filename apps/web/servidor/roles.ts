@@ -8,9 +8,11 @@ import {
   crear,
   editar,
   fichaDeRol,
+  historialDelRol,
   listarLosRoles,
   rolesAsignables,
   type DependenciasDeRolesWeb,
+  type EventoDelRolParaLaPantalla,
   type RolParaLaPantalla,
 } from "../../../src/composicion/roles-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -54,6 +56,14 @@ export function cargarLaFichaDeRol(
   rolId: string,
 ): Promise<Respuesta<RolParaLaPantalla>> {
   return fichaDeRol(dependencias, contexto, { rolId });
+}
+
+/** El historial de un rol propio (los últimos cambios, con quién los hizo), por el id de la dirección. Solo el gerente (`roles.ver`). */
+export function cargarElHistorialDelRol(
+  contexto: ContextoOperativo,
+  rolId: string,
+): Promise<Respuesta<readonly EventoDelRolParaLaPantalla[]>> {
+  return historialDelRol(dependencias, contexto, { rolId });
 }
 
 /** Las casillas de la ficha: el catálogo por módulo con pisos y plan. */

@@ -9,7 +9,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
  * (`nombre-de-rol`) y una casilla por acción agrupadas por módulo (`acciones-de-rol`). Una acción de piso «solo el gerente» o de un módulo fuera del plan se muestra cerrada con su nota; las de piso
  * «todos los roles» van tildadas y cerradas.
  * BOTONES: «Nuevo rol» (navega al alta), «Guardar» del alta (crea) y de la ficha (edita), «Archivar» y «Reactivar». Sin permiso ningún botón se dibuja (`AUSENTE`); es solo una ayuda, el servidor vuelve a exigir cada
- * permiso. Archivar no pide confirmación aparte: es reversible (se reactiva) y el servidor lo rechaza si el rol tiene personas. MODALES: ninguno. ESTADOS: lista vacía («Todavía no hay roles propios»), rol archivado
+ * permiso. Archivar no pide confirmación aparte: es reversible (se reactiva) y el servidor lo rechaza si el rol tiene personas. MODALES: ninguno. HISTORIAL (B3b, DEC-IDE-005): bloque al pie de la ficha de un rol, solo lectura y sin campos ni botones; cada fila dice cuándo, quién y qué (si fue una edición, el nombre anterior y las acciones agregadas o quitadas); lo ve quien tiene `roles.ver` (solo el gerente). ESTADOS: lista vacía («Todavía no hay roles propios»), rol archivado
  * (insignia «Archivado») y, ante cualquier falla o sin permiso, el mensaje genérico, sin filas.
  *
  * Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
@@ -31,6 +31,14 @@ const ETIQUETA_DELEGADA = {
     "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila 173 (delegación de textos); inventario de textos de la pantalla Roles",
 } as const;
 
+/** Los ocho textos del bloque «Historial» de la ficha de un rol que el orquestador aceptó por delegación (fila 173, 26/11/2026); DEC-IDE-005. */
+const HISTORIAL_DELEGADO = {
+  decidio:
+    "el dueño, por la delegación de textos del 15/11/2026 (DDD:173, aceptada el 26/11/2026; etiqueta simple, sin dinero, permisos ni fiscal); DEC-IDE-005",
+  donde:
+    "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila 173 (delegación de textos); ficha de B3b: el historial de un rol propio",
+} as const;
+
 /** Un texto que ya existía en el catálogo y se reusa sin cambios (una regla, un lugar). */
 const REUSADO = {
   decidio: "el dueño (texto ya aprobado y en uso en el catálogo, reutilizado sin cambios)",
@@ -41,6 +49,7 @@ const REUSADO = {
 const USO_DE_LA_LISTA = "modelo-de-roles.ts (armarLaListaDeRoles)";
 const USO_DEL_ALTA = "modelo-de-roles.ts (armarElFormularioDeAlta)";
 const USO_DE_LA_FICHA = "modelo-de-roles.ts (armarLaFichaDeRol)";
+const USO_DEL_HISTORIAL = "modelo-de-roles.ts (armarElHistorialDelRol)";
 
 const MODULOS = {
   "roles.modulo.administracion": { usos: [USO_DE_LA_FICHA], fuente: APROBADO_POR_EL_DUENO },
@@ -70,6 +79,7 @@ export const FICHA_DE_ROLES = {
     "apps/web/ui/plantillas/roles/FormularioDeAltaDeRol.cliente.tsx",
     "apps/web/ui/plantillas/roles/FormularioDeFichaDeRol.cliente.tsx",
     "apps/web/ui/plantillas/roles/AccionDeEstadoDeRol.cliente.tsx",
+    "apps/web/ui/plantillas/roles/HistorialDelRol.tsx",
     "apps/web/ui/plantillas/roles/modelo-de-roles.ts",
     "src/composicion/roles-web.ts",
     "src/composicion/entradas-de-roles.ts",
@@ -133,6 +143,14 @@ export const FICHA_DE_ROLES = {
     "roles.formulario.origen": { usos: [USO_DEL_ALTA], fuente: ETIQUETA_DELEGADA },
     "roles.formulario.origen_vacio": { usos: [USO_DEL_ALTA], fuente: ETIQUETA_DELEGADA },
     "roles.formulario.origen_rol": { usos: [USO_DEL_ALTA], fuente: ETIQUETA_DELEGADA },
+    "roles.historial.titulo": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.creado": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.editado": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.archivado": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.reactivado": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.agregadas": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.quitadas": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
+    "roles.historial.nombre_anterior": { usos: [USO_DEL_HISTORIAL], fuente: HISTORIAL_DELEGADO },
     "caja.campo.nombre": { usos: [USO_DEL_ALTA, USO_DE_LA_FICHA], fuente: REUSADO },
     "caja.accion.guardar": { usos: [USO_DEL_ALTA, USO_DE_LA_FICHA], fuente: REUSADO },
     "caja.accion.cancelar": { usos: [USO_DEL_ALTA, USO_DE_LA_FICHA], fuente: REUSADO },

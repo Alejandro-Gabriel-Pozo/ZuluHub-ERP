@@ -124,6 +124,11 @@ export type {
 } from "./consultas/contrato";
 export type { ErrorAlListarMiembros, MiembroDeLista } from "./consultas/listar-miembros";
 export type { RolParaLaLista } from "./consultas/listar-roles";
+export type {
+  EventoDelRol,
+  HistorialDelRol,
+  TipoDeEventoDelRol,
+} from "./consultas/historial-del-rol";
 export type { RolesAsignables } from "./consultas/roles-asignables";
 export type { AccionParaElegir, ModuloParaElegir } from "./consultas/acciones-para-elegir";
 export type { OrigenDeUnRol } from "./casos-de-uso/crear-rol";
