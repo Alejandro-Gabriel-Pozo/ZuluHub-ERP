@@ -14,6 +14,7 @@ import type {
   CategoriaDeSalida,
   SentidoDeMovimientoDeDinero,
 } from "../dominio/movimiento-de-dinero";
+import type { OrigenDevoluble } from "../dominio/devolucion";
 import type { CajaDb } from "./esquema";
 
 /** Un movimiento de dinero por alta. Lo que el sentido no admite va `null` (la base lo repite en `movimiento_de_dinero_forma_ck`). */
@@ -30,6 +31,8 @@ export type MovimientoDeDineroNuevo = Readonly<{
   terceroPersonaId: string | null;
   referencia: string | null;
   devuelveA: string | null;
+  /** La cobranza que devuelve (0114), con el pedido de devolución que agrupa sus líneas; `null` fuera de una devolución de cobranza. */
+  devuelveOrigen?: Readonly<{ tipo: OrigenDevoluble; id: string; devolucionId: string }> | null;
   /** El egreso manual de la salida; `null` en la entrada (sus movimientos son los cobros con origen del acto). */
   movimientoId: string | null;
   claveDeIdempotencia: string;
@@ -51,6 +54,7 @@ export type MovimientoDeDineroGuardado = Readonly<{
   terceroPersonaId: string | null;
   referencia: string | null;
   devuelveA: string | null;
+  devuelveOrigen: Readonly<{ tipo: OrigenDevoluble; id: string; devolucionId: string }> | null;
   movimientoId: string | null;
   claveDeIdempotencia: string;
   huella: string;
@@ -76,6 +80,8 @@ export interface RepositorioDeMovimientosDeDinero {
   ): Promise<MovimientoDeDineroGuardado[]>;
   /** Lo ya devuelto de una entrada: Σ de sus devoluciones vigentes (las que no se anularon el mismo día). */
   devueltoDe(empresa: EmpresaId, entradaId: string): Promise<Importe>;
+  /** Lo que queda por devolver de un origen (una entrada de dinero o una cobranza de ticket): la función de la base, la regla única del tope. */
+  devolvibleDeOrigen(empresa: EmpresaId, tipo: string, id: string): Promise<Importe>;
 }
 
 type Fila = Readonly<{
@@ -91,6 +97,9 @@ type Fila = Readonly<{
   tercero_persona_id: string | null;
   referencia: string | null;
   devuelve_a: string | null;
+  devuelve_origen_tipo: OrigenDevoluble | null;
+  devuelve_origen_id: string | null;
+  devolucion_id: string | null;
   movimiento_id: string | null;
   clave: string;
   huella: string;
@@ -111,6 +120,14 @@ const aGuardado = (f: Fila): MovimientoDeDineroGuardado => ({
   terceroPersonaId: f.tercero_persona_id,
   referencia: f.referencia,
   devuelveA: f.devuelve_a,
+  devuelveOrigen:
+    f.devuelve_origen_tipo === null
+      ? null
+      : {
+          tipo: f.devuelve_origen_tipo,
+          id: f.devuelve_origen_id as string,
+          devolucionId: f.devolucion_id as string,
+        },
   movimientoId: f.movimiento_id,
   claveDeIdempotencia: f.clave,
   huella: f.huella,
@@ -134,6 +151,9 @@ export function crearRepositorioDeMovimientosDeDinero(
     "d.tercero_persona_id as tercero_persona_id",
     "d.referencia as referencia",
     "d.devuelve_a as devuelve_a",
+    "d.devuelve_origen_tipo as devuelve_origen_tipo",
+    "d.devuelve_origen_id as devuelve_origen_id",
+    "d.devolucion_id as devolucion_id",
     "d.movimiento_id as movimiento_id",
     "d.clave as clave",
     "d.huella as huella",
@@ -158,6 +178,9 @@ export function crearRepositorioDeMovimientosDeDinero(
           tercero_persona_id: nuevo.terceroPersonaId,
           referencia: nuevo.referencia,
           devuelve_a: nuevo.devuelveA,
+          devuelve_origen_tipo: nuevo.devuelveOrigen?.tipo ?? null,
+          devuelve_origen_id: nuevo.devuelveOrigen?.id ?? null,
+          devolucion_id: nuevo.devuelveOrigen?.devolucionId ?? null,
           movimiento_id: nuevo.movimientoId,
           clave: nuevo.claveDeIdempotencia,
           huella: nuevo.huella,
@@ -228,6 +251,15 @@ export function crearRepositorioDeMovimientosDeDinero(
         )
         .executeTakeFirstOrThrow();
       return importeDesdeTexto(ARS, fila.total);
+    },
+
+    async devolvibleDeOrigen(empresa, tipo, id) {
+      if (!esUuid(id)) return importeDesdeTexto(ARS, "0.00");
+      const { rows } = await sql<{ total: string }>`
+        select public.movimiento_de_dinero_devolvible_de_origen(${empresa}::uuid, ${tipo}::text, ${id}::uuid)::numeric(18,2)::text as total`.execute(
+        db,
+      );
+      return importeDesdeTexto(ARS, rows[0]?.total ?? "0.00");
     },
   };
 }
