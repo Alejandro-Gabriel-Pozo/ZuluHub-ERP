@@ -14,6 +14,7 @@ const LEER = (nombre: string) =>
   readFileSync(join(import.meta.dirname, "../../.github/workflows", nombre), "utf8");
 const ALTA = LEER("alta-de-cliente.yml");
 const DESPLIEGUE = LEER("desplegar-cliente.yml");
+const REEMISION = LEER("reemitir-invitacion-de-cliente.yml");
 const MIGRAR = LEER("migrar.yml");
 
 const sinComentarios = (texto: string) =>
@@ -127,7 +128,7 @@ function comunes(texto: string, job: string, frase: RegExp): string[] {
   const pasosConCadena = [...limpio.split(/\n {6}- /)].filter(
     (p) =>
       p.includes("secrets.PEDERNAL_DB_DUENO_DIRECTA") &&
-      /npm run (plataforma:(alta|secreto)|desplegar-cliente -- datos)/.test(p),
+      /npm run (plataforma:(alta|secreto|reemitir)|desplegar-cliente -- datos)/.test(p),
   );
   exigir(
     "candado-de-host-en-cada-paso-con-la-cadena",
@@ -255,6 +256,64 @@ function problemasDelDespliegue(texto: string): string[] {
     secretos.every((s) => ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN"].includes(s)),
   );
   exigir("cli-sin-scripts-de-instalacion", /NPM_CONFIG_IGNORE_SCRIPTS: "true"/.test(limpio));
+  return problemas;
+}
+
+function problemasDeLaReemision(texto: string): string[] {
+  const problemas = comunes(texto, "reemitir", /REEMITIR CLIENTE-[A-Z]+/);
+  const limpio = sinComentarios(texto);
+  const pasos = pasosDe(texto, "reemitir");
+  const exigir = (codigo: string, cumple: boolean) => {
+    CODIGOS.add(codigo);
+    if (!cumple) problemas.push(codigo);
+  };
+  const i = (parte: string) => pasos.findIndex((x) => x.nombre.includes(parte));
+  const orden = [
+    "Revisar el estado del alta",
+    "La base tiene que estar al día",
+    "Secreto de invitaciones nuevo",
+    "Confirmar el proyecto",
+    "Desplegar a producción con el secreto nuevo",
+    "Abrir el login",
+    "Reemitir la invitación",
+    "Cerrar el login",
+  ].map(i);
+  // La invitación se reemite DESPUÉS de desplegar con el secreto nuevo: así el cron manda el mail con un despliegue que ya lo tiene.
+  exigir(
+    "reemite-despues-de-desplegar",
+    orden.every((p, k) => p >= 0 && (k === 0 || (orden[k - 1] as number) < p)),
+  );
+  exigir(
+    "secreto-nuevo-en-modo-reemitir",
+    /plataforma:secreto-de-invitaciones -- "\$AMBIENTE" --reemitir/.test(limpio),
+  );
+  const cerrar = pasos.find((p) => p.nombre.includes("Cerrar el login"));
+  exigir(
+    "cierra-siempre",
+    cerrar !== undefined &&
+      /if: always\(\) && steps\.abrir\.conclusion != 'skipped'/.test(cerrar.texto) &&
+      /plataforma:login-temporal -- cerrar/.test(cerrar.texto),
+  );
+  const abrir = pasos.find((p) => p.nombre.includes("Abrir el login"));
+  exigir(
+    "login-sin-clave-propia",
+    abrir !== undefined &&
+      /id: abrir/.test(abrir.texto) &&
+      /login-temporal -- abrir sin-clave-propia/.test(abrir.texto),
+  );
+  exigir(
+    "version-fija-de-la-cli",
+    /npx --yes vercel@\d+\.\d+\.\d+ deploy --prod --yes/.test(limpio) &&
+      !/vercel@(latest|\^|~)/.test(limpio),
+  );
+  exigir("cli-sin-scripts-de-instalacion", /NPM_CONFIG_IGNORE_SCRIPTS: "true"/.test(limpio));
+  exigir("sin-proyecto-ni-token-en-la-linea", !/--scope|--project|--token|--org/.test(limpio));
+  exigir("corta-si-no-hay-direccion-del-despliegue", /if \[ -z "\$direccion" \]/.test(limpio));
+  const secretos = [...limpio.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1] as string);
+  exigir(
+    "solo-los-secretos-del-cliente",
+    secretos.every((x) => ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN"].includes(x)),
+  );
   return problemas;
 }
 
@@ -458,6 +517,116 @@ const VIOLACIONES_DESPLIEGUE: Array<[string, (t: string) => string]> = [
   ],
 ];
 
+const VIOLACIONES_REEMISION: Array<[string, (t: string) => string]> = [
+  [
+    "solo-a-mano",
+    (t) => t.replace("on:\n  workflow_dispatch:", "on:\n  push:\n  workflow_dispatch:"),
+  ],
+  [
+    "ambiente-es-la-lista-cerrada-de-clientes",
+    (t) => t.replace("          - cliente-hdn\n", "          - cliente-hdn\n          - preview\n"),
+  ],
+  ["solo-desde-main", (t) => t.replace('"$REF" != "refs/heads/main"', '"$REF" != "refs/heads/x"')],
+  ["frase-por-cliente", (t) => t.replaceAll("REEMITIR CLIENTE-HDN", "ok")],
+  [
+    "environment-del-cliente-con-revisor",
+    (t) =>
+      t.replace("environment: ${{ needs.validar.outputs.ambiente }}", "environment: produccion"),
+  ],
+  [
+    "comparte-el-grupo-de-migrar",
+    (t) => t.replace("group: migrar-${{ inputs.ambiente }}", "group: reemitir"),
+  ],
+  [
+    "no-se-cancela-lo-que-corre",
+    (t) => t.replace("cancel-in-progress: false", "cancel-in-progress: true"),
+  ],
+  [
+    "sin-expresiones-en-run",
+    (t) =>
+      t.replace(
+        'run: npm run plataforma:reemitir-invitacion -- "$AMBIENTE" --validar',
+        "run: npm run plataforma:reemitir-invitacion -- ${{ inputs.ambiente }} --validar",
+      ),
+  ],
+  [
+    "secretos-solo-en-env",
+    (t) =>
+      t.replace(
+        'run: npm run plataforma:reemitir-invitacion -- "$AMBIENTE" --validar',
+        "run: echo ${{ secrets.PEDERNAL_VERCEL_TOKEN }}",
+      ),
+  ],
+  [
+    "acciones-fijadas-por-sha",
+    (t) => t.replace(/actions\/checkout@[0-9a-f]{40}/, "actions/checkout@main"),
+  ],
+  [
+    "exige-base-al-dia",
+    (t) => t.replace('! grep -q "la base está al día"', 'grep -q "faltan aplicar"'),
+  ],
+  [
+    "candado-de-host-en-cada-paso-con-la-cadena",
+    (t) =>
+      t.replaceAll(
+        "          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}\n",
+        "",
+      ),
+  ],
+  [
+    "reemite-despues-de-desplegar",
+    (t) =>
+      t
+        .replace(
+          "name: Reemitir la invitación (sin mostrar",
+          "name: Antes de desplegar, Reemitir (sin mostrar",
+        )
+        .replace("name: Desplegar a producción con el secreto nuevo", "name: Otro paso"),
+  ],
+  [
+    "secreto-nuevo-en-modo-reemitir",
+    (t) => t.replace('-- "$AMBIENTE" --reemitir', '-- "$AMBIENTE"'),
+  ],
+  [
+    "cierra-siempre",
+    (t) => t.replace("if: always() && steps.abrir.conclusion != 'skipped'", "if: success()"),
+  ],
+  ["login-sin-clave-propia", (t) => t.replace("abrir sin-clave-propia", "abrir")],
+  ["version-fija-de-la-cli", (t) => t.replace("vercel@65.15.0", "vercel@latest")],
+  [
+    "cli-sin-scripts-de-instalacion",
+    (t) => t.replace('NPM_CONFIG_IGNORE_SCRIPTS: "true"', 'NPM_CONFIG_IGNORE_SCRIPTS: "false"'),
+  ],
+  [
+    "sin-proyecto-ni-token-en-la-linea",
+    (t) => t.replace("deploy --prod --yes", "deploy --prod --yes --token $VERCEL_TOKEN"),
+  ],
+  [
+    "corta-si-no-hay-direccion-del-despliegue",
+    (t) => t.replace('if [ -z "$direccion" ]', 'if [ -n "$direccion" ]'),
+  ],
+  [
+    "solo-los-secretos-del-cliente",
+    (t) =>
+      t.replace(
+        "secrets.PEDERNAL_VERCEL_TOKEN }}\n\n      - uses",
+        "secrets.NEON_API_KEY }}\n\n      - uses",
+      ),
+  ],
+];
+
+describe("workflow reemitir-invitacion-de-cliente.yml", () => {
+  it("cumple todas las propiedades", () => {
+    expect(problemasDeLaReemision(REEMISION)).toEqual([]);
+  });
+
+  it.each(VIOLACIONES_REEMISION)("violación inyectada: %s", (codigo, romper) => {
+    const roto = romper(REEMISION);
+    expect(roto).not.toBe(REEMISION);
+    expect(problemasDeLaReemision(roto)).toContain(codigo);
+  });
+});
+
 describe("workflow alta-de-cliente.yml", () => {
   it("cumple todas las propiedades", () => {
     expect(problemasDelAlta(ALTA)).toEqual([]);
@@ -488,7 +657,9 @@ describe("workflow desplegar-cliente.yml", () => {
   });
 
   it("toda propiedad evaluada tiene su violación inyectada (en alguno de los dos flujos)", () => {
-    const cubiertos = new Set([...VIOLACIONES_ALTA, ...VIOLACIONES_DESPLIEGUE].map(([c]) => c));
+    const cubiertos = new Set(
+      [...VIOLACIONES_ALTA, ...VIOLACIONES_DESPLIEGUE, ...VIOLACIONES_REEMISION].map(([c]) => c),
+    );
     for (const codigo of CODIGOS) {
       // Dos propiedades son estructurales y las cubre otra prueba de este archivo.
       if (

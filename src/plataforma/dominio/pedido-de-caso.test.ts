@@ -180,6 +180,10 @@ const VALIDOS: Record<NombreDeCaso, { json: unknown; entrada: unknown }> = {
     json: { claveDeIdempotencia: CLAVE, empresaId: ID_B, modulo: "facturacion" },
     entrada: { claveDeIdempotencia: CLAVE, empresaId: ID_B, modulo: "facturacion" },
   },
+  reenviarInvitacionDelAlta: {
+    json: { claveDeIdempotencia: CLAVE, empresaId: ID_A },
+    entrada: { claveDeIdempotencia: CLAVE, empresaId: ID_A },
+  },
 };
 
 const problemasDe = (caso: NombreDeCaso, json: unknown): readonly ProblemaDeForma[] => {
@@ -216,6 +220,7 @@ describe("la lista cerrada de casos", () => {
       "altaDeEmpresa",
       "activarModuloDeEmpresa",
       "desactivarModuloDeEmpresa",
+      "reenviarInvitacionDelAlta",
     ]);
   });
 

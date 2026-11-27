@@ -136,6 +136,12 @@ const FORMAS = {
     empresaId: req("id"),
     modulo: req("texto"),
   },
+  // Reemitir la invitación del gerente del alta (otro id, otro token, 24 h; revoca la anterior): lo usa `reemitir-invitacion-de-cliente.yml` cuando el mail salió con un secreto que la web ya no tiene.
+  reenviarInvitacionDelAlta: {
+    claveDeIdempotencia: req("clave"),
+    empresaId: req("id"),
+    emailNuevo: opc("texto"),
+  },
 } as const;
 
 /** Los casos que se pueden ejecutar desde un archivo (la lista cerrada). */

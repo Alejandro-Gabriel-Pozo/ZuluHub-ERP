@@ -90,6 +90,8 @@ export function armarCasosDeLaLista(
       plataforma.casosDeUsoDeMarcasYPlanes().activarModuloDeEmpresa(c, e),
     desactivarModuloDeEmpresa: (c, e) =>
       plataforma.casosDeUsoDeMarcasYPlanes().desactivarModuloDeEmpresa(c, e),
+    reenviarInvitacionDelAlta: (c, e) =>
+      plataforma.casosDeUsoDeAltas().reenviarInvitacionDelAlta(c, e),
   };
 }
 
