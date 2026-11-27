@@ -596,7 +596,7 @@ describe.skipIf(base === null)(
               [sesion],
             );
             const a = await abrirApp();
-            let rechazada = false;
+            let rechazada: boolean;
             try {
               const egreso = await movimiento(a, esc, sesion, {
                 clase: "EGRESO_MANUAL",
@@ -604,8 +604,9 @@ describe.skipIf(base === null)(
                 importe: "-1000.00",
                 motivo: "Devolucion de prueba",
               });
-              rechazada = !egreso.ok;
-              if (egreso.ok) {
+              if (!egreso.ok) {
+                rechazada = true;
+              } else {
                 const acto = await insertarActo(a, sesion, textoDe(egreso, "id"), {
                   cobranza,
                   importe: "1000.00",

@@ -81,7 +81,10 @@ export interface RepositorioDeMovimientosDeDinero {
   /** Lo ya devuelto de una entrada: Σ de sus devoluciones vigentes (las que no se anularon el mismo día). */
   devueltoDe(empresa: EmpresaId, entradaId: string): Promise<Importe>;
   /** El acto que apunta a ese egreso de caja (a lo sumo uno: `movimiento_de_dinero_movimiento_uk`), si hay. Solo lectura. */
-  delMovimiento(empresa: EmpresaId, movimientoId: string): Promise<MovimientoDeDineroGuardado | null>;
+  delMovimiento(
+    empresa: EmpresaId,
+    movimientoId: string,
+  ): Promise<MovimientoDeDineroGuardado | null>;
   /** Las líneas (actos) de un pedido de devolución, por orden de registro. Vacío si no existe en la empresa. Solo lectura. */
   deLaDevolucion(empresa: EmpresaId, devolucionId: string): Promise<MovimientoDeDineroGuardado[]>;
   /** Lo ya devuelto de una cobranza: Σ de sus devoluciones vigentes (las que no tienen su egreso anulado). */

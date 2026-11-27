@@ -1,18 +1,27 @@
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import { exigirSucursal, type ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
+import {
+  importeAJson,
+  importeCero,
+  sumar,
+  type Importe,
+  type ImporteJson,
+} from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
+import type { OrigenDevoluble } from "../persistencia/esquema";
 import { esUuidCanonico } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import { ORIGENES_DEVOLUBLES } from "../dominio/devolucion";
-import { sumarImportes } from "../dominio/importes";
 import { alcanceParaMirar, exigirPermisoDeConsulta } from "./comun";
 import type { DependenciasDeConsultasDeCaja } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
-/** El origen que se devuelve hoy: la cobranza de un ticket de ventas. */
-const ORIGEN_DE_LA_COBRANZA = ORIGENES_DEVOLUBLES[0];
+/**
+ * El origen que se devuelve hoy: la cobranza de un ticket de ventas. Una consulta no importa el dominio (ADR-005), así que la lista cerrada de `ORIGENES_DEVOLUBLES` no se lee
+ * acá: el tipo `OrigenDevoluble` (el mismo de la lista) obliga a que este literal siga siendo uno de sus miembros, y si la lista cambia deja de compilar.
+ */
+const ORIGEN_DE_LA_COBRANZA: OrigenDevoluble = "ventas.cobranza_de_ticket";
 
 export type EntradaDeCobrosDevolublesDeUnOrigen = Readonly<{ cobranzaId: string }>;
 
@@ -100,7 +109,7 @@ export function armarCobrosDevolublesDeUnOrigen({
         const cobradoPorMedio = [...porPar.values()].map((p) => ({
           medioDePagoId: p.medioDePagoId,
           cuentaDeCobroId: p.cuentaDeCobroId,
-          importe: importeAJson(sumarImportes(p.importes)),
+          importe: importeAJson(p.importes.reduce(sumar, importeCero(ARS))),
         }));
         return ok({
           cobradoPorMedio,

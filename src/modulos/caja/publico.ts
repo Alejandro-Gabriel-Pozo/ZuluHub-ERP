@@ -300,7 +300,6 @@ export type {
   SalidaDeAnularMovimientoDeCaja,
 } from "./casos-de-uso/anular-movimiento";
 export type {
-  AvisoDeDevolverDinero,
   EntradaDeDevolverDinero,
   ErrorAlDevolverDinero,
   SalidaDeDevolverDinero,
@@ -338,7 +337,6 @@ export type {
 export { crearConsultasDeCaja, type ConsultasDeCaja } from "./consultas/consultas";
 export type { DependenciasDeConsultasDeCaja, TxDeConsultasDeCaja } from "./consultas/contrato";
 export type {
-  CobradoPorMedio,
   CobrosDevolublesDeUnOrigen,
   EntradaDeCobrosDevolublesDeUnOrigen,
   ErrorAlConsultarCobrosDevolubles,
