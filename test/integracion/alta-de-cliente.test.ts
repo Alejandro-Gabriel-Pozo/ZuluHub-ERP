@@ -1,6 +1,9 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { altaDeCliente } from "../../scripts/ejecutar-alta-de-cliente";
+import { reemitirInvitacionDeCliente } from "../../scripts/ejecutar-reemitir-invitacion-de-cliente";
+import { leerEstadoDelAlta } from "../../src/adaptadores/postgres/estado-del-alta";
+import { TRABAJO_ENVIAR_INVITACION } from "../../src/modulos/identidad/publico";
 import { armarCasosDeLaLista } from "../../scripts/ejecutar-caso-desde-archivo";
 import { ejecutarCreacionDelPrimerAdmin } from "../../scripts/ejecutar-crear-primer-admin";
 import { ejecutorDeCasos } from "../../scripts/ejecutar-preparar-empresa-de-pruebas";
@@ -126,5 +129,90 @@ describe.skipIf(base === null)("alta de un cliente de punta a punta", () => {
     expect(otra, salida.join("\n")).toBe(0);
     expect(await n("empresa")).toBe(empresasAntes);
     expect(await n("modulo_de_empresa")).toBe(modulosAntes);
+  });
+
+  it("reemitir la invitación del gerente con el mail ya enviado (trabajo HECHO): revoca la vieja y emite otra; con el mismo estado no duplica; otra corrida reemite a propósito", async () => {
+    if (base === null) return;
+    const clave = `${String(propia.base.clave.kid)}:${propia.base.clave.secreto.toString("hex")}`;
+    const entorno = {
+      PEDERNAL_DB_MIGRACIONES: propia.base.dueno,
+      PEDERNAL_DB_PLATAFORMA: propia.base.plataforma,
+      PEDERNAL_CLAVE_CONTEXTO: clave,
+      PEDERNAL_SECRETO_INVITACIONES: HEX,
+      PEDERNAL_HOST_DE_LA_BASE: new URL(propia.base.dueno).hostname,
+    };
+    const pendientes = async () =>
+      (
+        await dueno.query<{ id: string }>("select id from invitacion where estado = 'PENDIENTE'")
+      ).rows.map((r) => r.id);
+    const total = async () =>
+      Number(
+        ((await dueno.query("select count(*) as n from invitacion")).rows[0] as { n: string }).n,
+      );
+    const trabajos = async () =>
+      (
+        await dueno.query<{ estado: string }>(
+          "select estado from trabajo where tipo = $1 order by creado_en",
+          [TRABAJO_ENVIAR_INVITACION],
+        )
+      ).rows.map((r) => r.estado);
+
+    // El estado de partida: el alta ya hecha (el test anterior) y el trabajo de envío de la invitación vieja ya HECHO (el cron lo procesó con el secreto viejo).
+    const [vieja] = await pendientes();
+    expect(vieja).toBeDefined();
+    for (const estado of ["EN_CURSO", "HECHO"]) {
+      await dueno.query("update trabajo set estado = $2 where tipo = $1", [
+        TRABAJO_ENVIAR_INVITACION,
+        estado,
+      ]);
+    }
+    const estadoViejo = await leerEstadoDelAlta(propia.base.dueno);
+
+    const salida: string[] = [];
+    const reemitir = async (leerEstado: typeof leerEstadoDelAlta) => {
+      const plataforma = armarPlataforma({ fuente: () => entorno });
+      try {
+        return await reemitirInvitacionDeCliente({
+          ambiente: "cliente-hdn",
+          entorno,
+          leerEstado,
+          ejecutarCaso: ejecutorDeCasos({
+            entorno,
+            ahora: () => new Date(),
+            buscarAdmin: plataforma.buscarAdmin,
+            casos: armarCasosDeLaLista(plataforma),
+          }),
+          info: (l) => salida.push(l),
+          error: (l) => salida.push(`ERR ${l}`),
+          comando: () => undefined,
+        });
+      } finally {
+        await plataforma.cerrar();
+      }
+    };
+
+    const antes = await total();
+    expect(await reemitir(leerEstadoDelAlta), salida.join("\n")).toBe(0);
+    const [nueva, ...resto] = await pendientes();
+    expect(resto).toEqual([]);
+    expect(nueva).not.toBe(vieja);
+    expect(await total()).toBe(antes + 1);
+    expect(
+      (await dueno.query("select estado from invitacion where id = $1", [vieja])).rows[0],
+    ).toEqual({ estado: "REVOCADA" });
+    // El trabajo de la vieja sigue HECHO y hay uno nuevo pendiente para la invitación nueva.
+    expect(await trabajos()).toEqual(["HECHO", "PENDIENTE"]);
+
+    // Repetir con el MISMO estado (un reintento antes de ver el cambio): misma clave, no emite otra ni encola otro mail.
+    expect(await reemitir(() => Promise.resolve(estadoViejo)), salida.join("\n")).toBe(0);
+    expect(await total()).toBe(antes + 1);
+    expect(await pendientes()).toEqual([nueva]);
+    expect(await trabajos()).toEqual(["HECHO", "PENDIENTE"]);
+
+    // Otra corrida, con el estado real (la pendiente es la nueva): reemite a propósito, siempre con UNA sola pendiente.
+    expect(await reemitir(leerEstadoDelAlta), salida.join("\n")).toBe(0);
+    expect(await total()).toBe(antes + 2);
+    expect(await pendientes()).toHaveLength(1);
+    expect(await pendientes()).not.toEqual([nueva]);
   });
 });

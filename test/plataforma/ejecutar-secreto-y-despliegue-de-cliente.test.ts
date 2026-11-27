@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { VARIABLE_DEL_PAQUETE_DE_CLIENTE } from "../../scripts/ejecutar-alta-de-cliente";
 import {
   PEDIDOS_DE_SALUD,
+  comprobarUltimoDespliegue,
   datosDelDespliegue,
   verificarDespliegue,
 } from "../../scripts/ejecutar-despliegue-de-cliente";
@@ -322,4 +323,74 @@ describe("verificación del despliegue del cliente", () => {
       expect(t.pedidos).toEqual([]);
     },
   );
+});
+
+describe("comprobar el último despliegue de producción del cliente (antes de emitir)", () => {
+  const DIRECCION = "https://pedernal-hdn-abc123.vercel.app";
+  const armar = (
+    respuesta: { estado: number; cuerpo: string } | "falla",
+    direccion: string | undefined,
+    ambiente: string | undefined,
+  ) => {
+    const errores: string[] = [];
+    const info: string[] = [];
+    const pedidos: Array<{ url: string; h: unknown }> = [];
+    return {
+      errores,
+      info,
+      pedidos,
+      entrada: {
+        ambiente,
+        direccion,
+        entorno: { PEDERNAL_VERCEL_TOKEN: TOKEN },
+        pedir: (url: string, h?: Readonly<Record<string, string>>) => {
+          pedidos.push({ url, h });
+          return respuesta === "falla"
+            ? Promise.reject(new Error(TOKEN))
+            : Promise.resolve(respuesta);
+        },
+        info: (l: string) => info.push(l),
+        error: (l: string) => errores.push(l),
+      },
+    };
+  };
+  const lista = (url: string, state: string) => ({
+    estado: 200,
+    cuerpo: JSON.stringify({ deployments: [{ url, state, target: "production" }] }),
+  });
+
+  it("confirma cuando el último despliegue de producción es el recién hecho y está READY (consulta el proyecto de la lista, token solo en el encabezado)", async () => {
+    const t = armar(lista("pedernal-hdn-abc123.vercel.app", "READY"), DIRECCION, "cliente-hdn");
+    expect(await comprobarUltimoDespliegue(t.entrada)).toBe(0);
+    expect(t.pedidos).toHaveLength(1);
+    expect(t.pedidos[0]?.url).toContain(`projectId=${PROYECTO}`);
+    expect(t.pedidos[0]?.url).toContain("target=production");
+    expect(t.pedidos[0]?.url).not.toContain(TOKEN);
+    expect(t.pedidos[0]?.h).toEqual({ authorization: `Bearer ${TOKEN}` });
+  });
+
+  it.each([
+    ["otro despliegue lo reemplazó", lista("pedernal-hdn-otro.vercel.app", "READY")],
+    ["todavía no está listo", lista("pedernal-hdn-abc123.vercel.app", "BUILDING")],
+    ["con error", lista("pedernal-hdn-abc123.vercel.app", "ERROR")],
+    ["la lista viene vacía", { estado: 200, cuerpo: JSON.stringify({ deployments: [] }) }],
+    ["Vercel dice 403", { estado: 403, cuerpo: "{}" }],
+    ["cuerpo que no es JSON", { estado: 200, cuerpo: "<html>" }],
+    ["falla de red", "falla" as const],
+  ])("no confirma (no se emite nada): %s", async (_n, respuesta) => {
+    const t = armar(respuesta, DIRECCION, "cliente-hdn");
+    expect(await comprobarUltimoDespliegue(t.entrada)).toBe(1);
+    expect(t.errores.join("\n")).toContain("No se emite nada");
+    expect(t.errores.join("\n")).not.toContain(TOKEN);
+  });
+
+  it.each([
+    ["ambiente fuera de la lista", DIRECCION, "preview"],
+    ["sin dirección", undefined, "cliente-hdn"],
+    ["dirección que no es de vercel.app", "https://evil.example/x", "cliente-hdn"],
+  ])("cierra ante la duda sin consultar: %s", async (_n, direccion, ambiente) => {
+    const t = armar(lista("x.vercel.app", "READY"), direccion, ambiente);
+    expect(await comprobarUltimoDespliegue(t.entrada)).toBe(2);
+    expect(t.pedidos).toEqual([]);
+  });
 });

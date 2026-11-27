@@ -152,3 +152,81 @@ export async function verificarDespliegue(entrada: EntradaDeVerificacion): Promi
   );
   return 1;
 }
+
+export type EntradaDeComprobacion = Readonly<{
+  ambiente: string | undefined;
+  /** Lo que imprimió la CLI de Vercel como dirección del despliegue que se acaba de hacer. */
+  direccion: string | undefined;
+  entorno: Entorno;
+  pedir: Pedido;
+  info: (linea: string) => void;
+  error: (linea: string) => void;
+}>;
+
+/**
+ * Antes de emitir una invitación (reemisión): comprueba con la API de Vercel que el ÚLTIMO despliegue de producción del proyecto del cliente es el que se acaba de hacer y está `READY` (`/api/salud` está
+ * protegida y no sirve). Es el modo de falla del incidente del 27/11/2026: el mail salió con un despliegue que no tenía el secreto nuevo. Si no se puede confirmar, no se emite. Salida: 0 confirmado, 1 no
+ * coincide o no está listo o falla la consulta, 2 datos incorrectos.
+ */
+export async function comprobarUltimoDespliegue(entrada: EntradaDeComprobacion): Promise<number> {
+  const token = leerTokenDeVercel(entrada.entorno);
+  const secreto = "token" in token ? token.token : undefined;
+  const error = (linea: string) => entrada.error(ocultarSecretos(linea, secreto));
+  const pedido = leerPedidoDeVercel(entrada.ambiente);
+  if (pedido === null || !entrada.ambiente?.startsWith("cliente-") || "problema" in token) {
+    error("ERROR: ambiente fuera de la lista cerrada o sin token de Vercel. No se emite nada.");
+    return 2;
+  }
+  const direccion = (entrada.direccion ?? "").trim();
+  if (!DIRECCION_TECNICA.test(direccion)) {
+    error(
+      "ERROR: la dirección del despliegue no tiene la forma https://<nombre>.vercel.app. No se emite nada.",
+    );
+    return 2;
+  }
+  let respuesta: Readonly<{ estado: number; cuerpo: string }>;
+  try {
+    respuesta = await entrada.pedir(
+      `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(pedido.proyecto)}&target=production&limit=1&slug=${encodeURIComponent(EQUIPO_DE_VERCEL)}`,
+      { authorization: `Bearer ${token.token}` },
+    );
+  } catch {
+    error(
+      "ERROR: no se pudo consultar el último despliegue en Vercel (red o tiempo). No se emite nada.",
+    );
+    return 1;
+  }
+  let cuerpo: unknown;
+  try {
+    cuerpo = JSON.parse(respuesta.cuerpo);
+  } catch {
+    cuerpo = null;
+  }
+  const lista = (cuerpo as { deployments?: unknown } | null)?.deployments;
+  const ultimo = Array.isArray(lista)
+    ? (lista[0] as Record<string, unknown> | undefined)
+    : undefined;
+  if (respuesta.estado !== 200 || ultimo === undefined) {
+    error(
+      `ERROR: Vercel no devolvió el último despliegue de producción (estado ${String(respuesta.estado)}). No se emite nada.`,
+    );
+    return 1;
+  }
+  const url = typeof ultimo["url"] === "string" ? `https://${ultimo["url"].toLowerCase()}` : "";
+  if (url !== direccion.toLowerCase()) {
+    error(
+      "ERROR: el último despliegue de producción NO es el que se acaba de hacer (otro despliegue lo reemplazó o la CLI no lo registró). No se emite nada.",
+    );
+    return 1;
+  }
+  if (ultimo["state"] !== "READY" && ultimo["readyState"] !== "READY") {
+    error(
+      "ERROR: el último despliegue de producción todavía no está listo (READY). No se emite nada.",
+    );
+    return 1;
+  }
+  entrada.info(
+    "CONFIRMADO: el último despliegue de producción es el recién hecho y está listo (READY).",
+  );
+  return 0;
+}

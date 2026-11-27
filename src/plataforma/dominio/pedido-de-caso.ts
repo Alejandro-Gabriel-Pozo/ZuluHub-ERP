@@ -22,9 +22,7 @@ import { claveDeIdempotenciaValida, uuidDesdeTexto } from "./soporte/consulta";
  * validación del caso, dentro de su transacción, sigue ahí: esto es la primera barrera, no la única.
  */
 
-// ---------------------------------------------------------------------------------------------
-// La lista cerrada
-// ---------------------------------------------------------------------------------------------
+// ---- La lista cerrada ----
 
 /**
  * Los casos que se pueden ejecutar desde un archivo, y la forma de su entrada. Cada campo dice su tipo (qué
@@ -136,6 +134,12 @@ const FORMAS = {
     empresaId: req("id"),
     modulo: req("texto"),
   },
+  // Reemitir la invitación del gerente del alta (otro id, otro token, 24 h; revoca la anterior): lo usa `reemitir-invitacion-de-cliente.yml` cuando el mail salió con un secreto que la web ya no tiene.
+  reenviarInvitacionDelAlta: {
+    claveDeIdempotencia: req("clave"),
+    empresaId: req("id"),
+    emailNuevo: opc("texto"),
+  },
 } as const;
 
 /** Los casos que se pueden ejecutar desde un archivo (la lista cerrada). */
@@ -148,9 +152,7 @@ export function esCasoDeLaLista(nombre: string): nombre is NombreDeCaso {
   return Object.hasOwn(FORMAS, nombre);
 }
 
-// ---------------------------------------------------------------------------------------------
-// Los tipos de campo
-// ---------------------------------------------------------------------------------------------
+// ---- Los tipos de campo ----
 
 /** Un valor mal formado o mal tipado. `FORMA_INVALIDA` es «no es del tipo»; los demás, el motivo del validador. */
 type MotivoDeValor =
@@ -262,9 +264,7 @@ type EntradaDeForma<F extends Forma> = {
 /** La entrada del caso, ya con los tipos que él espera: se pasa tal cual al caso de uso. */
 export type EntradaDeCaso<N extends NombreDeCaso> = EntradaDeForma<(typeof FORMAS)[N]>;
 
-// ---------------------------------------------------------------------------------------------
-// El archivo
-// ---------------------------------------------------------------------------------------------
+// ---- El archivo ----
 
 /**
  * Un problema de la forma del archivo. `campo` es el nombre del campo, o `null` si el problema es del
@@ -352,9 +352,7 @@ export function armarEntradaDelCaso<N extends NombreDeCaso>(
   return ok(entrada as EntradaDeCaso<N>);
 }
 
-// ---------------------------------------------------------------------------------------------
-// La línea de comandos
-// ---------------------------------------------------------------------------------------------
+// ---- La línea de comandos ----
 
 export type PedidoDeLinea = Readonly<{ caso: string; archivo: string; emailDelAdmin: string }>;
 

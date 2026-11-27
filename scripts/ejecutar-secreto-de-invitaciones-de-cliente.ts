@@ -35,6 +35,11 @@ export type EntradaDelSecretoDeInvitaciones = Readonly<{
   ambiente: string | undefined;
   entorno: Readonly<Record<string, string | undefined>>;
   empresaExiste: (cadena: string) => Promise<boolean>;
+  /** `reemitir`: el secreto se ROTA aunque la empresa exista, pero solo si `puedeReemitir` lo permite (no hace falta el secreto con los datos personales). */
+  modo?: "reemitir";
+  puedeReemitir?: (
+    cadena: string,
+  ) => Promise<Readonly<{ ok: true }> | Readonly<{ ok: false; motivo: string }>>;
   /** Cliente de la API de Vercel ya armado para el proyecto del cliente. */
   clienteDeVercel: (token: string, proyecto: string) => ClienteDeVariables;
   /** Escribe `NOMBRE=valor` en el archivo de entorno del runner. */
@@ -81,7 +86,10 @@ export async function prepararSecretoDeInvitaciones(
     return 2;
   }
   tapados.push(token.token);
-  if (problemasDelSecretoPersonal(entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE]).length > 0) {
+  if (
+    entrada.modo !== "reemitir" &&
+    problemasDelSecretoPersonal(entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE]).length > 0
+  ) {
     error(
       "ERROR: los datos del alta no sirven (los revisa el paso de validación). No se hizo nada.",
     );
@@ -91,7 +99,17 @@ export async function prepararSecretoDeInvitaciones(
 
   let existe: boolean;
   try {
-    existe = await entrada.empresaExiste(cadena);
+    if (entrada.modo === "reemitir") {
+      if (entrada.puedeReemitir === undefined) throw new Error("falta puedeReemitir");
+      const permitido = await entrada.puedeReemitir(cadena);
+      if (!permitido.ok) {
+        error(`ERROR: ${permitido.motivo}. No se cambió nada.`);
+        return 1;
+      }
+      existe = false;
+    } else {
+      existe = await entrada.empresaExiste(cadena);
+    }
   } catch (falla) {
     error(
       `ERROR: no se pudo consultar la base del cliente: ${describirFallaDeBase(falla, cadena)}`,
