@@ -76,16 +76,17 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
   const hidratada = useHidratada();
   const [consulta, setConsulta] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
-  // `null` hasta medir; después, si el entorno deja montar el Libro. Solo importa si la carta es del modelo Libro.
-  const [libroPosible, setLibroPosible] = useState<boolean | null>(null);
+  // Se mide una vez, en la primera pintura con JavaScript (en el servidor no hay nada que medir: queda en `false`).
+  // El Libro igual espera a `hidratada`, así que lo que sale del servidor y la hidratación coinciden.
+  const [libroPosible] = useState(
+    () =>
+      vista.modelo === "LIBRO" && typeof window !== "undefined" && medirSiPuedeMontarseElLibro(),
+  );
   // Lo que eligió quien mira con «Ver como lista» / «Ver como libro»; no se guarda: cada visita parte de cero.
   const [eleccion, setEleccion] = useState<"LIBRO" | "LISTA" | null>(null);
-  useEffect(() => {
-    if (vista.modelo === "LIBRO") setLibroPosible(medirSiPuedeMontarseElLibro());
-  }, [vista.modelo]);
   const esDeLibro = vista.modelo === "LIBRO";
   const enLibro =
-    esDeLibro && hidratada && (eleccion ?? (libroPosible === true ? "LIBRO" : "LISTA")) === "LIBRO";
+    esDeLibro && hidratada && (eleccion ?? (libroPosible ? "LIBRO" : "LISTA")) === "LIBRO";
 
   const productos = useMemo(
     () => new Map(vista.secciones.flatMap((s) => s.productos).map((p) => [p.segmento, p])),

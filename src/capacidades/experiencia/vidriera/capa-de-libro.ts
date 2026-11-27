@@ -56,15 +56,20 @@ export function numeroDeSeccion(pagina: number): number | null {
     : pagina - PAGINAS_ANTES_DE_LAS_SECCIONES + 1;
 }
 
-/** La página a la que lleva `#<slug>`: la de esa sección, o `null` si ninguna sección tiene ese ancla. */
-export function paginaDelAncla(ancla: string, idsDeSecciones: readonly string[]): number | null {
+/** El ancla sin «#» y sin codificar, o `null` si viene mal codificada. */
+function anclaLegible(ancla: string): string | null {
   const sinNumeral = ancla.startsWith("#") ? ancla.slice(1) : ancla;
-  let id = sinNumeral;
   try {
-    id = decodeURIComponent(sinNumeral);
+    return decodeURIComponent(sinNumeral);
   } catch {
     return null;
   }
+}
+
+/** La página a la que lleva `#<slug>`: la de esa sección, o `null` si ninguna sección tiene ese ancla. */
+export function paginaDelAncla(ancla: string, idsDeSecciones: readonly string[]): number | null {
+  const id = anclaLegible(ancla);
+  if (id === null) return null;
   const i = idsDeSecciones.indexOf(id);
   return i === -1 ? null : paginaDeLaSeccion(i);
 }

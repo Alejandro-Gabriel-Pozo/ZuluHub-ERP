@@ -26,7 +26,7 @@ function entorno(
   const original = window.matchMedia.bind(window);
   vi.spyOn(window, "matchMedia").mockImplementation((consulta: string) =>
     consulta.includes("prefers-reduced-motion")
-      ? ({ ...original("(min-width: 0px)"), matches: reducido, media: consulta } as MediaQueryList)
+      ? { ...original("(min-width: 0px)"), matches: reducido, media: consulta }
       : original(consulta),
   );
 }
@@ -163,9 +163,7 @@ describe("PlantillaLibro (modelo Libro sobre la Lista)", () => {
     entorno();
     await abrir();
     for (const nombre of ["Anterior", "Índice", "Siguiente"]) {
-      const caja = (
-        await page.getByRole("button", { name: nombre }).element()
-      ).getBoundingClientRect();
+      const caja = page.getByRole("button", { name: nombre }).element().getBoundingClientRect();
       expect(caja.width, nombre).toBeGreaterThanOrEqual(48);
       expect(caja.height, nombre).toBeGreaterThanOrEqual(48);
     }
