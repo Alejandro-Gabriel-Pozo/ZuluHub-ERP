@@ -4,6 +4,10 @@ import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { jornadaDeSucursal, type EstadoConsultado } from "../../cierre/publico";
+import {
+  cobradoYDevueltoPorPar,
+  type CobradoYDevuelto,
+} from "../aporte/cobrado-y-devuelto-por-par";
 import { leerLaJornada, type ErrorAlLeerLaJornada } from "../aporte/la-jornada";
 import type { EstadoDeConteo } from "../estados";
 import type { MedioYCuentaConNombre } from "../persistencia/base-de-la-jornada";
@@ -22,6 +26,10 @@ export type EntradaDeConciliacionDeLaJornada = EntradaDeJornadaDeCaja;
 export type LineaDeConciliacionVista = MedioYCuentaConNombre &
   Readonly<{
     registrado: ImporteJson;
+    /** Informativo (no entra en la diferencia): Σ de los COBROS de la jornada en este par, en el medio con que se cobraron. */
+    cobrado: ImporteJson;
+    /** Informativo (no entra en la diferencia): Σ, en positivo, de las devoluciones vigentes que salieron por este par; ya están restadas del `registrado`. */
+    devuelto: ImporteJson;
     /** Σ de las correcciones de medio: `+importe` en el par de destino, `−importe` en el de origen. */
     correcciones: ImporteJson;
     /** `null` si `CONFORME` o `SIN_DATO`. */
@@ -76,6 +84,11 @@ export type ErrorAlVerLaConciliacion =
 
 const jsonONulo = (importe: Importe | null): ImporteJson | null =>
   importe === null ? null : importeAJson(importe);
+
+const informativoVisto = (x: CobradoYDevuelto) => ({
+  cobrado: importeAJson(x.cobrado),
+  devuelto: importeAJson(x.devuelto),
+});
 
 const ajusteVisto = (a: AjusteConEnlace): AjusteVisto => ({
   ...a,
@@ -158,6 +171,7 @@ export function armarConciliacionDeLaJornada({
         if (estado === "CERRADA") {
           const lineas = await tx.fotos.lineas(empresa, sucursal, fecha);
           const origenes = await tx.fotos.origenes(empresa, sucursal, fecha);
+          const informativo = await cobradoYDevueltoPorPar(tx, empresa, sucursal, fecha);
           return ok({
             estadoDeLaJornada: estado,
             enVivo: false,
@@ -168,6 +182,7 @@ export function armarConciliacionDeLaJornada({
               cuentaDeCobroId: l.cuentaDeCobroId,
               cuentaNombre: l.cuentaNombre,
               registrado: importeAJson(l.registrado),
+              ...informativoVisto(informativo(l.medioDePagoId, l.cuentaDeCobroId)),
               correcciones: importeAJson(l.correcciones),
               declarado: jsonONulo(l.declarado),
               estadoDeConteo: l.estado,
@@ -196,12 +211,14 @@ export function armarConciliacionDeLaJornada({
         const jornada = await leerLaJornada(tx, empresa, sucursal, fecha, tickets);
         if (!jornada.ok) return err(jornada.error);
         const nombres = await nombresDeLosPares(tx, contexto, sucursal);
+        const informativo = await cobradoYDevueltoPorPar(tx, empresa, sucursal, fecha);
         return ok({
           estadoDeLaJornada: estado,
           enVivo: true,
           lineas: jornada.valor.lineas.map((l) => ({
             ...nombres(l.medioDePagoId, l.cuentaDeCobroId),
             registrado: importeAJson(l.registrado),
+            ...informativoVisto(informativo(l.medioDePagoId, l.cuentaDeCobroId)),
             correcciones: importeAJson(l.correcciones),
             declarado: jsonONulo(l.declarado),
             estadoDeConteo: l.estado,

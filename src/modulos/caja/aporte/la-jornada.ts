@@ -5,6 +5,7 @@ import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   ORIGEN_DE_COBRANZA_DE_TICKET,
   compararContraTickets,
+  descontarDevoluciones,
   type DiferenciaDeTicket,
 } from "../dominio/cobrado-contra-ticket";
 import {
@@ -62,19 +63,32 @@ function cierresDelArqueo(
   return cierres;
 }
 
-/** Los cobros con origen de ventas de la jornada contra el total vigente de su ticket; si no hay ninguno, no se le pregunta nada a ventas. */
+/**
+ * Los cobros con origen de ventas de la jornada, NETOS de lo ya devuelto de cada cobranza (devoluciones vigentes hasta ahora), contra el total vigente de su ticket; si no hay ninguno,
+ * no se le pregunta nada a ventas.
+ */
 async function diferenciasContraLosTickets(
   tx: TxDeLecturaDeLaJornada,
+  empresa: EmpresaId,
   tickets: TicketsPorCobranza,
-  cobrado: readonly Readonly<{
+  cobradoBruto: readonly Readonly<{
     origen: Readonly<{ tipo: string; id: string }>;
     importe: Importe;
   }>[],
 ): Promise<readonly DiferenciaDeTicket[] | null> {
-  const cobranzaIds = cobrado
+  const cobranzaIds = cobradoBruto
     .filter((c) => c.origen.tipo === ORIGEN_DE_COBRANZA_DE_TICKET)
     .map((c) => c.origen.id);
   if (cobranzaIds.length === 0) return [];
+  const devueltos = await tx.devolucionesDeLaJornada.devueltoPorOrigen(
+    empresa,
+    ORIGEN_DE_COBRANZA_DE_TICKET,
+    cobranzaIds,
+  );
+  const cobrado = descontarDevoluciones(
+    cobradoBruto.map((c) => ({ origen: c.origen, cobrado: c.importe })),
+    devueltos,
+  ).map((c) => ({ origen: c.origen, importe: c.cobrado }));
   let informados;
   try {
     informados = await tickets.ticketsPorCobranza(tx, cobranzaIds);
@@ -117,6 +131,7 @@ export async function leerLaJornada(
   const cobrado = await tx.laJornada.cobradoPorOrigen(empresa, sucursal, fecha, null, null);
   const diferenciasDeTicket = await diferenciasContraLosTickets(
     tx,
+    empresa,
     tickets,
     cobrado.map((c) => ({ origen: c.origen, importe: c.cobrado })),
   );

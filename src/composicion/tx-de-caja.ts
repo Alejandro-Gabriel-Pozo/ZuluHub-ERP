@@ -10,6 +10,7 @@ import {
   crearRepositorioDeCorrecciones,
   crearRepositorioDeCuentasDeCobro,
   crearRepositorioDeDeclaraciones,
+  crearRepositorioDeDevolucionesDeLaJornada,
   crearRepositorioDeFotos,
   crearRepositorioDeLaJornada,
   crearRepositorioDeMediosDePago,
@@ -24,6 +25,7 @@ import {
   type RepositorioDeCorrecciones,
   type RepositorioDeCuentasDeCobro,
   type RepositorioDeDeclaraciones,
+  type RepositorioDeDevolucionesDeLaJornada,
   type RepositorioDeFotos,
   type RepositorioDeLaJornada,
   type RepositorioDeMediosDePago,
@@ -64,6 +66,8 @@ export type PiezasDeCajaEnTx = Readonly<{
   correcciones: RepositorioDeCorrecciones;
   declaraciones: RepositorioDeDeclaraciones;
   laJornada: RepositorioDeLaJornada;
+  /** Lo cobrado y lo devuelto de la jornada (la devolución con medio): solo lectura. */
+  devolucionesDeLaJornada: RepositorioDeDevolucionesDeLaJornada;
   cobrosDeLaJornada: RepositorioDeCobrosDeLaJornada;
   fotos: RepositorioDeFotos;
   /** Lo que el plan de la empresa le deja usar (el límite de cajas por sucursal), leído en esta transacción y sin caché. */
@@ -96,6 +100,7 @@ export function armarPiezasDeCajaEnTx(
     correcciones: crearRepositorioDeCorrecciones(db.withTables<CajaDb>()),
     declaraciones: crearRepositorioDeDeclaraciones(db.withTables<CajaDb>()),
     laJornada: crearRepositorioDeLaJornada(db.withTables<CajaDb>()),
+    devolucionesDeLaJornada: crearRepositorioDeDevolucionesDeLaJornada(db.withTables<CajaDb>()),
     cobrosDeLaJornada: crearRepositorioDeCobrosDeLaJornada(db.withTables<CajaDb>()),
     fotos: crearRepositorioDeFotos(db.withTables<CajaDb>()),
     derechos: crearLecturaDeDerechosDeUso(crearLecturaDePlanes(db.withTables<PlanesDb>()), {
