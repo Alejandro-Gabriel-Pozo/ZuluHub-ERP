@@ -118,7 +118,7 @@
 .barra {
   flex-wrap: wrap;
   position: fixed;
-  inset: auto 0 0;
+  inset: auto 0 var(--alto-de-la-barra-inferior);
   z-index: var(--capa-franja-de-aviso);
   display: flex;
   align-items: center;

@@ -52,6 +52,7 @@
 .inferior {
   position: sticky;
   bottom: 0;
+  min-height: var(--alto-de-la-barra-inferior);
   background: var(--color-superficie-elevada);
   border-top: var(--borde-grosor) solid var(--color-borde);
 }

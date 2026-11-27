@@ -80,7 +80,7 @@
 
 .pie {
   position: fixed;
-  inset: auto 0 0;
+  inset: auto 0 var(--alto-de-la-barra-inferior);
   z-index: var(--capa-franja-de-aviso);
   padding: var(--espacio-3) var(--espacio-4);
   background: var(--color-superficie-elevada);
