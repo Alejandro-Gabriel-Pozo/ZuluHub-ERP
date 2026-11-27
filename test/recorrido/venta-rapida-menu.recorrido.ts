@@ -15,7 +15,10 @@ describe.skipIf(base === null)("recorrido de Venta rápida en el celular", () =>
 
   beforeAll(async () => {
     if (base === null) return;
-    mundo = await armarMundoDelRecorrido(base, { activarModulosEnDesarrollo: true });
+    mundo = await armarMundoDelRecorrido(base, {
+      modulosAdicionales: ["catalogo", "caja", "ventas"],
+      activarModulosEnDesarrollo: true,
+    });
     const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
     navegador = await chromium.launch({
       ...(ejecutable === undefined || ejecutable === "" ? {} : { executablePath: ejecutable }),
