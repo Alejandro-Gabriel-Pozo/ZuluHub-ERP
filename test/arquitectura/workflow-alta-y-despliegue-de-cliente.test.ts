@@ -252,9 +252,7 @@ function problemasDelDespliegue(texto: string): string[] {
   const secretos = [...limpio.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1] as string);
   exigir(
     "solo-los-secretos-del-cliente",
-    secretos.every((s) =>
-      ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN", "PEDERNAL_VERCEL_BYPASS"].includes(s),
-    ),
+    secretos.every((s) => ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN"].includes(s)),
   );
   exigir("cli-sin-scripts-de-instalacion", /NPM_CONFIG_IGNORE_SCRIPTS: "true"/.test(limpio));
   return problemas;

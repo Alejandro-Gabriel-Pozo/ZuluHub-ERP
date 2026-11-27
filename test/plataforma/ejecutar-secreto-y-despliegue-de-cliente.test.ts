@@ -302,23 +302,6 @@ describe("verificación del despliegue del cliente", () => {
     expect(t.pedidos).toEqual([`${URL}/api/salud`]);
   });
 
-  it("con el secreto de bypass lo manda solo en el encabezado y puede mirar una dirección protegida", async () => {
-    const t = armar([SANO], URL);
-    const pedidos: Array<unknown> = [];
-    const pedir = (u: string, h?: Readonly<Record<string, string>>) => {
-      pedidos.push([u, h]);
-      return Promise.resolve(SANO);
-    };
-    expect(await verificarDespliegue({ ...t.entrada, pedir, bypass: "bypass-centinela-123" })).toBe(
-      0,
-    );
-    expect(pedidos).toEqual([
-      [`${URL}/api/salud`, { "x-vercel-protection-bypass": "bypass-centinela-123" }],
-    ]);
-    expect(await verificarDespliegue({ ...t.entrada, pedir, bypass: "con espacio" })).toBe(2);
-    expect(t.salida.join("")).not.toContain("bypass-centinela");
-  });
-
   it("reintenta un despliegue que todavía no contesta y termina en LISTO", async () => {
     const t = armar([{ estado: 502, cuerpo: "" }, "falla", SANO], URL);
     expect(await verificarDespliegue(t.entrada)).toBe(0);

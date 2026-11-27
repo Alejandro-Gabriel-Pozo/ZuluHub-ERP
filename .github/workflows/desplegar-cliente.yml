@@ -13,8 +13,7 @@ name: Desplegar la web de un cliente (producción)
 #    cambió, se vuelve a desplegar para que la web la tome.
 #  - Los dominios (`app.` y `carta.`) los sirve este proyecto recién cuando el dueño cambia el DNS (H.9); este flujo no lo hace.
 #  - Concurrencia: el MISMO grupo que `migrar.yml` y el alta (`migrar-<ambiente>`): nunca se despliega mientras se migra o se da el alta; una corrida que ya corre nunca se cancela.
-#  - Secretos del Environment del cliente (nunca en el repositorio): PEDERNAL_DB_DUENO_DIRECTA y PEDERNAL_VERCEL_TOKEN (alcance al proyecto del cliente), y opcional PEDERNAL_VERCEL_BYPASS (el secreto de «Protection Bypass for Automation» del proyecto,
-#    para poder mirar /api/salud de la dirección técnica protegida sin aflojar la protección). Ningún paso los imprime.
+#  - Secretos del Environment del cliente (nunca en el repositorio): PEDERNAL_DB_DUENO_DIRECTA y PEDERNAL_VERCEL_TOKEN (alcance al proyecto del cliente). Ningún paso los imprime.
 
 on:
   workflow_dispatch:
@@ -148,5 +147,3 @@ jobs:
         run: npm run desplegar-cliente -- verificar "$DIRECCION"
         env:
           DIRECCION: ${{ steps.desplegar.outputs.direccion }}
-          # Opcional: el secreto de «Protection Bypass for Automation» del proyecto. La dirección técnica está protegida por Vercel (SSO) y sin él da 401.
-          PEDERNAL_VERCEL_BYPASS: ${{ secrets.PEDERNAL_VERCEL_BYPASS }}

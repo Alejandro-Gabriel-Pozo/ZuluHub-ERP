@@ -41,7 +41,6 @@ if (process.argv[2] === "datos") {
 } else if (process.argv[2] === "verificar") {
   process.exitCode = await verificarDespliegue({
     url: process.argv[3],
-    bypass: process.env["PEDERNAL_VERCEL_BYPASS"],
     pedir,
     esperar: (ms) => new Promise<void>((listo) => setTimeout(listo, ms)),
     info,
