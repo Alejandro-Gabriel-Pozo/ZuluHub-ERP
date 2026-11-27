@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import {
+  compararFilasDeLotes,
   leerLotesDelRenglon,
   lotesParaLaHuella,
   MAXIMO_DE_LOTES_POR_RENGLON,
@@ -128,6 +129,32 @@ describe("leerLotesDelRenglon", () => {
   });
 });
 
+describe("leerLotesDelRenglon: bordes que antes sobrevivían", () => {
+  it("una lista vacía nunca es válida, ni siquiera para un renglón de cantidad cero", () => {
+    expect(codigoDe(leer([], "0"))).toBe("RENGLONES_INVALIDOS");
+    expect(codigoDe(leer([], "5"))).toBe("RENGLONES_INVALIDOS");
+  });
+
+  it("una fecha de elaboración inexistente (o que no es texto) se rechaza aunque el vencimiento sea válido", () => {
+    for (const fechaDeElaboracion of ["2026-02-30", "26-11-2026", "", 20260601, "1999-12-31"]) {
+      expect(
+        codigoDe(leer([lote({ fechaDeElaboracion, cantidad: "5" })])),
+        String(fechaDeElaboracion),
+      ).toBe("VENCIMIENTO_REQUERIDO");
+    }
+  });
+
+  it("la elaboración puede venir sola (sin vencimiento) y, con los dos, no pasa de la del vencimiento (igual sí, un día después no)", () => {
+    const solo = { codigo: "L-1", cantidad: "5", fechaDeElaboracion: "2099-06-02" };
+    expect(codigoDe(leer([solo]))).toBe("OK");
+    expect(codigoDe(leer([lote({ fechaDeElaboracion: "2099-05-31", cantidad: "5" })]))).toBe("OK");
+    expect(codigoDe(leer([lote({ fechaDeElaboracion: "2099-06-01", cantidad: "5" })]))).toBe("OK");
+    expect(codigoDe(leer([lote({ fechaDeElaboracion: "2099-06-02", cantidad: "5" })]))).toBe(
+      "IDENTIFICADOR_INVALIDO",
+    );
+  });
+});
+
 const leidos = (
   filas: readonly (readonly [string, string | null, string | null, string])[],
 ): LoteLeido[] =>
@@ -223,5 +250,124 @@ describe("lotesParaLaHuella", () => {
     expect(lotesParaLaHuella(leidos([["A", null, null, "2"]]))).toBe(
       lotesParaLaHuella(leidos([["A", null, null, "2.0000"]])),
     );
+  });
+});
+
+describe("lotesParaLaHuella: el orden", () => {
+  const fila = (codigo: string, vence: string | null, elabora: string | null, cantidad: string) =>
+    [codigo, vence, elabora, cantidad] as const;
+  const permutaciones = <T>(lista: readonly T[]): T[][] =>
+    lista.length <= 1
+      ? [[...lista]]
+      : lista.flatMap((x, i) =>
+          permutaciones([...lista.slice(0, i), ...lista.slice(i + 1)]).map((resto) => [
+            x,
+            ...resto,
+          ]),
+        );
+
+  it("ordena por el código, después por el vencimiento, la elaboración y la cantidad: cualquier orden de entrada da el mismo texto", () => {
+    const filas = [
+      fila("A", "2099-01-01", null, "1"),
+      fila("A", "2099-02-01", null, "1"),
+      fila("A", "2099-02-01", "2098-01-01", "1"),
+      fila("A", "2099-02-01", "2098-01-01", "2"),
+      fila("B", null, null, "1"),
+    ];
+    const esperado = lotesParaLaHuella(leidos(filas));
+    for (const orden of permutaciones(filas)) {
+      expect(lotesParaLaHuella(leidos(orden))).toBe(esperado);
+    }
+    expect(JSON.parse(esperado).map((f: unknown[]) => f[0])).toEqual(["A", "A", "A", "A", "B"]);
+  });
+
+  it("un campo ausente (null) ordena antes que uno con valor: se lee como texto vacío", () => {
+    const sin = fila("A", null, null, "1");
+    const con = fila("A", "2099-01-01", null, "1");
+    for (const orden of [
+      [sin, con],
+      [con, sin],
+    ]) {
+      expect(JSON.parse(lotesParaLaHuella(leidos(orden)))).toEqual([
+        ["A", null, null, "1.0000"],
+        ["A", "2099-01-01", null, "1.0000"],
+      ]);
+    }
+  });
+
+  it("mayor y menor: el menor primero y nunca al revés", () => {
+    expect(
+      JSON.parse(
+        lotesParaLaHuella(leidos([fila("B", null, null, "1"), fila("A", null, null, "1")])),
+      )[0][0],
+    ).toBe("A");
+    expect(
+      JSON.parse(
+        lotesParaLaHuella(leidos([fila("A", null, null, "1"), fila("B", null, null, "1")])),
+      )[0][0],
+    ).toBe("A");
+    expect(
+      JSON.parse(
+        lotesParaLaHuella(leidos([fila("a", null, null, "1"), fila("B", null, null, "1")])),
+      )[0][0],
+    ).toBe("B");
+  });
+
+  it("el orden es estable: dos lotes de igual clave (un null y un texto vacío) mantienen el orden en que llegaron", () => {
+    const conNull = fila("A", null, null, "1");
+    const conVacio = fila("A", "", null, "1");
+    expect(JSON.parse(lotesParaLaHuella(leidos([conNull, conVacio])))).toEqual([
+      ["A", null, null, "1.0000"],
+      ["A", "", null, "1.0000"],
+    ]);
+    expect(JSON.parse(lotesParaLaHuella(leidos([conVacio, conNull])))).toEqual([
+      ["A", "", null, "1.0000"],
+      ["A", null, null, "1.0000"],
+    ]);
+  });
+
+  it("con muchos lotes (más de lo que ordena por inserción simple) el orden sigue siendo el de la clave y estable en los empates", () => {
+    const filas: (readonly [string, string | null, string | null, string])[] = [];
+    for (let i = 0; i < 120; i++) {
+      // Pocos códigos y fechas a propósito: muchos empates de clave, con un null y un texto vacío que comparten clave pero se escriben distinto.
+      const codigo = `C${String((i * 7) % 5)}`;
+      const vence = i % 3 === 0 ? null : i % 3 === 1 ? "" : "2099-01-01";
+      filas.push([codigo, vence, null, `${String((i * 11) % 4)}.0000`]);
+    }
+    const clave = (f: readonly (string | null)[]) => JSON.stringify(f.map((c) => c ?? ""));
+    const esperado = JSON.stringify(
+      [...filas].sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0)),
+    );
+    expect(lotesParaLaHuella(leidos(filas))).toBe(esperado);
+    expect(lotesParaLaHuella(leidos([...filas].reverse()))).toBe(
+      JSON.stringify(
+        [...filas]
+          .reverse()
+          .sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0)),
+      ),
+    );
+  });
+});
+
+describe("compararFilasDeLotes", () => {
+  it("menor → −1, mayor → 1, igual → 0, sobre pares sueltos (sin pasar por el sort)", () => {
+    expect(compararFilasDeLotes(["A", null], ["B", null])).toBe(-1);
+    expect(compararFilasDeLotes(["B", null], ["A", null])).toBe(1);
+    expect(compararFilasDeLotes(["A", "x"], ["A", "x"])).toBe(0);
+  });
+
+  it("el campo ausente vale vacío: null y texto vacío empatan, y un valor es mayor que la ausencia", () => {
+    expect(compararFilasDeLotes(["A", null], ["A", ""])).toBe(0);
+    expect(compararFilasDeLotes(["A", null], ["A", "2099-01-01"])).toBe(-1);
+    expect(compararFilasDeLotes(["A", "2099-01-01"], ["A", null])).toBe(1);
+  });
+
+  it("compara por la clave completa, campo a campo, en orden", () => {
+    expect(
+      compararFilasDeLotes(["A", "2099-01-01", null, "9"], ["A", "2099-01-02", null, "1"]),
+    ).toBe(-1);
+    expect(
+      compararFilasDeLotes(["A", "2099-01-01", null, "2"], ["A", "2099-01-01", null, "1"]),
+    ).toBe(1);
   });
 });
