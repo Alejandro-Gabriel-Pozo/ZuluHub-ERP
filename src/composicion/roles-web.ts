@@ -1,6 +1,7 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type {
+  EventoDelRol,
   ModuloParaElegir,
   RolParaLaLista,
   RolesAsignables,
@@ -36,7 +37,12 @@ export type DependenciasDeRolesWeb = Readonly<{
   >;
   consultas: () => Pick<
     ReturnType<Web["consultasDeIdentidad"]>,
-    "listarRoles" | "verRol" | "accionesParaElegir" | "rolesAsignables"
+    | "listarRoles"
+    | "verRol"
+    | "historialDelRol"
+    | "accionesParaElegir"
+    | "rolesAsignables"
+    | "personasParaMostrar"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -72,6 +78,60 @@ export function fichaDeRol(
       return rol.valor === null ? err("ROL_NO_ENCONTRADO") : ok(rol.valor);
     },
     (rol) => rol,
+  );
+}
+
+/** Un cambio en la vida de un rol propio tal como lo dibuja la pantalla: la fecha como instante ISO y quién lo hizo como correo (`null`: actor de sistema). */
+export type EventoDelRolParaLaPantalla = Readonly<{
+  id: string;
+  tipo: EventoDelRol["tipo"];
+  cuando: string;
+  por: string | null;
+  nombreAnterior: string | null;
+  nombreNuevo: string | null;
+  agregadas: readonly string[];
+  quitadas: readonly string[];
+}>;
+
+/**
+ * El historial de un rol propio por el id de la dirección (`roles.ver`, solo el gerente): los últimos cambios del más nuevo al más viejo, con el correo de quien los hizo (`personasParaMostrar`, una sola vez).
+ * Uno inexistente o de otra empresa es el genérico, sin decir cuál de las dos cosas pasó. Solo lectura.
+ */
+export function historialDelRol(
+  d: DependenciasDeRolesWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<readonly EventoDelRolParaLaPantalla[]>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeRol,
+    async (entrada): Promise<Resultado<readonly EventoDelRolParaLaPantalla[], unknown>> => {
+      const historial = await d.consultas().historialDelRol(contexto, { rolId: entrada.rolId });
+      if (!historial.ok) return historial;
+      if (historial.valor === null) return err("ROL_NO_ENCONTRADO");
+      const ids = [
+        ...new Set(
+          historial.valor.eventos.flatMap((e) => (e.porPersonaId === null ? [] : [e.porPersonaId])),
+        ),
+      ];
+      const personas = await d.consultas().personasParaMostrar(contexto, { ids });
+      // No se esconde ningún fallo: sin el correo no hay «quién», y un historial sin quién engaña.
+      if (!personas.ok) return personas;
+      return ok(
+        historial.valor.eventos.map((e) => ({
+          id: e.id,
+          tipo: e.tipo,
+          cuando: e.cuando.toISOString(),
+          por: e.porPersonaId === null ? null : (personas.valor.get(e.porPersonaId) ?? null),
+          nombreAnterior: e.nombreAnterior,
+          nombreNuevo: e.nombreNuevo,
+          agregadas: e.agregadas,
+          quitadas: e.quitadas,
+        })),
+      );
+    },
+    (eventos) => eventos,
   );
 }
 

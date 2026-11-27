@@ -8,7 +8,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * «Roles» de punta a punta en la app REAL construida, con un navegador real y una base real. El gerente entra a Cuenta → «Roles» y:
  *  R1 toca «Nuevo rol», escribe el nombre y toca «Guardar» dos veces seguidas: queda UN rol y va a su ficha;
  *  R2 en la ficha tilda una acción y guarda: queda guardada (una versión nueva) y al volver a abrir sigue tildada; lo cerrado (solo gerente) no se puede tildar;
- *  R3 archiva el rol: la lista lo muestra «Archivado»; lo reactiva y vuelve a figurar activo;
+ *  R3 archiva el rol: la lista lo muestra «Archivado»; lo reactiva y vuelve a figurar activo; y el «Historial» al pie de la ficha cuenta las cuatro cosas que le pasaron (alta, edición con la acción agregada, archivado y reactivado), del más nuevo al más viejo;
  *  R4 la ficha de un rol de otra empresa dice lo mismo que una inexistente.
  * Además: la entrada «Roles» figura en el menú de Cuenta para el gerente y sin violaciones graves de accesibilidad.
  * Lo que esta prueba ve y las de componentes y las de integración no: las acciones de servidor en el navegador (cifrado del id y de la versión ligados con `.bind`, la navegación tras crear) y la lista que se vuelve a leer.
@@ -114,7 +114,7 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     ).resolves.toBe(true);
   });
 
-  it("R3: archivar lo muestra «Archivado» en la lista y reactivar lo vuelve a dejar activo", async () => {
+  it("R3: archivar lo muestra «Archivado» en la lista, reactivar lo vuelve a dejar activo y el historial lo cuenta", async () => {
     const [rol] = await rolesLlamados("Cajero");
     await ir(`/cuenta/roles/${rol?.id}`);
     await pagina.getByRole("button", { name: "Archivar" }).click();
@@ -128,6 +128,19 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     await ir(`/cuenta/roles/${rol?.id}`);
     await pagina.getByRole("button", { name: "Reactivar" }).click();
     await expect.poll(async () => (await rolesLlamados("Cajero"))[0]?.activo).toBe(true);
+
+    // El historial al pie de la ficha: lo último primero, con la acción que se agregó en R2.
+    await ir(`/cuenta/roles/${rol?.id}`);
+    const historial = pagina.getByRole("region", { name: "Historial" });
+    await historial.getByRole("listitem").nth(3).waitFor();
+    const filas = await historial.getByRole("listitem").allTextContents();
+    expect(filas).toHaveLength(4);
+    expect(filas[0]).toContain("Rol reactivado");
+    expect(filas[1]).toContain("Rol archivado");
+    expect(filas[2]).toContain("Rol editado");
+    expect(filas[2]).toContain("Acciones agregadas: Invitar usuarios");
+    expect(filas[3]).toContain("Rol creado");
+    await sinViolacionesDeAxe();
   });
 
   it("R4: la ficha de un rol de otra empresa dice lo mismo que una inexistente, sin el nombre", async () => {
