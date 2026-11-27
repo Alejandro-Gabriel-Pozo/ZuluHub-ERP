@@ -64,13 +64,14 @@ function cierresDelArqueo(
 }
 
 /**
- * Los cobros con origen de ventas de la jornada, NETOS de lo ya devuelto de cada cobranza (devoluciones vigentes hasta ahora), contra el total vigente de su ticket; si no hay ninguno,
+ * Los cobros con origen de ventas de la jornada, NETOS de lo devuelto de cada cobranza EN ESA MISMA JORNADA (devoluciones vigentes), contra el total vigente de su ticket; si no hay ninguno,
  * no se le pregunta nada a ventas.
  */
 async function diferenciasContraLosTickets(
   tx: TxDeLecturaDeLaJornada,
   empresa: EmpresaId,
   sucursal: SucursalId,
+  fecha: FechaCivil,
   tickets: TicketsPorCobranza,
   cobradoBruto: readonly Readonly<{
     origen: Readonly<{ tipo: string; id: string }>;
@@ -84,6 +85,7 @@ async function diferenciasContraLosTickets(
   const devueltos = await tx.devolucionesDeLaJornada.devueltoPorOrigen(
     empresa,
     sucursal,
+    fecha,
     ORIGEN_DE_COBRANZA_DE_TICKET,
     cobranzaIds,
   );
@@ -135,6 +137,7 @@ export async function leerLaJornada(
     tx,
     empresa,
     sucursal,
+    fecha,
     tickets,
     cobrado.map((c) => ({ origen: c.origen, importe: c.cobrado })),
   );

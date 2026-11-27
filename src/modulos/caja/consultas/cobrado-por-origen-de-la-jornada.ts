@@ -40,7 +40,7 @@ export type CobradoDeUnOrigenVisto = Readonly<{
   origen: Readonly<{ tipo: string; id: string }>;
   /** Σ de los cobros de ese origen en la jornada: no cambia con una corrección de medio. */
   cobrado: ImporteJson;
-  /** Lo ya devuelto de esa cobranza (devoluciones vigentes, hasta ahora, de cualquier jornada); cero si no hay. Solo las cobranzas de ticket se devuelven. */
+  /** Lo ya devuelto de esa cobranza (devoluciones vigentes que salieron EN ESA JORNADA); cero si no hay. Solo las cobranzas de ticket se devuelven. */
   devuelto: ImporteJson;
   /** `cobrado` − `devuelto`: lo que compara el control «cobrado contra el ticket». */
   neto: ImporteJson;
@@ -109,6 +109,7 @@ export function armarCobradoPorOrigenDeLaJornada({
             await tx.devolucionesDeLaJornada.devueltoPorOrigen(
               contexto.empresaId,
               jornada.valor.sucursal,
+              jornada.valor.fecha,
               ORIGEN_DE_LA_COBRANZA,
               pagina.filter((o) => o.origen.tipo === ORIGEN_DE_LA_COBRANZA).map((o) => o.origen.id),
             )

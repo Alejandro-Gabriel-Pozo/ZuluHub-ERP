@@ -1,6 +1,6 @@
 -- 0115_cierre_de_caja_cobrado_neto_de_devoluciones: DM-3a, el control «cobrado contra el ticket» del cierre del día resta lo ya devuelto de cada cobranza.
 -- QUÉ HACE: reemplaza, con UN `CREATE OR REPLACE`, la función del disparador diferido `cierre_de_caja_verificar` (0027, el único que la define): lo único que cambia es la
---   última comprobación. El `cobrado` guardado de cada origen de la foto es la Σ de sus cobros en la jornada MENOS las devoluciones vigentes que citan ese origen (hasta ahora).
+--   última comprobación. El `cobrado` guardado de cada origen de la foto es la Σ de sus cobros en la jornada MENOS las devoluciones vigentes que citan ese origen y salieron EN ESA MISMA JORNADA (misma sucursal y fecha de negocio).
 --   Sin devoluciones, el mismo número de siempre; lo ya guardado sigue siendo válido. El resto del cuerpo es el de 0027, sin tocar.
 -- NO ADITIVO (AVISO, como el AVISO 3 de 0091 y el de 0114): reemplaza una función existente. NO toca datos, columnas ni restricciones.
 -- Reversión: `migraciones/reversiones/0115_revertir_cierre_de_caja_cobrado_neto_de_devoluciones.sql` (restituye el cuerpo de 0027 byte a byte). FRENA (55000) si ya hay una foto de cierre
@@ -113,8 +113,8 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'caja_conciliacion_no_cuadra';
   END IF;
 
-  -- Cobrado contra el ticket (0115): `cobrado` de cada origen guardado es la Σ real de sus cobros en las sesiones de la jornada MENOS lo ya devuelto de ese origen
-  -- (las devoluciones vigentes que lo citan, de la misma empresa y sucursal, hasta ahora: su egreso no tiene una anulación). Sin devoluciones es la suma bruta de siempre. El total del ticket es de ventas
+  -- Cobrado contra el ticket (0115): `cobrado` de cada origen guardado es la Σ real de sus cobros en las sesiones de la jornada MENOS lo devuelto de ese origen EN ESA
+  -- MISMA JORNADA (las devoluciones vigentes que lo citan cuyo egreso cayó en una sesión de la misma sucursal y fecha de negocio: su egreso no tiene una anulación). Sin devoluciones es la suma bruta de siempre. El total del ticket es de ventas
   -- y no se puede verificar acá.
   IF EXISTS (
     SELECT 1 FROM public.conciliacion_de_cobro_por_origen o
@@ -129,8 +129,11 @@ BEGIN
              AND c.sucursal_id = o.sucursal_id AND s.fecha_negocio = o.fecha_negocio)
          - (SELECT coalesce(sum(d.importe), 0)
               FROM public.movimiento_de_dinero d
-             WHERE d.empresa_id = o.empresa_id AND d.sucursal_id = o.sucursal_id
-               AND d.devuelve_origen_tipo = o.origen_tipo AND d.devuelve_origen_id = o.origen_id
+              JOIN public.movimiento_caja m2 ON m2.id = d.movimiento_id AND m2.empresa_id = d.empresa_id
+              JOIN public.sesion_caja s2 ON s2.id = m2.sesion_id AND s2.empresa_id = m2.empresa_id
+              JOIN public.caja c2 ON c2.id = s2.caja_id AND c2.empresa_id = s2.empresa_id
+             WHERE d.empresa_id = o.empresa_id AND d.devuelve_origen_tipo = o.origen_tipo AND d.devuelve_origen_id = o.origen_id
+               AND c2.sucursal_id = o.sucursal_id AND s2.fecha_negocio = o.fecha_negocio
                AND NOT EXISTS (SELECT 1 FROM public.movimiento_caja a
                                 WHERE a.empresa_id = d.empresa_id AND a.anula_a = d.movimiento_id AND a.clase = 'ANULACION'))
        )

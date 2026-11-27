@@ -42,7 +42,7 @@ export function cobradoPorOrigen(cobros: readonly CobroDeUnOrigen[]): readonly C
   });
 }
 
-/** Lo ya devuelto (devoluciones vigentes, hasta ahora) de una cobranza. */
+/** Lo devuelto (devoluciones vigentes) de una cobranza EN LA JORNADA que se concilia. */
 export type DevueltoDeUnOrigen = Readonly<{ origenId: string; devuelto: Importe }>;
 
 /**

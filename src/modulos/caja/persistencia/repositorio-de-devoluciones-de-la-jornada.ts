@@ -33,10 +33,14 @@ export interface RepositorioDeDevolucionesDeLaJornada {
     sucursal: SucursalId,
     fecha: FechaCivil,
   ): Promise<ImportePorPar[]>;
-  /** Lo devuelto (vigente, HASTA AHORA, de cualquier jornada) de cada una de esas cobranzas, de esa sucursal; las que no tienen devoluciones no figuran. */
+  /**
+   * Lo devuelto (vigente) de cada una de esas cobranzas EN ESA JORNADA (las devoluciones cuyo egreso cayó en una sesión de esa sucursal y fecha de negocio); las que no tienen
+   * devoluciones no figuran. Acotado a la jornada como los cobros: una cobranza con cobros en dos jornadas no descuenta la misma devolución en las dos.
+   */
   devueltoPorOrigen(
     empresa: EmpresaId,
     sucursal: SucursalId,
+    fecha: FechaCivil,
     tipo: OrigenDevoluble,
     origenIds: readonly string[],
   ): Promise<DevueltoDeUnOrigen[]>;
@@ -98,12 +102,22 @@ export function crearRepositorioDeDevolucionesDeLaJornada(
       return filas.map(porPar);
     },
 
-    async devueltoPorOrigen(empresa, sucursal, tipo, origenIds) {
+    async devueltoPorOrigen(empresa, sucursal, fecha, tipo, origenIds) {
       if (origenIds.length === 0) return [];
       const filas = await db
         .selectFrom("movimiento_de_dinero as d")
+        .innerJoin("movimiento_caja as m2", (unir) =>
+          unir.onRef("m2.id", "=", "d.movimiento_id").onRef("m2.empresa_id", "=", "d.empresa_id"),
+        )
+        .innerJoin("sesion_caja as s2", (unir) =>
+          unir.onRef("s2.id", "=", "m2.sesion_id").onRef("s2.empresa_id", "=", "m2.empresa_id"),
+        )
+        .innerJoin("caja as c2", (unir) =>
+          unir.onRef("c2.id", "=", "s2.caja_id").onRef("c2.empresa_id", "=", "s2.empresa_id"),
+        )
         .where("d.empresa_id", "=", empresa)
-        .where("d.sucursal_id", "=", sucursal)
+        .where("c2.sucursal_id", "=", sucursal)
+        .where(sql<boolean>`s2.fecha_negocio = ${fecha}::date`)
         .where("d.devuelve_origen_tipo", "=", tipo)
         .where("d.devuelve_origen_id", "in", [...origenIds])
         .where((eb) =>

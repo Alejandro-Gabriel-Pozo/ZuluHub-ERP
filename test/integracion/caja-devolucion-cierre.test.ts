@@ -387,7 +387,7 @@ describe.skipIf(base === null)("caja: la devolución en el cierre del día", () 
     expect(JSON.stringify(await origenesGuardados(m, j))).toBe(antes);
   });
 
-  it("CONCURRENCIA: cerrar el día contra una devolución de OTRA jornada sobre la misma cobranza, en los dos órdenes: el cierre siempre confirma y la foto es coherente con la base", async () => {
+  it("CONCURRENCIA: cerrar el día contra una devolución de OTRA jornada sobre la misma cobranza, en los dos órdenes: el cierre siempre confirma y la foto del día del cobro no cambia", async () => {
     for (const cierraPrimero of [true, false]) {
       const m = await mundo();
       const cobranza = origenNuevo();
@@ -428,10 +428,10 @@ describe.skipIf(base === null)("caja: la devolución en el cierre del día", () 
       const [rc, rd] = await Promise.all([pc, pd]);
       expect(rd.ok, JSON.stringify(rd)).toBe(true);
       expect(rc.ok, JSON.stringify(rc)).toBe(true);
-      const guardado = await origenesGuardados(m, dia1);
-      // Si la devolución entró antes de la foto: 5.000 − 1.000 = 4.000 = el total → sin diferencia y sin fila. Si entró después: la foto quedó con el bruto (5.000).
-      expect([0, 1]).toContain(guardado.length);
-      if (guardado.length === 1) expect(guardado[0]?.cobrado).toBe("5000.00");
+      // La devolución cayó en OTRA jornada: no toca el control del día del cobro, entre en el orden que entre. La foto guarda el bruto (5.000) contra el ticket (4.000).
+      expect(await origenesGuardados(m, dia1)).toEqual([
+        { origen_id: cobranza.id, cobrado: "5000.00", total_del_ticket: "4000.00" },
+      ]);
     }
   });
 
@@ -463,6 +463,46 @@ describe.skipIf(base === null)("caja: la devolución en el cierre del día", () 
     expect(fallo?.code).toBe("55000");
     expect(fallo?.message).toContain("no se revierte sin decisión del dueño");
     expect(await cuerpo()).toBe(antes);
+  });
+
+  it("una cobranza con cobros en DOS jornadas y UNA devolución en la 2.ª: descuenta solo en la 2.ª (sin doble descuento ni neto negativo falso) y las dos jornadas cierran", async () => {
+    const m = await mundo();
+    const cobranza = origenNuevo();
+    const dia1 = await jornada(m, [
+      {
+        medio: "EFECTIVO",
+        importe: "3000.00",
+        origen: cobranza,
+        orden: 1,
+        totalDelTicket: "5000.00",
+      },
+    ]);
+    expect((await cerrarSesionYDia(m, dia1, "4000.00")).ok).toBe(true);
+    const dia2 = await jornada(
+      m,
+      [
+        {
+          medio: "EFECTIVO",
+          importe: "2000.00",
+          origen: cobranza,
+          orden: 2,
+          totalDelTicket: "5000.00",
+        },
+      ],
+      2,
+    );
+    await devolver(m, dia2, cobranza.id, [linea(m, "QR", "500.00")]);
+    expect((await conciliacion(dia2)).cobradoContraTicket[0]).toMatchObject({
+      cobrado: pesos("1500.00"),
+    });
+    expect(await origenesGuardados(m, dia1)).toEqual([
+      { origen_id: cobranza.id, cobrado: "3000.00", total_del_ticket: "5000.00" },
+    ]);
+    const cerrado2 = await cerrarSesionYDia(m, dia2, "3500.00");
+    expect(cerrado2.ok, JSON.stringify(cerrado2)).toBe(true);
+    expect(await origenesGuardados(m, dia2)).toEqual([
+      { origen_id: cobranza.id, cobrado: "1500.00", total_del_ticket: "5000.00" },
+    ]);
   });
 
   it("CONCURRENCIA: devolver contra cerrar la sesión, en los dos órdenes: el esperado del arqueo cuenta la devolución que entró o la devolución se rechaza; nunca un cierre sin una devolución ya hecha", async () => {
