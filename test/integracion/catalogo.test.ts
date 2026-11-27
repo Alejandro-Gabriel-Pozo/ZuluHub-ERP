@@ -1706,6 +1706,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "tercero_persona_id",
             "referencia",
             "devuelve_a",
+            "devuelve_origen_tipo", // 0114
+            "devuelve_origen_id", // 0114
+            "devolucion_id", // 0114
             "movimiento_id",
             "clave",
             "huella",
