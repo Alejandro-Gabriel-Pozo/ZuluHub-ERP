@@ -165,6 +165,28 @@ describe("PantallaDeCartaEnLinea", () => {
     await expect.element(page.getByText("Enlace copiado")).toBeVisible();
   });
 
+  describe("modelo: Lista o Libro (DEC-CAT-004)", () => {
+    it("ofrece Lista y Libro, parte del guardado y guardar manda el elegido", async () => {
+      const envio = vi.fn((_previo: unknown, datos: FormData) => {
+        void datos;
+        return Promise.resolve({ error: null });
+      });
+      await render(pantalla(dato(), TODO, envio));
+      await expect.element(page.getByRole("radio", { name: "Lista" })).toBeChecked();
+      await expect.element(page.getByRole("radio", { name: "Libro" })).not.toBeChecked();
+      await userEvent.click(page.getByRole("radio", { name: "Libro" }));
+      await userEvent.click(page.getByRole("button", { name: "Guardar" }));
+      await vi.waitFor(() => expect(envio).toHaveBeenCalledTimes(1));
+      expect(envio.mock.calls[0]?.[1]?.get("modelo")).toBe("LIBRO");
+    });
+
+    it("sin permiso de editar el modelo sale apagado", async () => {
+      await render(pantalla(dato(), { ...TODO, guardar: false }));
+      await expect.element(page.getByRole("radio", { name: "Lista" })).toBeDisabled();
+      await expect.element(page.getByRole("radio", { name: "Libro" })).toBeDisabled();
+    });
+  });
+
   describe("identidad: cara, color y logo", () => {
     const LOGO = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
     const conCarta = (extra: Partial<NonNullable<CartaEnLineaDeLaPantalla["carta"]>> = {}) =>

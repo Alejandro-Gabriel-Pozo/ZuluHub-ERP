@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOGO_DE_MODELOS_DE_VIDRIERA,
   MODELO_DE_RESERVA,
+  MODELOS_ELEGIBLES_EN_LA_PANTALLA,
   esModeloDeVidriera,
   modeloEfectivo,
   pideAhorroDeDatos,
@@ -115,6 +116,15 @@ describe("pideAhorroDeDatos (encabezado Save-Data)", () => {
   it("ausente o cualquier otro valor no lo pide", () => {
     for (const valor of [null, "", "off", "true", "1", "on,off", "no", " "]) {
       expect(pideAhorroDeDatos(valor), JSON.stringify(valor)).toBe(false);
+    }
+  });
+});
+
+describe("MODELOS_ELEGIBLES_EN_LA_PANTALLA", () => {
+  it("son Lista y Libro, en ese orden; la Cuadrícula no se ofrece y todos son del catálogo", () => {
+    expect([...MODELOS_ELEGIBLES_EN_LA_PANTALLA]).toEqual(["LISTA", "LIBRO"]);
+    for (const m of MODELOS_ELEGIBLES_EN_LA_PANTALLA) {
+      expect(Object.keys(CATALOGO_DE_MODELOS_DE_VIDRIERA)).toContain(m);
     }
   });
 });

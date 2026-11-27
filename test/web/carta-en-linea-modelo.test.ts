@@ -103,6 +103,24 @@ describe("armarLaCartaEnLinea", () => {
     });
   });
 
+  it("el modelo (DEC-CAT-004): Lista o Libro con sus textos; sin carta o con otro valor parte de Lista; con Libro guardado parte de Libro; sin permiso sale apagado", () => {
+    const sin = armarLaCartaEnLinea(dato(), TODO).formulario.identidad;
+    expect(sin.modelo.etiqueta).toBe("Modelo");
+    expect(sin.modelo.opciones).toEqual([
+      { valor: "LISTA", etiqueta: "Lista" },
+      { valor: "LIBRO", etiqueta: "Libro" },
+    ]);
+    expect(sin.modelo.valorInicial).toBe("LISTA");
+    for (const modelo of [null, "CUADRICULA", "inventado"]) {
+      const m = armarLaCartaEnLinea(dato({ carta: { ...CARTA, modelo } }), TODO).formulario;
+      expect(m.identidad.modelo.valorInicial, String(modelo)).toBe("LISTA");
+    }
+    const libro = armarLaCartaEnLinea(dato({ carta: { ...CARTA, modelo: "LIBRO" } }), TODO);
+    expect(libro.formulario.identidad.modelo.valorInicial).toBe("LIBRO");
+    const sinPermiso = armarLaCartaEnLinea(dato(), { ...TODO, guardar: false });
+    expect(sinPermiso.formulario.identidad.apagada).toBe(true);
+  });
+
   it("la identidad: sin elegir muestra la cara de siempre, «Usar lo de la empresa» y el logo vacío; con lo elegido, sus valores", () => {
     const sin = armarLaCartaEnLinea(dato(), TODO).formulario.identidad;
     expect(sin.cara.valorInicial).toBe("DIA");
