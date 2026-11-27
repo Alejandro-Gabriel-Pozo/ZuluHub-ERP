@@ -8,7 +8,7 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 - Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run analizar:muerto` (knip),
   `npm run arquitectura` (y sus controles contra la rama base y las pruebas de `test/arquitectura`, que ese comando no corre), las pruebas de composición
   (`src/composicion`) y las pruebas de lo que tocaste, incluidas las de integración de los módulos que
-  consumen un contrato que cambiaste (campo obligatorio, error nuevo, firma). Todo eso lo corre en orden, cortando en la primera falla, **`npm run previo`**
+  consumen un contrato que cambiaste (campo obligatorio, error nuevo, firma). Todo eso lo corre, cortando en la primera falla, **`npm run previo`** (los pasos baratos que más fallan primero; tipos y lint a la vez si la máquina tiene 14 GB o más, y de a uno si no)
   (con `npm run previo -- <módulo>` si no puede inferir el módulo del diff); antes de empujar, traé la integración con merge y corrélo de nuevo. El gate completo
   (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate completo local tarda unos 20 minutos y repite lo que ya corre el CI
   (dueño, 17/11/2026, «4.-si»). `previo` (dueño, 26/11/2026, «Sí a las dos, a tu recomendación») previene las 26 ejecuciones rojas del CI en dos días por olvido local

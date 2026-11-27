@@ -15,11 +15,19 @@
  * pruebas que importan lo que cambió (incluye las de integración de los módulos que consumen un contrato tocado). Si el diff no se puede
  * inferir, lo dice y corta (fail closed): se indica el módulo con `npm run previo -- <módulo>`.
  */
-const { spawn, spawnSync } = require("node:child_process");
-const { Buffer } = require("node:buffer");
+const { spawnSync } = require("node:child_process");
 const { existsSync, mkdtempSync, readdirSync, rmSync } = require("node:fs");
-const { tmpdir } = require("node:os");
+const { tmpdir, totalmem } = require("node:os");
 const { join } = require("node:path");
+
+const {
+  MEMORIA_MINIMA_PARA_PARALELO,
+  tandasDeLaCorrida,
+  correrTandas,
+  esCacheVieja,
+  correrConReintentoPorCacheVieja,
+  correrPasoReal,
+} = require("./previo-ejecucion.cjs");
 
 const RAIZ = join(__dirname, "..");
 const RAMA_BASE = "integracion/modulos-v2";
@@ -28,89 +36,19 @@ const CANDIDATAS_DE_BASE = [`origin/${RAMA_BASE}`, "origin/main"];
 
 /** Los pasos fijos, en orden. El nombre (`id`) es lo que fija `test/arquitectura/previo.test.ts`. */
 const PASOS_FIJOS = [
-  { id: "tipos", comando: ["npm", "run", "typecheck"] },
   { id: "formato", comando: ["npm", "run", "format:check"] },
-  { id: "lint", comando: ["npm", "run", "lint"] },
   { id: "codigo-muerto", comando: ["npm", "run", "analizar:muerto"] },
   { id: "arquitectura", comando: ["npm", "run", "arquitectura"] },
   { id: "arquitectura-con-la-base", comando: ["node", "arquitectura/previo.cjs", "--con-la-base"] },
+  // Los dos pasos pesados corren a la vez (picos medidos: tipos 4,2 GB y lint 5,2 GB) si la máquina tiene memoria; ver `tandasDeLaCorrida`.
+  { id: "tipos", comando: ["npm", "run", "typecheck"], paralelo: "pesados" },
+  { id: "lint", comando: ["npm", "run", "lint"], paralelo: "pesados" },
+  { id: "composicion", comando: ["npx", "vitest", "run", "--project", "node", "src/composicion"] },
   {
     id: "pruebas-de-arquitectura",
     comando: ["npx", "vitest", "run", "--project", "node", "test/arquitectura"],
   },
-  { id: "composicion", comando: ["npx", "vitest", "run", "--project", "node", "src/composicion"] },
 ];
-
-/**
- * Cachés de transformación de vite que, vencidas, hacen fallar `test/arquitectura/grafo.test.ts` con «Unknown variable dynamic import»: su `import()` con
- * variable se resuelve al transformar, y un transformado cacheado antes de que entrara un archivo nuevo (por un merge de la integración) no lo incluye. El CI,
- * sin caché, no lo ve. Solo se borran ante ese síntoma (borrarlas siempre encarecería cada corrida con transformación en frío) y se repite UNA vez.
- */
-const CACHES_DE_VITE = [
-  "node_modules/.vite",
-  "node_modules/.vite-temp",
-  "node_modules/.vitest-cache",
-];
-const SINTOMA_DE_CACHE_VIEJA = /Unknown variable dynamic import/;
-
-/** ¿Esta falla de vitest es el síntoma de la caché vieja de `grafo.test.ts`? Función pura. */
-function esCacheVieja(comando, salidaCompleta) {
-  return (
-    comando.includes("vitest") &&
-    SINTOMA_DE_CACHE_VIEJA.test(salidaCompleta) &&
-    /grafo\.test\.ts/.test(salidaCompleta)
-  );
-}
-
-/**
- * Corre un paso; si falla por la caché vieja, la limpia y lo repite UNA vez (sin saltear nada: si vuelve a fallar, la falla vale).
- * `ejecutar(comando)` devuelve `{ ok, segundos, salida }` y `limpiar()` borra las cachés; se inyectan para probarlo.
- */
-async function correrConReintentoPorCacheVieja(comando, ejecutar, limpiar) {
-  const primera = await ejecutar(comando);
-  if (primera.ok || !esCacheVieja(comando, primera.salida)) {
-    return { ok: primera.ok, segundos: primera.segundos, cacheLimpiada: false };
-  }
-  limpiar();
-  const segunda = await ejecutar(comando);
-  return {
-    ok: segunda.ok,
-    segundos: primera.segundos + segunda.segundos,
-    cacheLimpiada: true,
-  };
-}
-
-function limpiarCachesDeVite() {
-  for (const ruta of CACHES_DE_VITE) rmSync(join(RAIZ, ruta), { recursive: true, force: true });
-}
-
-/** Corre un comando mostrando su salida en vivo y guardándola para reconocer fallas conocidas. */
-function ejecutarConSalida(comando) {
-  return new Promise((resolver) => {
-    const t0 = Date.now();
-    const trozos = [];
-    const hijo = spawn(comando[0], comando.slice(1), {
-      cwd: RAIZ,
-      stdio: ["inherit", "pipe", "pipe"],
-    });
-    hijo.stdout.on("data", (d) => {
-      process.stdout.write(d);
-      trozos.push(d);
-    });
-    hijo.stderr.on("data", (d) => {
-      process.stderr.write(d);
-      trozos.push(d);
-    });
-    hijo.on("error", () => resolver({ ok: false, segundos: 0, salida: "" }));
-    hijo.on("close", (codigo) =>
-      resolver({
-        ok: codigo === 0,
-        segundos: Math.round((Date.now() - t0) / 1000),
-        salida: Buffer.concat(trozos).toString("utf8"),
-      }),
-    );
-  });
-}
 
 const EXTENSIONES_DE_CODIGO = /\.(ts|tsx)$/;
 /**
@@ -286,26 +224,11 @@ async function main(argv) {
   }
 
   const pasos = pasosDeLaCorrida(plan);
-  const resumen = [];
-  for (const paso of pasos) {
-    salida(`\n== previo: ${paso.id} (${paso.comando.join(" ")})`);
-    const { ok, segundos, cacheLimpiada } = await correrConReintentoPorCacheVieja(
-      paso.comando,
-      ejecutarConSalida,
-      limpiarCachesDeVite,
-    );
-    if (cacheLimpiada) {
-      salida(
-        `previo: «${paso.id}» falló por la caché vieja de vite (grafo.test.ts); se limpió y se repitió una vez: ${ok ? "ahora pasa, caché vieja limpiada" : "vuelve a fallar, la falla vale"}.`,
-      );
-    }
-    resumen.push(
-      `${ok ? "ok   " : "FALLA"} ${paso.id} (${segundos} s${cacheLimpiada && ok ? ", caché vieja limpiada" : ""})`,
-    );
-    if (!ok) {
-      salidaDeError(`\nprevio: falló «${paso.id}»; se corta acá.\n${resumen.join("\n")}`);
-      return 1;
-    }
+  const tandas = tandasDeLaCorrida(pasos, totalmem());
+  const { ok, fallo, resumen } = await correrTandas(tandas, correrPasoReal, salida);
+  if (!ok) {
+    salidaDeError(`\nprevio: falló «${fallo.id}»; se corta acá.\n${resumen.join("\n")}`);
+    return 1;
   }
 
   salida(`\nprevio: todo en verde.\n${resumen.join("\n")}`);
@@ -327,6 +250,9 @@ module.exports = {
   planDeLasPruebas,
   comandosDelPlan,
   pasosDeLaCorrida,
+  tandasDeLaCorrida,
+  correrTandas,
+  MEMORIA_MINIMA_PARA_PARALELO,
   esCacheVieja,
   correrConReintentoPorCacheVieja,
 };
