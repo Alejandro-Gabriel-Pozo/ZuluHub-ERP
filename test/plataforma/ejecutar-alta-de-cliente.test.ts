@@ -3,6 +3,7 @@ import {
   VARIABLES_OBLIGATORIAS_DE_CLIENTE,
   VARIABLE_DEL_PAQUETE_DE_CLIENTE,
   altaDeCliente,
+  armarPaqueteDeCliente,
   codigoDelCliente,
   leerPaqueteDeCliente,
   modulosDisponibles,
@@ -138,15 +139,39 @@ function casosFalsos(cambios: Partial<Record<string, Respuesta>> = {}) {
   return { casos, llamadas };
 }
 
+/** Lo personal: lo único que viaja en el secreto del Environment. */
+const SECRETO = {
+  adminEmail: PERSONALES.adminEmail,
+  emailGerente: PERSONALES.emailGerente,
+  cuit: PERSONALES.cuit,
+  razonSocial: PERSONALES.razonSocial,
+  nombreDeTenant: PERSONALES.nombreDeTenant,
+};
+/** Lo que no es personal: el contenido del archivo versionado del cliente (la carta primero a propósito: la aplicación tiene que ir antes igual). */
+const ARCHIVO = {
+  marca: PAQUETE.marca,
+  plan: PAQUETE.plan,
+  dominios: PAQUETE.dominios.map(({ host, superficie, titular }) => ({
+    host,
+    superficie,
+    titular,
+  })),
+  zonaHoraria: PAQUETE.empresa.zonaHoraria,
+  moneda: PAQUETE.empresa.moneda,
+};
+
 function armar(
   opciones: {
     ambiente?: string | undefined;
-    paquete?: unknown;
+    secreto?: unknown;
+    archivo?: unknown;
+    resuelve?: boolean;
     entorno?: Record<string, string | undefined>;
     casos?: Partial<Record<string, Respuesta>>;
     admin?: number;
     soloValidar?: boolean;
-    ahora?: Date;
+    /** Lecturas sucesivas del reloj: la primera arma el paquete, las siguientes miden la espera (la última se repite). */
+    relojes?: Date[];
   } = {},
 ) {
   const salida: string[] = [];
@@ -164,7 +189,7 @@ function armar(
     ambiente: "ambiente" in opciones ? opciones.ambiente : "cliente-hdn",
     entorno: {
       ...SECRETOS,
-      [VARIABLE_DEL_PAQUETE_DE_CLIENTE]: JSON.stringify(opciones.paquete ?? PAQUETE),
+      [VARIABLE_DEL_PAQUETE_DE_CLIENTE]: JSON.stringify(opciones.secreto ?? SECRETO),
       ...opciones.entorno,
     },
     sembrarAdmin: sembrar,
@@ -181,7 +206,12 @@ function armar(
     info: (l) => salida.push(l),
     error: (l) => errores.push(l),
     comando: (l) => comandos.push(l),
-    ahora: () => opciones.ahora ?? AHORA_DE_LA_CORRIDA,
+    ahora: () => {
+      const lecturas = opciones.relojes ?? [AHORA_DE_LA_CORRIDA];
+      return lecturas.length > 1 ? (lecturas.shift() as Date) : (lecturas[0] as Date);
+    },
+    leerDatosDelCliente: () => opciones.archivo ?? ARCHIVO,
+    resolverHost: () => Promise.resolve(opciones.resuelve ?? true),
     esperar: (ms) => {
       esperas.push(ms);
       return Promise.resolve();
@@ -308,22 +338,127 @@ describe("alta de un cliente: el camino feliz", () => {
     expect(segunda.llamadas).toEqual(primera.llamadas);
   });
 
-  it("espera a que la marca rija (vigenteDesde) antes del alta de la empresa, y no antes", async () => {
+  it("vigenteDesde y verificadoEn los pone el flujo: la marca rige 6 minutos después de la corrida y los dominios se verifican en el instante de la corrida", async () => {
+    const t = armar();
+    await altaDeCliente(t.entrada);
+    const por = (caso: string) => t.llamadas.filter((l) => l.caso === caso).map((l) => l.entrada);
+    expect(por("confirmarVersionDeMarca")[0]?.["vigenteDesde"]).toEqual(
+      new Date(AHORA_DE_LA_CORRIDA.getTime() + 6 * 60_000),
+    );
+    expect(por("verificarDominio").map((d) => d["verificadoEn"])).toEqual([
+      AHORA_DE_LA_CORRIDA,
+      AHORA_DE_LA_CORRIDA,
+    ]);
+  });
+
+  it("espera a que la marca rija antes del alta de la empresa, y no antes", async () => {
     const t = armar();
     await altaDeCliente(t.entrada);
     expect(t.esperas).toHaveLength(1);
-    // Un minuto de diferencia más el margen: más de 60 segundos.
-    expect(t.esperas[0]).toBeGreaterThan(60_000);
-    const yaRige = armar({ ahora: new Date("2026-11-27T12:30:00-03:00") });
+    // Seis minutos de diferencia más el margen.
+    expect(t.esperas[0]).toBeGreaterThan(5 * 60_000);
+    const yaRige = armar({
+      relojes: [AHORA_DE_LA_CORRIDA, new Date(AHORA_DE_LA_CORRIDA.getTime() + 30 * 60_000)],
+    });
     expect(await altaDeCliente(yaRige.entrada)).toBe(0);
     expect(yaRige.esperas).toEqual([]);
   });
 
-  it("vigenteDesde lejano (más de 10 minutos) se rechaza antes de tocar nada", async () => {
-    const t = armar({ ahora: new Date("2026-11-27T10:00:00-03:00") });
+  it("repetir en otra corrida (otro instante): lo que la clave de idempotencia rechaza por el instante es «ya hecho» y se sigue sin esperar de nuevo", async () => {
+    const t = armar({
+      casos: {
+        confirmarVersionDeMarca: err("CLAVE_REUTILIZADA"),
+        verificarDominio: err("CLAVE_REUTILIZADA"),
+      },
+    });
+    expect(await altaDeCliente(t.entrada)).toBe(0);
+    expect(t.esperas).toEqual([]);
+    expect(t.texto()).toContain("ya se hizo en una corrida anterior");
+    expect(t.llamadas.some((l) => l.caso === "altaDeEmpresa")).toBe(true);
+  });
+
+  it("pero CLAVE_REUTILIZADA en un paso que NO depende del instante sigue cortando", async () => {
+    const t = armar({ casos: { crearMarca: err("CLAVE_REUTILIZADA") } });
+    expect(await altaDeCliente(t.entrada)).toBe(1);
+  });
+
+  it("los dominios tienen que resolver en el DNS: si no, corta antes de sembrar nada (y la validación no consulta el DNS)", async () => {
+    const t = armar({ resuelve: false });
     expect(await altaDeCliente(t.entrada)).toBe(2);
     expect(t.sembrar).not.toHaveBeenCalled();
     expect(t.llamadas).toEqual([]);
+    expect(t.texto()).toContain(".centinela.test no resuelve");
+    const solo = armar({ resuelve: false, soloValidar: true });
+    expect(await altaDeCliente(solo.entrada)).toBe(0);
+  });
+});
+
+describe("alta de un cliente: el secreto solo trae lo personal y el archivo lo demás", () => {
+  const ahora = new Date("2026-11-27T12:00:00.000Z");
+  const problemas = (secreto: unknown, archivo: unknown = ARCHIVO) => {
+    const r = armarPaqueteDeCliente(JSON.stringify(secreto), archivo, ahora);
+    return r.ok ? [] : r.problemas.join("\n");
+  };
+
+  it("arma el paquete completo con las tres fuentes", () => {
+    const r = armarPaqueteDeCliente(JSON.stringify(SECRETO), ARCHIVO, ahora);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.paquete.vigenteDesde).toBe("2026-11-27T12:06:00.000Z");
+      expect(r.paquete.empresa.zonaHoraria).toBe("America/Argentina/Buenos_Aires");
+      expect(r.paquete.empresa.cuit).toBe(PERSONALES.cuit);
+      expect(r.paquete.dominios.every((d) => d.verificadoEn === ahora.toISOString())).toBe(true);
+    }
+  });
+
+  it.each(["vigenteDesde", "marca", "plan", "dominios", "zonaHoraria", "moneda"])(
+    "el secreto no puede traer «%s» (sobra) y no repite el valor",
+    (campo) => {
+      const texto = problemas({ ...SECRETO, [campo]: "valor-centinela" });
+      expect(texto).toContain(`${campo}: no se esperaba este campo`);
+      expect(texto).not.toContain("valor-centinela");
+    },
+  );
+
+  it.each(["adminEmail", "emailGerente", "cuit", "razonSocial", "nombreDeTenant"])(
+    "al secreto le falta «%s»: se rechaza nombrando el campo",
+    (campo) => {
+      const sin: Record<string, unknown> = { ...SECRETO };
+      delete sin[campo];
+      expect(problemas(sin)).toContain(`${campo}: falta o no es un texto`);
+    },
+  );
+
+  it.each(["adminEmail", "emailGerente", "cuit", "vigenteDesde", "empresa", "extra"])(
+    "el archivo del cliente no puede traer «%s» (lo personal y lo que calcula el flujo no van ahí)",
+    (campo) => {
+      expect(problemas(SECRETO, { ...ARCHIVO, [campo]: "x" })).toContain(
+        `${campo}: no se esperaba este campo`,
+      );
+    },
+  );
+
+  it("el archivo no puede fijar verificadoEn en un dominio ni dejar de traer una sección", () => {
+    const conVerificado = {
+      ...ARCHIVO,
+      dominios: [
+        { ...ARCHIVO.dominios[0], verificadoEn: "2020-01-01T00:00:00Z" },
+        ARCHIVO.dominios[1],
+      ],
+    };
+    expect(problemas(SECRETO, conVerificado)).toContain("verificadoEn: no se esperaba este campo");
+    const { moneda: _quitado, ...sinMoneda } = ARCHIVO;
+    expect(problemas(SECRETO, sinMoneda)).toContain("moneda: falta");
+    expect(problemas(SECRETO, "no es un objeto")).toContain("archivo del cliente");
+  });
+
+  it("el archivo real de hdn (scripts/clientes/hdn.json) es válido con un secreto de relleno", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const archivo: unknown = JSON.parse(
+      readFileSync(join(import.meta.dirname, "../../scripts/clientes/hdn.json"), "utf8"),
+    );
+    expect(problemas(SECRETO, archivo)).toEqual([]);
   });
 });
 
@@ -382,10 +517,7 @@ describe("alta de un cliente: cierra ante la duda", () => {
 
   it("el administrador y el gerente con el mismo email: se rechaza antes de sembrar nada", async () => {
     const t = armar({
-      paquete: {
-        ...PAQUETE,
-        empresa: { ...PAQUETE.empresa, emailGerente: PERSONALES.adminEmail.toUpperCase() },
-      },
+      secreto: { ...SECRETO, emailGerente: PERSONALES.adminEmail.toUpperCase() },
     });
     expect(await altaDeCliente(t.entrada)).toBe(2);
     expect(t.sembrar).not.toHaveBeenCalled();
@@ -396,7 +528,7 @@ describe("alta de un cliente: cierra ante la duda", () => {
 
   it("un dato mal escrito se rechaza ANTES de sembrar nada, sin repetir el valor", async () => {
     const t = armar({
-      paquete: { ...PAQUETE, empresa: { ...PAQUETE.empresa, cuit: "20123456785" } },
+      secreto: { ...SECRETO, cuit: "20123456785" },
     });
     expect(await altaDeCliente(t.entrada)).toBe(2);
     expect(t.sembrar).not.toHaveBeenCalled();
@@ -483,7 +615,7 @@ describe("alta de un cliente: cierra ante la duda", () => {
     expect(t.llamadas).toEqual([]);
     const malo = armar({
       soloValidar: true,
-      paquete: { ...PAQUETE, empresa: { ...PAQUETE.empresa, cuit: "20123456785" } },
+      secreto: { ...SECRETO, cuit: "20123456785" },
     });
     expect(await altaDeCliente(malo.entrada)).toBe(2);
   });
@@ -495,7 +627,7 @@ describe("alta de un cliente: nada sensible sale", () => {
       {},
       { casos: { altaDeEmpresa: err("EMPRESA_YA_EXISTE") } },
       { soloValidar: true },
-      { paquete: { ...PAQUETE, empresa: { ...PAQUETE.empresa, cuit: "20123456785" } } },
+      { secreto: { ...SECRETO, cuit: "20123456785" } },
     ] as const) {
       const t = armar(opciones);
       await altaDeCliente(t.entrada);

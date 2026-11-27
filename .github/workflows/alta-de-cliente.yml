@@ -8,9 +8,9 @@ name: Alta de un cliente (administrador de plataforma, empresa, marca, plan y do
 #    activar), alta de la empresa con la invitación a su primer gerente y cada módulo del plan. Cada paso lleva una clave de idempotencia fija: repetir el flujo con
 #    los MISMOS datos no duplica nada; con datos distintos el paso rechaza (CLAVE_REUTILIZADA) y no cambia nada. Cambiar el plan o los módulos DESPUÉS del alta no
 #    pasa por este flujo.
-#  - Los datos (emails, CUIT, razón social, plan, marca, dominios, módulos…) NO se escriben en el formulario (las entradas se ven en la página de la corrida): van en
-#    el secreto `PEDERNAL_ALTA_DE_CLIENTE` del Environment del cliente, un JSON en UNA línea (forma en `scripts/ejecutar-alta-de-cliente.ts`). Cada dato personal se
-#    tapa en lo que sale y se entrega al runner con `::add-mask::`. Nada del paquete vive en el repositorio.
+#  - Lo PERSONAL (emails, CUIT, razón social, nombre del tenant) NO se escribe en el formulario (las entradas se ven en la página de la corrida): va en el secreto `PEDERNAL_ALTA_DE_CLIENTE` del Environment del cliente,
+#    un JSON en UNA línea con esos cinco campos. Lo demás (marca, plan, perillas, módulos, dominios, zona horaria, moneda) está en `scripts/clientes/<codigo>.json`, versionado y sin secretos; `vigenteDesde` y `verificadoEn`
+#    los calcula el flujo con el reloj de la corrida. Cada dato personal se tapa en lo que sale y se entrega al runner con `::add-mask::`. Nada personal vive en el repositorio.
 #  - SECRETO DE INVITACIONES: el token de una invitación es un HMAC con `PEDERNAL_SECRETO_INVITACIONES`, y tiene que ser el MISMO valor acá y en la web del cliente. El
 #    paso «Secreto de invitaciones» lo genera al azar en el runner (enmascarado), lo escribe en el proyecto de Vercel del cliente (lista cerrada de proyectos, nunca
 #    una entrada) y lo pasa al alta, SOLO si la empresa no existe todavía. Si ya existe, no toca nada. Si el proyecto ya estaba desplegado, hay que volver a

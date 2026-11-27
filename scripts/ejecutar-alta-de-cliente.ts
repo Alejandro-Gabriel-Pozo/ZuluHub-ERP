@@ -16,7 +16,6 @@ import { armarEntradaDelCaso, type NombreDeCaso } from "../src/plataforma/domini
 import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
 import { VARIABLE_DEL_HOST_DE_LA_BASE, hostDeLaBaseCoincide } from "./host-de-la-base";
 import {
-  ESPERA_MAXIMA_DE_VIGENCIA_EN_MS,
   ID_DE_RELLENO,
   MARCA_NEUTRA,
   MARGEN_DE_VIGENCIA_EN_MS,
@@ -27,7 +26,7 @@ import {
   type Objeto,
   type Salida,
 } from "./ejecutar-preparar-empresa-de-pruebas";
-import { textoDeProblema } from "./mensajes-de-plataforma";
+import { MENSAJES_DE_MOTIVO, textoDeProblema } from "./mensajes-de-plataforma";
 
 /**
  * El alta de un CLIENTE con base propia (workflow `alta-de-cliente.yml`; PRIMER-DESPLIEGUE.md, H.4 y H.8): el primer administrador de plataforma, el plan (crear, borrador, publicar), la marca (crear,
@@ -36,7 +35,7 @@ import { textoDeProblema } from "./mensajes-de-plataforma";
  * `ejecutar-preparar-empresa-de-pruebas.ts` (la de preview), de donde reutiliza la lectura de secciones, el ejecutor de casos y la marca neutra. Lo que cambia respecto de preview: varios dominios y módulos, el
  * ambiente en la clave de idempotencia, ninguna clave de contexto propia de la corrida y ningún pedido al cron (la cola de mails la despacha el cron del proyecto del cliente cuando corra).
  *
- * Los datos salen de UNA variable (`PEDERNAL_ALTA_DE_CLIENTE`, un JSON que en GitHub es un secreto del Environment del cliente): así no figuran en la interfaz de la corrida y el runner los enmascara. Cada dato
+ * Lo personal sale de UNA variable (`PEDERNAL_ALTA_DE_CLIENTE`, un JSON que en GitHub es un secreto del Environment del cliente: así no figura en la interfaz de la corrida y el runner lo enmascara); lo demás, del archivo versionado `scripts/clientes/<codigo>.json`; y la hora de `vigenteDesde` y `verificadoEn`, del reloj de la corrida. Cada dato
  * personal se tapa en todo lo que sale. Idempotente: la clave de cada paso es fija (`alta-cliente-v1-<codigo>-<paso>`); repetir con los MISMOS datos devuelve lo ya hecho sin duplicar nada (ni administrador, ni
  * empresa, ni dominios); con datos distintos el caso rechaza `CLAVE_REUTILIZADA` y no cambia nada. Antes de abrir ninguna conexión se revisa la forma de TODOS los pasos (con ids de relleno): un dato mal
  * escrito no deja el alta a medias. Código de salida: 0 todo hecho, 1 un paso rechazó o falló, 2 datos o uso incorrectos.
@@ -278,6 +277,109 @@ export function leerPaqueteDeCliente(
   };
 }
 
+/** Lo que viaja en el secreto del Environment: SOLO lo personal. Todo lo demás está en `scripts/clientes/<codigo>.json` (versionado, sin secretos) o lo calcula el flujo. */
+export const CAMPOS_PERSONALES = [
+  "adminEmail",
+  "emailGerente",
+  "cuit",
+  "razonSocial",
+  "nombreDeTenant",
+] as const;
+
+/** ¿El secreto trae exactamente lo personal (los cinco campos, ni uno más ni uno menos)? Devuelve los problemas, sin repetir ningún valor. */
+export function problemasDelSecretoPersonal(texto: string | undefined): readonly string[] {
+  if (texto === undefined || texto.trim() === "")
+    return [`falta la variable ${VARIABLE_DEL_PAQUETE_DE_CLIENTE}`];
+  let json: unknown;
+  try {
+    json = JSON.parse(texto);
+  } catch {
+    return [`${VARIABLE_DEL_PAQUETE_DE_CLIENTE} no es un JSON válido`];
+  }
+  const problemas: string[] = [];
+  leerSeccion(json, VARIABLE_DEL_PAQUETE_DE_CLIENTE, CAMPOS_PERSONALES, [], problemas);
+  return problemas;
+}
+
+/** Cuánto después de la corrida empieza a regir la marca (la corrida espera ese tiempo antes del alta de la empresa). */
+export const MINUTOS_HASTA_QUE_RIGE_LA_MARCA = 6;
+
+const CAMPOS_DEL_ARCHIVO = ["marca", "plan", "dominios", "zonaHoraria", "moneda"] as const;
+
+/**
+ * Arma el paquete COMPLETO del alta con tres fuentes: el secreto (solo lo personal), el archivo versionado del cliente (marca, plan, perillas, módulos, dominios, zona horaria y moneda) y el reloj de la
+ * corrida (`vigenteDesde` = ahora + 6 minutos y `verificadoEn` de cada dominio = ahora). Cada fuente se revisa con la misma cerradura que antes: todo campo que sobra o falta se rechaza, con todos los
+ * problemas juntos y sin repetir ningún valor; el archivo NO puede traer lo personal ni lo que calcula el flujo (así nadie lo fija por error ahí). La revisión profunda es la de `leerPaqueteDeCliente`.
+ */
+export function armarPaqueteDeCliente(
+  textoDelSecreto: string | undefined,
+  archivo: unknown,
+  ahora: Date,
+):
+  | Readonly<{ ok: true; paquete: PaqueteDeCliente }>
+  | Readonly<{ ok: false; problemas: readonly string[] }> {
+  const nombre = VARIABLE_DEL_PAQUETE_DE_CLIENTE;
+  if (textoDelSecreto === undefined || textoDelSecreto.trim() === "") {
+    return { ok: false, problemas: [`falta la variable ${nombre}`] };
+  }
+  let personal: unknown;
+  try {
+    personal = JSON.parse(textoDelSecreto);
+  } catch {
+    return { ok: false, problemas: [`${nombre} no es un JSON válido`] };
+  }
+  if (!esObjeto(personal))
+    return { ok: false, problemas: [`${nombre} tiene que ser un objeto JSON`] };
+  if (!esObjeto(archivo)) {
+    return { ok: false, problemas: ["el archivo del cliente tiene que ser un objeto JSON"] };
+  }
+
+  const problemas: string[] = [];
+  const datos = leerSeccion(personal, nombre, CAMPOS_PERSONALES, [], problemas);
+  for (const campo of Object.keys(archivo)) {
+    if (!(CAMPOS_DEL_ARCHIVO as readonly string[]).includes(campo)) {
+      problemas.push(`archivo del cliente: ${campo}: no se esperaba este campo`);
+    }
+  }
+  for (const campo of CAMPOS_DEL_ARCHIVO) {
+    if (!Object.hasOwn(archivo, campo)) problemas.push(`archivo del cliente: ${campo}: falta`);
+  }
+  const dominiosDelArchivo = Array.isArray(archivo["dominios"]) ? archivo["dominios"] : [];
+  dominiosDelArchivo.forEach((crudo, i) => {
+    // El archivo solo trae host, superficie y titular: `verificadoEn` lo pone el flujo (y cualquier otro campo sobra).
+    leerSeccion(
+      crudo,
+      `archivo del cliente: dominios[${String(i)}]`,
+      ["host", "superficie", "titular"],
+      [],
+      problemas,
+    );
+  });
+  if (problemas.length > 0) return { ok: false, problemas };
+
+  const instante = ahora.toISOString();
+  const vigenteDesde = new Date(
+    ahora.getTime() + MINUTOS_HASTA_QUE_RIGE_LA_MARCA * 60_000,
+  ).toISOString();
+  return leerPaqueteDeCliente(
+    JSON.stringify({
+      adminEmail: datos["adminEmail"],
+      vigenteDesde,
+      marca: archivo["marca"],
+      plan: archivo["plan"],
+      dominios: dominiosDelArchivo.map((d) => ({ ...(d as Objeto), verificadoEn: instante })),
+      empresa: {
+        nombreDeTenant: datos["nombreDeTenant"],
+        cuit: datos["cuit"],
+        razonSocial: datos["razonSocial"],
+        zonaHoraria: archivo["zonaHoraria"],
+        moneda: archivo["moneda"],
+        emailGerente: datos["emailGerente"],
+      },
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
 // Los pasos
 // ---------------------------------------------------------------------------------------------
@@ -297,6 +399,8 @@ type Paso = Readonly<{
   caso: NombreDeCaso;
   json: (c: Contexto) => Record<string, unknown>;
   leer?: (datos: ReadonlyMap<string, string>, c: Contexto) => boolean;
+  /** Lleva un dato que sale del reloj de la corrida (`vigenteDesde`, `verificadoEn`): si una corrida anterior ya lo hizo, la clave de idempotencia lo rechaza por OTRO instante y eso es «ya hecho», no un error. */
+  delInstante?: true;
 }>;
 
 const idDe = (d: ReadonlyMap<string, string>, campo: string): string | null => {
@@ -383,6 +487,7 @@ export function pasosDeAltaDeCliente(p: PaqueteDeCliente, codigo: string): reado
     {
       nombre: "confirmar-marca",
       caso: "confirmarVersionDeMarca",
+      delInstante: true,
       json: (c) => ({
         claveDeIdempotencia: clave("confirmar-marca"),
         marcaId: c.marcaId,
@@ -418,6 +523,7 @@ export function pasosDeAltaDeCliente(p: PaqueteDeCliente, codigo: string): reado
       {
         nombre: `verificar-dominio-${sufijo}`,
         caso: "verificarDominio",
+        delInstante: true,
         json: (c) => ({
           claveDeIdempotencia: clave(`verificar-dominio-${sufijo}`),
           dominioId: c.dominioIds[dominio.host],
@@ -488,6 +594,10 @@ export type EntradaDeAltaDeCliente = Readonly<{
   soloValidar?: boolean;
   ahora?: () => Date;
   esperar?: (milisegundos: number) => Promise<void>;
+  /** Los datos NO personales del cliente: el contenido de `scripts/clientes/<codigo>.json`. */
+  leerDatosDelCliente: (codigo: string) => unknown;
+  /** ¿El host resuelve en el DNS? (`dns.lookup`; solo en la corrida completa). */
+  resolverHost: (host: string) => Promise<boolean>;
 }>;
 
 /** El código corto del cliente (`hdn` de `cliente-hdn`), solo si el ambiente está en la lista cerrada de clientes con base propia. */
@@ -555,7 +665,21 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
     return 2;
   }
 
-  const leido = leerPaqueteDeCliente(entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE]);
+  const ahora = entrada.ahora ?? (() => new Date());
+  let datosDelCliente: unknown;
+  try {
+    datosDelCliente = entrada.leerDatosDelCliente(codigo);
+  } catch {
+    error(
+      `ERROR: no se pudo leer el archivo de datos del cliente (scripts/clientes/${codigo}.json). No se hizo nada.`,
+    );
+    return 2;
+  }
+  const leido = armarPaqueteDeCliente(
+    entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE],
+    datosDelCliente,
+    ahora(),
+  );
   if (!leido.ok) {
     error("ERROR: los datos del alta no sirven (no se repite ningún valor):");
     for (const problema of leido.problemas) error(`  - ${problema}`);
@@ -594,13 +718,6 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
         problemasDeForma.push(`${paso.nombre}: ${textoDeProblema(problema)}`);
     }
   }
-  const vigencia = new Date(paquete.vigenteDesde).getTime();
-  const ahora = entrada.ahora ?? (() => new Date());
-  if (!Number.isNaN(vigencia) && vigencia - ahora().getTime() > ESPERA_MAXIMA_DE_VIGENCIA_EN_MS) {
-    problemasDeForma.push(
-      "vigenteDesde: está a más de 10 minutos del momento de la corrida; el flujo espera a que rija antes del alta. Poné un instante de 5 a 8 minutos desde ahora",
-    );
-  }
   if (problemasDeForma.length > 0) {
     error("ERROR: los datos no sirven para estos pasos (no se repite ningún valor):");
     for (const problema of problemasDeForma) error(`  - ${problema}`);
@@ -611,6 +728,16 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
   if (entrada.soloValidar === true) {
     info("VALIDADO: variables y datos de los pasos están bien. No se tocó ninguna base.");
     return 0;
+  }
+
+  // Los dominios tienen que resolver ya: el orden del hotel exige el DNS cortado ANTES del alta (la invitación apunta a esos hosts). Comprobación barata y débil (resolver no prueba que apunte a Vercel).
+  for (const dominio of paquete.dominios) {
+    if (!(await entrada.resolverHost(dominio.host))) {
+      error(
+        `ERROR: el host ${dominio.host} no resuelve en el DNS todavía (¿ya cambiaste el DNS?). No se hizo nada.`,
+      );
+      return 2;
+    }
   }
 
   const total = pasos.length + 1;
@@ -624,13 +751,14 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
     entrada.esperar ?? ((ms: number) => new Promise<void>((listo) => setTimeout(listo, ms)));
   const contexto: Contexto = { ...relleno, dominioIds: {} };
   let numero = 1;
+  let esperarALaMarca = true;
   for (const paso of pasos) {
     numero += 1;
     if (paso.caso === "altaDeEmpresa") {
       // El alta exige la marca VIGENTE: se espera a que llegue `vigenteDesde` (ya validado: no está más lejos que el tope).
       const falta =
         new Date(paquete.vigenteDesde).getTime() + MARGEN_DE_VIGENCIA_EN_MS - ahora().getTime();
-      if (falta > 0) {
+      if (esperarALaMarca && falta > 0) {
         info(
           `Esperando ${String(Math.ceil(falta / 1000))} s a que la marca empiece a regir (vigenteDesde).`,
         );
@@ -638,12 +766,31 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
       }
     }
     info(`Paso ${String(numero)} de ${String(total)}: ${paso.nombre}.`);
+    const lineasDeError: string[] = [];
     const { codigo: salidaDelCaso, datos } = await entrada.ejecutarCaso(
       paso.caso,
       paso.json(contexto),
       paquete.adminEmail,
-      salida,
+      paso.delInstante === true
+        ? {
+            info,
+            error: (linea) => {
+              lineasDeError.push(linea);
+              error(linea);
+            },
+          }
+        : salida,
     );
+    if (
+      salidaDelCaso !== 0 &&
+      paso.delInstante === true &&
+      lineasDeError.some((l) => l.includes(MENSAJES_DE_MOTIVO["CLAVE_REUTILIZADA"] as string))
+    ) {
+      // Una corrida anterior ya hizo este paso con su propio instante: repetirlo no cambia nada.
+      info(`El paso «${paso.nombre}» ya se hizo en una corrida anterior: se sigue.`);
+      if (paso.caso === "confirmarVersionDeMarca") esperarALaMarca = false;
+      continue;
+    }
     if (salidaDelCaso !== 0) {
       error(
         `Se detuvo en el paso ${String(numero)} («${paso.nombre}»). Lo ya hecho queda; repetir el flujo es seguro.`,

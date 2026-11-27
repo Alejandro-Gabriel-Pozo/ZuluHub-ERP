@@ -23,25 +23,10 @@ const CADENA = "postgres://dueno-centinela:clave-dueno-centinela@host-centinela.
 const GENERADO = "ab12".repeat(16);
 const PAQUETE = JSON.stringify({
   adminEmail: "admin.centinela@ejemplo.test",
-  vigenteDesde: "2026-11-27T12:00:00-03:00",
-  marca: { codigo: "hdn", nombreVisible: "Hoteles" },
-  plan: { codigo: "p", nombreComercial: "Plan", perillas: {} },
-  dominios: [
-    {
-      host: "app.centinela.test",
-      superficie: "APP",
-      titular: "OPERADOR",
-      verificadoEn: "2026-11-26T09:00:00-03:00",
-    },
-  ],
-  empresa: {
-    nombreDeTenant: "Tenant Centinela",
-    cuit: "20123456786",
-    razonSocial: "Razon Centinela SRL",
-    zonaHoraria: "America/Argentina/Buenos_Aires",
-    moneda: "ARS",
-    emailGerente: "gerente.centinela@ejemplo.test",
-  },
+  emailGerente: "gerente.centinela@ejemplo.test",
+  cuit: "20123456786",
+  razonSocial: "Razon Centinela SRL",
+  nombreDeTenant: "Tenant Centinela",
 });
 
 function armarSecreto(
