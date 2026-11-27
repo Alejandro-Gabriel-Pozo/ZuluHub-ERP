@@ -19,6 +19,10 @@ describe("traducirErrorDeStock", () => {
     ["DEPOSITO_CON_EXISTENCIA", "STOCK_DEPOSITO_CON_EXISTENCIA"],
     ["ES_EL_DE_VENTA", "STOCK_ES_EL_DE_VENTA"],
     ["DEPOSITO_DESACTUALIZADO", "STOCK_DEPOSITO_DESACTUALIZADO"],
+    ["VENCIMIENTO_REQUERIDO", "LOTE_VENCIMIENTO_REQUERIDO"],
+    ["VENCIMIENTO_PASADO", "STOCK_VENCIMIENTO_PASADO"],
+    ["LOTE_CON_OTRA_FECHA", "STOCK_LOTE_CON_OTRA_FECHA"],
+    ["SALDO_DE_LOTE_INSUFICIENTE", "STOCK_SALDO_DE_LOTE_INSUFICIENTE"],
   ])("%s tiene su texto propio: sale como %s", (error, codigo) => {
     expect(traducirErrorDeStock(error)).toEqual({ codigo });
   });

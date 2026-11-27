@@ -408,3 +408,367 @@ describe("aplicarElConteo", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+// ---- Contra mutantes (grupo «web (stock…)»): qué se le pide a cada consulta, que un error de una consulta salga tal cual y no se siga con lo que no llegó, y los campos que solo existen si vinieron. ----
+
+const CONTROLADOS = [
+  { articuloId: A1, productoId: "p1", nombre: "Harina", unidadId: "KILOGRAMO" },
+  { articuloId: A2, productoId: "p2", nombre: "Sal", unidadId: "UNIDAD" },
+];
+type NombreDeConsulta =
+  "listarDepositos" | "listarConteos" | "fichaDeConteo" | "articulosControlados";
+type Respuestas = Partial<Record<NombreDeConsulta, () => unknown>>;
+const DOS_DEPOSITOS = [
+  { id: D1, nombre: "Salón", activo: true },
+  { id: D2, nombre: "Barra", activo: true },
+];
+const FICHA_VACIA = { conteo: { id: CONTEO, estado: "ABIERTO" }, registros: [] as Registro[] };
+const FALLA = () => err("CONTEO_EN_CURSO");
+const CODIGO_DE_LA_FALLA = "STOCK_CONTEO_EN_CURSO";
+
+const montarPropio = (c: Respuestas = {}) => {
+  const pedidos: Record<NombreDeConsulta, unknown[]> = {
+    listarDepositos: [],
+    listarConteos: [],
+    fichaDeConteo: [],
+    articulosControlados: [],
+  };
+  const porDefecto: Record<NombreDeConsulta, () => unknown> = {
+    listarDepositos: () => ok(DOS_DEPOSITOS),
+    listarConteos: () => ok([{ id: CONTEO }]),
+    fichaDeConteo: () => ok(FICHA_VACIA),
+    articulosControlados: () => ok(CONTROLADOS),
+  };
+  const consulta = (nombre: NombreDeConsulta) => (_contexto: unknown, entrada: unknown) => {
+    pedidos[nombre].push(entrada);
+    return Promise.resolve((c[nombre] ?? porDefecto[nombre])());
+  };
+  const llamadas: { que: string; entrada: unknown }[] = [];
+  const d = {
+    casosDeUso: () => ({
+      abrirConteo: (_c: unknown, entrada: unknown) => {
+        llamadas.push({ que: "abrir", entrada });
+        return Promise.resolve(ok({ conteoId: CONTEO, yaExistia: true }));
+      },
+      registrarConteo: (_c: unknown, entrada: unknown) => {
+        llamadas.push({ que: "registrar", entrada });
+        return Promise.resolve(ok({ yaExistia: true }));
+      },
+      cancelarConteo: () => Promise.resolve(ok({ yaEstaba: true })),
+      aplicarConteo: (_c: unknown, entrada: unknown) => {
+        llamadas.push({ que: "aplicar", entrada });
+        return Promise.resolve(ok({ movimientoId: ID, yaAplicado: true }));
+      },
+    }),
+    consultas: () => ({
+      listarDepositos: consulta("listarDepositos"),
+      listarConteos: consulta("listarConteos"),
+      fichaDeConteo: consulta("fichaDeConteo"),
+      articulosControlados: consulta("articulosControlados"),
+    }),
+    respuesta: { registrar: () => undefined },
+  } as unknown as DependenciasDeConteoWeb;
+  return { d, pedidos, llamadas };
+};
+const REGISTRO_CARGADO = (extra: Partial<Registro> = {}): Registro => ({
+  articuloId: A1,
+  cantidadContada: "5.0000",
+  vigente: true,
+  contadoEn: en,
+  ...extra,
+});
+
+describe("lecturaDelConteo: lo que pide y cómo falla", () => {
+  it("le pide a cada consulta justo lo que necesita: la sucursal, el depósito con su estado y el conteo abierto", async () => {
+    const { d, pedidos } = montarPropio();
+    const r = await lecturaDelConteo(d, contexto, SUC, {});
+    expect(codigoDe(r)).toBe("OK");
+    expect(pedidos.listarDepositos).toEqual([{ sucursalId: SUC }]);
+    expect(pedidos.listarConteos).toEqual([{ depositoId: D1, estado: "ABIERTO" }]);
+    expect(pedidos.fichaDeConteo).toEqual([{ conteoId: CONTEO }]);
+  });
+
+  it("acepta cualquiera de los depósitos activos de la sucursal, no solo el primero", async () => {
+    const { d, pedidos } = montarPropio();
+    const r = await lecturaDelConteo(d, contexto, SUC, { depositoId: D2 });
+    expect(r).toMatchObject({ ok: true, dato: { depositoId: D2, conteoId: CONTEO } });
+    expect(pedidos.listarConteos).toEqual([{ depositoId: D2, estado: "ABIERTO" }]);
+  });
+
+  it("un depósito que no es de la sucursal sale como el genérico y no consulta conteos", async () => {
+    const { d, pedidos } = montarPropio();
+    const r = await lecturaDelConteo(d, contexto, SUC, { depositoId: ID });
+    expect(codigoDe(r)).toBe(GENERICO);
+    expect(pedidos.listarConteos).toEqual([]);
+  });
+
+  it.each(["listarDepositos", "listarConteos", "fichaDeConteo", "articulosControlados"] as const)(
+    "si %s falla, el error sale tal cual y no se sigue con lo que no llegó",
+    async (nombre) => {
+      const { d } = montarPropio({ [nombre]: FALLA });
+      expect(codigoDe(await lecturaDelConteo(d, contexto, SUC, {}))).toBe(CODIGO_DE_LA_FALLA);
+    },
+  );
+
+  it("una sucursal sin depósitos activos devuelve la lectura vacía y no consulta conteos", async () => {
+    const { d, pedidos } = montarPropio({
+      listarDepositos: () => ok([{ id: D1, nombre: "Viejo", activo: false }]),
+    });
+    const r = await lecturaDelConteo(d, contexto, SUC, {});
+    expect(r).toEqual({
+      ok: true,
+      dato: { depositos: [], depositoId: null, conteoId: null, articulos: [] },
+    });
+    expect(pedidos.listarConteos).toEqual([]);
+  });
+
+  it("sin conteo abierto devuelve los depósitos, el elegido y ningún artículo", async () => {
+    const { d, pedidos } = montarPropio({ listarConteos: () => ok([]) });
+    const r = await lecturaDelConteo(d, contexto, SUC, {});
+    expect(r).toEqual({
+      ok: true,
+      dato: {
+        depositos: DOS_DEPOSITOS.map(({ id, nombre }) => ({ id, nombre })),
+        depositoId: D1,
+        conteoId: null,
+        articulos: [],
+      },
+    });
+    expect(pedidos.fichaDeConteo).toEqual([]);
+  });
+
+  it("si la ficha del conteo abierto no existe, tampoco hay conteo ni artículos", async () => {
+    const { d, pedidos } = montarPropio({ fichaDeConteo: () => ok(null) });
+    const r = await lecturaDelConteo(d, contexto, SUC, {});
+    expect(r).toEqual({
+      ok: true,
+      dato: {
+        depositos: DOS_DEPOSITOS.map(({ id, nombre }) => ({ id, nombre })),
+        depositoId: D1,
+        conteoId: null,
+        articulos: [],
+      },
+    });
+    expect(pedidos.articulosControlados).toEqual([]);
+  });
+});
+
+describe("revisionDelConteo: lo que pide, cómo falla y qué campos existen", () => {
+  it("le pide a la consulta el conteo que se revisa", async () => {
+    const { d, pedidos } = montarPropio();
+    await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    expect(pedidos.fichaDeConteo).toEqual([{ conteoId: CONTEO }]);
+  });
+
+  it.each(["fichaDeConteo", "articulosControlados"] as const)(
+    "si %s falla, el error sale tal cual",
+    async (nombre) => {
+      const { d } = montarPropio({ [nombre]: FALLA });
+      expect(codigoDe(await revisionDelConteo(d, contexto, { conteoId: CONTEO }))).toBe(
+        CODIGO_DE_LA_FALLA,
+      );
+    },
+  );
+
+  it("un artículo que ya no se controla sale con nombre y unidad vacíos, nunca con un texto inventado ni sin campos", async () => {
+    const desconocido = "99999999-9999-4999-8999-999999999999";
+    const { d } = montarPropio({
+      fichaDeConteo: () =>
+        ok({
+          conteo: { id: CONTEO, estado: "APLICADO" },
+          registros: [REGISTRO_CARGADO({ articuloId: desconocido })],
+          explicaciones: [
+            {
+              articuloId: desconocido,
+              contada: "5.0000",
+              diferenciaFinal: "-1.0000",
+              motivo: "MERMA",
+              detalle: null,
+            },
+          ],
+        }),
+    });
+    const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    expect(r).toMatchObject({ ok: true });
+    const dato = (r as { dato: { filas: unknown[]; aplicadas: unknown[] } }).dato;
+    expect(dato.filas).toStrictEqual([
+      {
+        articuloId: desconocido,
+        nombre: "",
+        unidadId: "",
+        contada: "5.0000",
+        contadoEn: en.toISOString(),
+      },
+    ]);
+    expect(dato.aplicadas).toStrictEqual([
+      {
+        articuloId: desconocido,
+        nombre: "",
+        unidadId: "",
+        contada: "5.0000",
+        diferencia: "-1.0000",
+        motivo: "MERMA",
+        detalle: null,
+      },
+    ]);
+  });
+
+  it("un conteo aplicado sin explicaciones no tiene filas aplicadas", async () => {
+    const { d } = montarPropio({
+      fichaDeConteo: () => ok({ conteo: { id: CONTEO, estado: "APLICADO" }, registros: [] }),
+    });
+    const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    expect(r).toMatchObject({
+      ok: true,
+      dato: { estado: "APLICADO", aplicadas: [], huella: null },
+    });
+  });
+
+  it("«sistema» y «movido» existen solo si vinieron: sin ellos la fila no los tiene, ni vacíos", async () => {
+    const { d } = montarPropio({
+      fichaDeConteo: () =>
+        ok({
+          conteo: { id: CONTEO, estado: "ABIERTO" },
+          registros: [
+            REGISTRO_CARGADO({ diferenciaBruta: "-2.0000" }),
+            REGISTRO_CARGADO({
+              articuloId: A2,
+              diferenciaBruta: "1.0000",
+              existenciaALaHora: "7.0000",
+            }),
+          ],
+        }),
+    });
+    const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    const filas = (r as { dato: { filas: Record<string, unknown>[] } }).dato.filas;
+    expect(Object.keys(filas[0] as object)).not.toContain("sistema");
+    expect(Object.keys(filas[0] as object)).not.toContain("movido");
+    expect(filas[1]).toMatchObject({ sistema: "7.0000" });
+    expect(Object.keys(filas[1] as object)).not.toContain("movido");
+  });
+
+  it("«movido» llega solo, sin «sistema»", async () => {
+    const { d } = montarPropio({
+      fichaDeConteo: () =>
+        ok({
+          conteo: { id: CONTEO, estado: "ABIERTO" },
+          registros: [REGISTRO_CARGADO({ diferenciaBruta: "1.0000", movidoDesdeLaHora: "3.0000" })],
+        }),
+    });
+    const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    const fila = (r as { dato: { filas: Record<string, unknown>[] } }).dato.filas[0] as object;
+    expect(fila).toMatchObject({ movido: "3.0000" });
+    expect(Object.keys(fila)).not.toContain("sistema");
+  });
+
+  it("los motivos salen en el orden aprobado, según el sentido de la diferencia", async () => {
+    const { d } = montarPropio({
+      fichaDeConteo: () =>
+        ok({
+          conteo: { id: CONTEO, estado: "ABIERTO" },
+          registros: [
+            REGISTRO_CARGADO({ diferenciaBruta: "-2.0000" }),
+            REGISTRO_CARGADO({ articuloId: A2, diferenciaBruta: "2.0000" }),
+          ],
+        }),
+    });
+    const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
+    const [faltante, sobrante] = (
+      r as { dato: { filas: { motivos: { codigo: string; pideDetalle: boolean }[] }[] } }
+    ).dato.filas;
+    expect(faltante?.motivos).toStrictEqual([
+      { codigo: "VENTA_NO_REGISTRADA", pideDetalle: false },
+      { codigo: "CONSUMO_INTERNO", pideDetalle: false },
+      { codigo: "MERMA", pideDetalle: false },
+      { codigo: "ROTURA", pideDetalle: false },
+      { codigo: "VENCIMIENTO", pideDetalle: false },
+      { codigo: "OTRA_SALIDA", pideDetalle: true },
+    ]);
+    expect(sobrante?.motivos).toStrictEqual([
+      { codigo: "DEVOLUCION_DE_CLIENTE", pideDetalle: false },
+      { codigo: "OTRA_ENTRADA", pideDetalle: true },
+    ]);
+  });
+});
+
+describe("las acciones del conteo: qué mandan, qué devuelven y cómo fallan", () => {
+  it("abrir acepta cualquier depósito activo de la sucursal, manda el id y devuelve el conteo y si ya existía", async () => {
+    const { d, llamadas } = montarPropio();
+    const r = await abrirElConteo(d, contexto, SUC, { id: ID, depositoId: D2 });
+    expect(r).toEqual({ ok: true, dato: { conteoId: CONTEO, yaExistia: true } });
+    expect(llamadas).toEqual([{ que: "abrir", entrada: { id: ID, depositoId: D2 } }]);
+  });
+
+  it("abrir con un depósito de otra sucursal es el genérico y no abre nada", async () => {
+    const { d, llamadas } = montarPropio();
+    const r = await abrirElConteo(d, contexto, SUC, { id: ID, depositoId: CONTEO });
+    expect(codigoDe(r)).toBe(GENERICO);
+    expect(llamadas).toEqual([]);
+  });
+
+  it("abrir con la lista de depósitos caída sale con ese error y no abre nada", async () => {
+    const { d, llamadas } = montarPropio({ listarDepositos: FALLA });
+    const r = await abrirElConteo(d, contexto, SUC, { id: ID, depositoId: D1 });
+    expect(codigoDe(r)).toBe(CODIGO_DE_LA_FALLA);
+    expect(llamadas).toEqual([]);
+  });
+
+  it("cargar lo contado devuelve si ya existía y, con los artículos caídos, no registra nada", async () => {
+    const { d, llamadas } = montarPropio();
+    const r = await cargarLoContado(d, contexto, {
+      id: ID,
+      conteoId: CONTEO,
+      articuloId: A1,
+      cantidad: "5",
+      hora: "",
+    });
+    expect(r).toEqual({ ok: true, dato: { yaExistia: true } });
+    expect(llamadas).toHaveLength(1);
+    const caido = montarPropio({ articulosControlados: FALLA });
+    const f = await cargarLoContado(caido.d, contexto, {
+      id: ID,
+      conteoId: CONTEO,
+      articuloId: A1,
+      cantidad: "5",
+      hora: "",
+    });
+    expect(codigoDe(f)).toBe(CODIGO_DE_LA_FALLA);
+    expect(caido.llamadas).toEqual([]);
+  });
+
+  it("aplicar con los artículos caídos sale con ese error y no aplica nada", async () => {
+    const { d, llamadas } = montarPropio({ articulosControlados: FALLA });
+    const r = await aplicarElConteo(d, contexto, {
+      conteoId: CONTEO,
+      huella: HUELLA,
+      respuestas: [],
+    });
+    expect(codigoDe(r)).toBe(CODIGO_DE_LA_FALLA);
+    expect(llamadas).toEqual([]);
+  });
+});
+
+describe("la huella del conteo: la forma exacta (64 de 0-9 a-f, ni antes ni después)", () => {
+  it.each([
+    ["con texto después", `${HUELLA}zz`],
+    ["con texto antes", `zz${HUELLA}`],
+    ["una de menos", "a".repeat(63)],
+    ["en mayúsculas", "A".repeat(64)],
+  ])("una huella %s se rechaza como el genérico y no aplica nada", async (_caso, huella) => {
+    const { d, llamadas } = montarPropio();
+    const r = await aplicarElConteo(d, contexto, { conteoId: CONTEO, huella, respuestas: [] });
+    expect(codigoDe(r)).toBe(GENERICO);
+    expect(llamadas).toEqual([]);
+  });
+
+  it("una huella bien formada se acepta", async () => {
+    const { d, llamadas } = montarPropio();
+    const r = await aplicarElConteo(d, contexto, {
+      conteoId: CONTEO,
+      huella: HUELLA,
+      respuestas: [],
+    });
+    expect(r).toEqual({ ok: true, dato: { movimientoId: ID, yaAplicado: true } });
+    expect(llamadas).toHaveLength(1);
+  });
+});

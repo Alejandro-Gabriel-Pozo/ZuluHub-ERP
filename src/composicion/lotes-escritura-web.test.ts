@@ -129,6 +129,9 @@ describe("corregirElLote", () => {
     for (const malo of [
       { ...base, vence: "2/12/2026" },
       { ...base, vence: "" },
+      { ...base, vence: "2026-12-02x" },
+      { ...base, vence: "x2026-12-02" },
+      { ...base, vence: "2026-12-02\n" },
       { ...base, version: "-1" },
       { ...base, version: "3.5" },
       { ...base, otro: 1 },
