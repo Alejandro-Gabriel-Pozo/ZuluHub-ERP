@@ -1,0 +1,10 @@
+{
+  "id": "DEC-PRO-002",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Al abrir una orden de producción desde la pantalla, los insumos salen del depósito de venta de la sucursal y lo producido entra en ese mismo depósito.",
+  "que_cambia": "De dónde se descuentan los ingredientes y dónde queda lo producido: el depósito de venta, sin elegir. Sin depósito de venta activo no se abren órdenes desde la pantalla. Revertir: sumar el selector de depósitos (el caso de uso ya los pide).",
+  "donde": "src/composicion/nueva-orden-web.ts; pantallas-de-produccion-inventario.md §3 O6; PR PRO-B; confirmada por el dueño el 26/11/2026 («Coincido con todas las recomendaciones»)"
+}

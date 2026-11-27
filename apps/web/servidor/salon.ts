@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
+  agregarAlPedidoDeLaMesa,
   cambiarDeMesaLaCuenta,
   liberarLaMesa,
   tomarElPedido,
@@ -12,6 +13,14 @@ import {
   type FichaParaLaPantalla,
   type MapaParaLaPantalla,
 } from "../../../src/composicion/cuenta-de-mesa-web";
+import {
+  dividirLaCuenta,
+  type DependenciasDeDividirCuentaWeb,
+} from "../../../src/composicion/dividir-cuenta-web";
+import {
+  unirLasMesas,
+  type DependenciasDeUnirMesasWeb,
+} from "../../../src/composicion/unir-mesas-web";
 import {
   cambiarElEstadoDeLaMesa,
   crearLaMesa,
@@ -51,6 +60,16 @@ const dependencias: DependenciasDeMesasWeb = {
 const dependenciasDeLaCuenta: DependenciasDeCuentaDeMesaWeb = {
   casosDeUso: web.casosDeUsoDeSalon,
   consultas: web.consultasDeSalon,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeUnir: DependenciasDeUnirMesasWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeDividir: DependenciasDeDividirCuentaWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
   respuesta: dependenciasDeSesion.respuesta,
 };
 
@@ -166,6 +185,12 @@ export const tomarElPedidoDeLaMesa = (crudo: unknown) =>
     tomarElPedido(dependenciasDeLaCuenta, contexto, sucursal, crudo),
   );
 
+/** «Agregar» un producto al pedido (`{ cuentaId, lineaId, productoId, varianteId?, opcionIds, cantidad, precioAbierto?, confirmaciones?, salida? }`; el `lineaId` lo fija la página una vez por intento). */
+export const agregarAlPedidoDeLaMesaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    agregarAlPedidoDeLaMesa(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
 /** «Liberar mesa» (`{ cuentaId }`). */
 export const liberarLaMesaDelSalon = (crudo: unknown) =>
   enLaSucursal((contexto, sucursal) =>
@@ -176,4 +201,14 @@ export const liberarLaMesaDelSalon = (crudo: unknown) =>
 export const cambiarDeMesaLaCuentaDelSalon = (crudo: unknown) =>
   enLaSucursal((contexto, sucursal) =>
     cambiarDeMesaLaCuenta(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** «Unir con otra mesa» (`{ unionId, cuentaDestinoId, cuentaOrigenId, clave }`; el `unionId` y la clave los fija la página una vez por intento). */
+export const unirLasMesasDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) => unirLasMesas(dependenciasDeUnir, contexto, sucursal, crudo));
+
+/** «Dividir la cuenta» por ítems (`{ divisionId, cuentaId, partes, asignaciones }`; el `divisionId` lo fija la página una vez por intento). */
+export const dividirLaCuentaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    dividirLaCuenta(dependenciasDeDividir, contexto, sucursal, crudo),
   );

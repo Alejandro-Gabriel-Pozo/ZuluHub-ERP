@@ -8,6 +8,12 @@ export const PERMISOS_DE_ADMINISTRACION = {
   "usuarios.ver": ["GERENTE", "ADMINISTRADOR"],
   "usuarios.asignar_sucursales": ["GERENTE", "ADMINISTRADOR"],
   "usuarios.revocar_invitacion": ["GERENTE", "ADMINISTRADOR"],
+  // H4b T4: los roles propios son solo del gerente (decisión del dueño, 14/11 y 25/11/2026; pisos SOLO_GERENTE en 0097).
+  "roles.ver": ["GERENTE"],
+  "roles.crear": ["GERENTE"],
+  "roles.editar": ["GERENTE"],
+  "roles.archivar": ["GERENTE"],
+  "usuarios.asignar_rol": ["GERENTE"],
   "sucursales.ver": ["GERENTE", "ADMINISTRADOR"],
   "sucursales.crear": ["GERENTE", "ADMINISTRADOR"],
   "sucursales.editar": ["GERENTE", "ADMINISTRADOR"],

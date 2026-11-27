@@ -27,16 +27,17 @@ El despliegue automático está apagado (`vercel.json` → `deploymentEnabled: f
 
 ## 3. Variables de entorno del proyecto (solo los nombres; los valores los carga el dueño)
 
-| Nombre                             | Para qué                                                                                                                            |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `PEDERNAL_HOST_DE_LA_CONSOLA`      | El host de la consola (el dominio de arriba, sin `https://`). De acá sale el origen del ingreso y contra él se compara cada sesión. |
-| `PEDERNAL_AUTH_SECRETO_PLATAFORMA` | Secreto de ingreso de la consola. Distinto del de la web.                                                                           |
-| `GOOGLE_CLIENT_ID_PLATAFORMA`      | Identificador del cliente de Google de la consola.                                                                                  |
-| `GOOGLE_CLIENT_SECRET_PLATAFORMA`  | Secreto del cliente de Google de la consola.                                                                                        |
-| `PEDERNAL_DB_AUTENTICACION`        | Conexión del rol de autenticación (segundo factor y sesiones).                                                                      |
-| `PEDERNAL_DB_PLATAFORMA`           | Conexión del rol de plataforma. **Solo existe en este proyecto.**                                                                   |
-| `PEDERNAL_CLAVE_CONTEXTO`          | Clave que firma el contexto de cada pedido.                                                                                         |
-| `PEDERNAL_SECRETO_INVITACIONES`    | Secreto de las invitaciones: lo necesita el alta de empresa **y también suspender una persona**.                                    |
+| Nombre                             | Para qué                                                                                                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PEDERNAL_HOST_DE_LA_CONSOLA`      | El host de la consola (el dominio de arriba, sin `https://`). De acá sale el origen del ingreso y contra él se compara cada sesión.                                                                  |
+| `PEDERNAL_AUTH_SECRETO_PLATAFORMA` | Secreto de ingreso de la consola. Distinto del de la web.                                                                                                                                            |
+| `PEDERNAL_HOSTS_PROTEGIDOS`        | Los hosts de los proyectos de la plataforma (consola, aplicación, landing), separados por comas y sin `https://`. Ningún cliente puede registrarlos ni activarlos. Sin ella, «Dominios» no funciona. |
+| `GOOGLE_CLIENT_ID_PLATAFORMA`      | Identificador del cliente de Google de la consola.                                                                                                                                                   |
+| `GOOGLE_CLIENT_SECRET_PLATAFORMA`  | Secreto del cliente de Google de la consola.                                                                                                                                                         |
+| `PEDERNAL_DB_AUTENTICACION`        | Conexión del rol de autenticación (segundo factor y sesiones).                                                                                                                                       |
+| `PEDERNAL_DB_PLATAFORMA`           | Conexión del rol de plataforma. **Solo existe en este proyecto.**                                                                                                                                    |
+| `PEDERNAL_CLAVE_CONTEXTO`          | Clave que firma el contexto de cada pedido.                                                                                                                                                          |
+| `PEDERNAL_SECRETO_INVITACIONES`    | Secreto de las invitaciones: lo necesita el alta de empresa **y también suspender una persona**.                                                                                                     |
 
 Si falta alguna, el pedido falla cerrado con una referencia `PD-XXXX-XXXX`; el **nombre** de la variable que falta queda
 en los registros de la función, nunca en la pantalla.

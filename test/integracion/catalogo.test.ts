@@ -85,6 +85,13 @@ const TABLAS_DE_NEGOCIO = [
   "seccion_de_carta",
   "nodo_de_clasificacion", // 0045
   "clasificacion_de_producto", // 0046
+  // Permisos configurables (0094, T1 de H4b)
+  "plantilla_de_rol",
+  "version_de_plantilla",
+  "piso_de_plataforma",
+  "accion_introducida",
+  "rol_de_empresa",
+  "version_de_rol",
   "producto",
   "grupo_de_elecciones",
   "opcion",
@@ -97,6 +104,8 @@ const TABLAS_DE_NEGOCIO = [
   "disponibilidad_de_producto",
   // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
   "identidad_de_carta_empresa",
+  // Las cuentas del proveedor de imágenes que cada empresa declara (0102_cuentas_de_imagen_declaradas)
+  "cuenta_de_imagen_declarada",
   // El portal de la vidriera (0078_portal_de_la_empresa)
   "portal_de_empresa",
   "portal_tarjeta",
@@ -125,6 +134,7 @@ const TABLAS_DE_NEGOCIO = [
   "saldo_de_imputacion",
   "saldo_de_parte",
   "saldo_de_parte_por_centro_de_costo",
+  "cuenta_del_cliente", // 0106
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -200,6 +210,8 @@ const TABLAS_DE_NEGOCIO = [
   "conciliacion",
   "configuracion_de_compras",
   "correccion_de_compra",
+  "correccion_de_lo_recibido",
+  "medio_de_un_pago",
   "ficha_de_compra_del_proveedor",
   "importe_por_alicuota",
   "linea_de_comprobante",
@@ -478,6 +490,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "saldo_de_parte",
             "saldo_de_parte_por_centro_de_costo",
           ].map((t) => `${t}:SELECT`), // 0092
+          "cuenta_del_cliente:SELECT", // 0106
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -537,6 +550,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "conciliacion:SELECT",
           "configuracion_de_compras:SELECT",
           "correccion_de_compra:SELECT",
+          "correccion_de_lo_recibido:SELECT",
+          "medio_de_un_pago:SELECT",
           "ficha_de_compra_del_proveedor:SELECT",
           "importe_por_alicuota:SELECT",
           "linea_de_comprobante:SELECT",
@@ -583,9 +598,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ].map((t) => `${t}:SELECT`), // 0025
           "nodo_de_clasificacion:SELECT", // 0045
           "clasificacion_de_producto:SELECT", // 0046
+          ...[
+            "plantilla_de_rol",
+            "version_de_plantilla",
+            "piso_de_plataforma",
+            "rol_de_empresa",
+            "version_de_rol",
+          ].map((t) => `${t}:SELECT`), // 0094 (la accion_introducida no la lee la aplicación)
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
           "identidad_de_carta_empresa:SELECT", // 0077
+          "cuenta_de_imagen_declarada:SELECT", // 0102
           ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
             (tabla) => `${tabla}:SELECT`,
           ), // 0078
@@ -629,6 +652,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "solicitud_de_alta:SELECT", // captación
+          ...[
+            "plantilla_de_rol",
+            "version_de_plantilla",
+            "piso_de_plataforma",
+            "accion_introducida",
+          ].map((t) => `${t}:SELECT`), // 0094
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
@@ -707,6 +736,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:membresia.activo",
           // `rol` desde 0005: solo cambia al aceptar un traspaso (política + disparador `membresia_cambio`)
           "pedernal_app:membresia.rol",
+          "pedernal_app:membresia.rol_propio_id",
           ...["numero", "sucursal_id", "domicilio_id", "estado"].map(
             (c) => `pedernal_app:punto_de_venta.${c}`,
           ),
@@ -763,6 +793,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["activo", "nombre", "nombre_clave", "padre_id"].map(
             (c) => `pedernal_app:nodo_de_clasificacion.${c}`,
           ),
+          // 0094: el rol propio cambia de nombre y se archiva; la plataforma cambia el tipo de un piso (y quién lo fijó)
+          ...["activo", "nombre", "nombre_clave"].map((c) => `pedernal_app:rol_de_empresa.${c}`),
+          ...["autor", "tipo"].map((c) => `pedernal_plataforma:piso_de_plataforma.${c}`),
           "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
           // 0026: la jornada del cierre del día cambia de estado y de marcas (la máquina de estados la impone el disparador)
           ...[
@@ -818,7 +851,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           // 0038: salón y comandas cambian solo lo que sus disparadores permiten (la mesa se edita y se desactiva; la línea de comanda pasa a enviada; el trabajo de impresión mueve su estado)
           ...["ultimo"].map((c) => `pedernal_app:contador_de_envios.${c}`),
           ...["activa", "nombre", "papel_mm", "uso"].map((c) => `pedernal_app:impresora.${c}`),
-          ...["envio_id", "salida"].map((c) => `pedernal_app:linea_de_comanda.${c}`),
+          ...["envio_id", "nota", "salida"].map((c) => `pedernal_app:linea_de_comanda.${c}`), // 0104: la nota se cambia mientras no se envió
           ...["activa", "columna", "fila", "forma", "numero", "tamano"].map(
             (c) => `pedernal_app:mesa.${c}`,
           ),
@@ -840,6 +873,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:saldo_de_imputacion.importe",
           "pedernal_app:saldo_de_parte.saldo",
           "pedernal_app:saldo_de_parte_por_centro_de_costo.saldo",
+          // 0106: la ficha de cuenta corriente cambia plazo, límite, estado y motivo (nada de lo que la identifica)
+          ...["plazo_dias", "limite", "estado", "motivo_de_suspension"].map(
+            (c) => `pedernal_app:cuenta_del_cliente.${c}`,
+          ),
           // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
           "pedernal_app:costo_de_articulo.costo_unitario",
           "pedernal_app:costo_de_articulo.cantidad_valorizada",
@@ -932,6 +969,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "rubro",
           ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
           "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
+          ...["estado", "motivo_de_retiro", "retirada_por"].map(
+            (c) => `pedernal_app:cuenta_de_imagen_declarada.${c}`,
+          ), // 0102
           ...[
             "portal_de_empresa.color_detras",
             "portal_de_empresa.color_encabezado",
@@ -1016,6 +1056,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:recepcion.motivo_de_anulacion",
           "pedernal_app:saldo_de_linea_de_comprobante.cantidad_asignada",
           "pedernal_app:saldo_de_linea_de_recepcion.cantidad_asignada",
+          "pedernal_app:saldo_de_linea_de_recepcion.cantidad_recibida",
           ...["estado", "resuelto_por", "resuelto_en", "motivo"].map(
             (c) => `pedernal_app:conteo_fisico.${c}`,
           ),
@@ -1314,6 +1355,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "es_canonico",
           "registrado_por",
         ].map((c) => `dominio.${c}`),
+        // 0094: la plataforma publica versiones de plantilla y fija pisos
+        ...["clave", "numero", "acciones", "autor"].map((c) => `version_de_plantilla.${c}`),
+        ...["accion", "tipo", "autor"].map((c) => `piso_de_plataforma.${c}`),
         "plan.codigo",
         ...["plan_id", "nombre_comercial", "modulos", "perillas"].map(
           (c) => `version_de_plan.${c}`,
@@ -1401,6 +1445,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "rubro",
           "sucursal_id",
         ].map((c) => `carta_publica.${c}`), // 0043 y 0077
+        // 0102: las cuentas de imagen declaradas (lo que escribe la aplicación al declarar; el retiro va por UPDATE)
+        ...[
+          "id",
+          "empresa_id",
+          "proveedor",
+          "cuenta",
+          "clave_idempotencia",
+          "huella",
+          "declarada_por",
+        ].map((c) => `cuenta_de_imagen_declarada.${c}`),
         // 0077: el color de la empresa para sus cartas (una fila por empresa)
         ...["color_principal", "creado_por", "empresa_id"].map(
           (c) => `identidad_de_carta_empresa.${c}`,
@@ -1549,6 +1603,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         // 0045: la clasificación comercial
         ...["empresa_id", "id", "nombre", "nombre_clave", "padre_id"].map(
           (c) => `nodo_de_clasificacion.${c}`,
+        ),
+        // 0094: los roles propios y sus versiones (solo inserción)
+        ...["empresa_id", "id", "nombre", "nombre_clave", "plantilla_origen"].map(
+          (c) => `rol_de_empresa.${c}`,
+        ),
+        ...["acciones", "creado_en", "creado_por", "empresa_id", "numero", "rol_id"].map(
+          (c) => `version_de_rol.${c}`,
         ),
         // 0046: el vínculo del producto con vigencia (solo inserción: sin UPDATE por columna)
         ...["cargado_por", "empresa_id", "id", "nodo_id", "producto_id", "vigente_desde"].map(
@@ -1699,6 +1760,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["empresa_id", "parte_id", "sentido", "moneda", "sucursal_id", "saldo"].map(
             (c) => `saldo_de_parte_por_centro_de_costo.${c}`,
           ),
+          // 0106: la ficha de cuenta corriente (la base fija `id`, `moneda`, `estado`, las fechas y la versión)
+          ...[
+            "empresa_id",
+            "parte_id",
+            "plazo_dias",
+            "limite",
+            "clave_idempotencia",
+            "huella",
+            "habilitada_por",
+          ].map((c) => `cuenta_del_cliente.${c}`),
           ...[
             "movimiento_id",
             "empresa_id",
@@ -1912,7 +1983,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["empresa_id", "linea_nueva_id", "linea_origen_id", "modo"].map(
             (c) => `linea_copiada.${c}`,
           ),
-          ...["cuenta_id", "empresa_id", "envio_id", "linea_id", "salida"].map(
+          ...["cuenta_id", "empresa_id", "envio_id", "linea_id", "nota", "salida"].map(
             (c) => `linea_de_comanda.${c}`,
           ),
           ...["empresa_id", "linea_id", "mesa_origen_id", "union_id"].map(
@@ -1943,6 +2014,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "envio_id",
             "linea_id",
             "nombre_de_cocina",
+            "nota",
             "orden",
             "rol",
           ].map((c) => `renglon_de_envio.${c}`),
@@ -1994,6 +2066,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "sesion_de_caja_id",
             "emitido_por",
             "emitido_en",
+            "cargado_a_parte_id", // 0107
           ].map((c) => `ticket.${c}`),
           ...[
             "id",
@@ -2255,6 +2328,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "comprobante_de_proveedor.proveedor_id",
           "comprobante_de_proveedor.proveedor_razon_social",
           "comprobante_de_proveedor.punto_de_venta",
+          "comprobante_de_proveedor.reemplaza_a_id",
           "comprobante_de_proveedor.registrado_por",
           "comprobante_de_proveedor.tipo",
           "comprobante_de_proveedor.total_calculado",
@@ -2286,6 +2360,24 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "correccion_de_compra.precio_por_tipo",
           "correccion_de_compra.recepcion_id",
           "correccion_de_compra.registrado_por",
+          "correccion_de_lo_recibido.cantidad_anterior",
+          "correccion_de_lo_recibido.cantidad_nueva",
+          "correccion_de_lo_recibido.causa",
+          "correccion_de_lo_recibido.clave_idempotencia",
+          "correccion_de_lo_recibido.empresa_id",
+          "correccion_de_lo_recibido.huella",
+          "correccion_de_lo_recibido.id",
+          "correccion_de_lo_recibido.linea",
+          "correccion_de_lo_recibido.movimiento_id",
+          "correccion_de_lo_recibido.nota",
+          "correccion_de_lo_recibido.numero",
+          "correccion_de_lo_recibido.recepcion_id",
+          "correccion_de_lo_recibido.registrado_por",
+          "medio_de_un_pago.empresa_id",
+          "medio_de_un_pago.importe",
+          "medio_de_un_pago.medio",
+          "medio_de_un_pago.numero",
+          "medio_de_un_pago.pago_id",
           "entrada_de_linea_de_recepcion.cantidad",
           "entrada_de_linea_de_recepcion.deposito_id",
           "entrada_de_linea_de_recepcion.empresa_id",
@@ -3160,9 +3252,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const politicasPublicas = await filas<{ policyname: string; qual: string }>(
         `select policyname, qual from pg_policies where tablename = 'carta_publica' and 'pedernal_publico' = any(roles)`,
       );
-      // Dos políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta) y la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
-      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»).
-      expect(politicasPublicas).toHaveLength(2);
+      // Tres políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta), la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
+      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»), y la de la raíz del host dedicado (0096), por `app.empresa_del_host`, que
+      // deja ver las cartas EN LÍNEA de UNA empresa (ver `carta-publica-raiz*.test.ts`). Cada una mira solo SU variable.
+      expect(politicasPublicas).toHaveLength(3);
       const porCarta = politicasPublicas.find((p) => p.qual.includes("app.codigo_de_carta"));
       const porPortal = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_portal"));
       expect(porCarta?.qual).not.toContain("app.empresa_del_portal");
@@ -3170,6 +3263,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(porPortal?.qual).toContain("portal_tarjeta");
       expect(porPortal?.qual).toContain("portal_zona");
       expect(porPortal?.qual).toContain("EN_LINEA");
+      const porHost = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_host"));
+      expect(porHost?.qual).not.toContain("app.codigo_de_carta");
+      expect(porHost?.qual).not.toContain("app.empresa_del_portal");
+      expect(porHost?.qual).toContain("EN_LINEA");
+      expect(porCarta?.qual).not.toContain("app.empresa_del_host");
+      expect(porPortal?.qual).not.toContain("app.empresa_del_host");
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {

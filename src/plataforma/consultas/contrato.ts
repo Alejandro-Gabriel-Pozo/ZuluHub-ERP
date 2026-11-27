@@ -2,7 +2,7 @@ import type { CatalogoComercial } from "../../capacidades/modulos/catalogo";
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
 import type { AmbitoDePerilla } from "../../capacidades/planes/perillas";
 import type { ValorDePerilla } from "../../capacidades/planes/valores";
-import type { RolDeEmpresa } from "../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import type {
   EstadoDeEmpresa,
   EstadoDeTenant,
@@ -10,6 +10,11 @@ import type {
   EstadosDeEmpresa,
 } from "../../contexto/estados";
 import type { EstadoGuardado, Invitacion, Persona } from "../../modulos/identidad/publico";
+import type {
+  EstadoDeDominio,
+  SuperficieDeDominio,
+  TitularDeDominio,
+} from "../../modulos/marcas/publico";
 import type { AjusteGuardado } from "../../modulos/planes/publico";
 import type {
   EmpresaId,
@@ -191,7 +196,7 @@ export type FilaDeReferencia = Readonly<{
 export type MembresiaVisible = Readonly<{
   empresaId: EmpresaId;
   personaId: PersonaId;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   activo: boolean;
 }>;
 
@@ -259,7 +264,34 @@ export type PerillaDelCatalogo = Readonly<{
 export type VistaDeCatalogoDePerillas = Readonly<{ perillas: readonly PerillaDelCatalogo[] }>;
 
 /** Las listas de nivel 1 y la búsqueda de referencias. */
+/** Qué dominios de empresa se piden: los de una empresa y/o en un estado; sin filtro, todos los de empresas. */
+export type FiltroDeDominios = Readonly<{
+  /** Solo ese dominio (y solo si es de una empresa): lo usan las acciones de la consola para no actuar sobre un dominio de marca. */
+  dominioId: string | null;
+  empresaId: EmpresaId | null;
+  estado: EstadoDeDominio | null;
+}>;
+
+/**
+ * Un dominio de una empresa tal como lo ve la consola: el host, qué muestra, de quién es, en qué estado está y la `version` (la que lee el caso de uso al
+ * cambiarlo). Sin el actor que lo registró ni ningún dato de la base que la pantalla no use.
+ */
+export type FilaDeDominio = Readonly<{
+  id: string;
+  host: string;
+  superficie: SuperficieDeDominio;
+  titular: TitularDeDominio;
+  estado: EstadoDeDominio;
+  verificadoEn: Date | null;
+  motivo: string | null;
+  version: number;
+  empresaId: EmpresaId;
+  razonSocial: string;
+}>;
+
 export interface LecturaDeNivel1 {
+  /** Los dominios de empresas (los de una marca no entran), con la razón social de su empresa: UNA sentencia con join, ordenada por id. */
+  listarDominios(filtro: FiltroDeDominios, pagina: Pagina): Promise<FilaDeDominio[]>;
   /**
    * Los tenants con su marca, su plan vigente a `ahora` y cuántas empresas no canceladas tienen: UNA
    * sentencia con joins, no una por fila.
@@ -304,9 +336,29 @@ export interface LecturaParaExplicar {
   membresiasDe(persona: PersonaId, empresas: readonly EmpresaId[]): Promise<MembresiaVisible[]>;
   /** Una invitación con sus empresas, sin sucursales y sin el hash del token; `null` si no existe. */
   invitacionPorId(id: InvitacionId): Promise<Invitacion | null>;
-  /** Módulos activables que la empresa activó. Hoy ninguno: no existe la tabla (como en `autorizacion`). */
-  modulosActivadosDe(empresa: EmpresaId): Promise<readonly string[]>;
+  /**
+   * Los módulos que decide el guard, leídos como los lee `autorizacion.delActor`: los que la empresa tiene ACTIVADOS y los que el plan VIGENTE de su tenant a `ahora` incluye (el techo).
+   * Una empresa que no se ve da ambas listas vacías (cierra).
+   */
+  modulosDeLaEmpresa(empresa: EmpresaId, ahora: Date): Promise<ModulosDeLaEmpresa>;
+  /**
+   * De dónde sale el conjunto de acciones de esa persona en esa empresa, leído como lo lee `autorizacion.delActor`: la versión vigente de la plantilla de cada rol base y, si tiene
+   * rol propio, ese rol (activo o archivado) con su versión vigente. Sin membresía no hay nada que leer (`rolPropio` y plantillas en `null`).
+   */
+  fuentesDelConjunto(persona: PersonaId, empresa: EmpresaId): Promise<FuentesDelConjuntoLeidas>;
 }
+
+export type ModulosDeLaEmpresa = Readonly<{
+  activados: readonly string[];
+  habilitados: readonly string[];
+}>;
+
+/** Las acciones guardadas, tal como están en la base (el catálogo del código las filtra después, en `conjuntoEfectivo`). `null`: sin versión legible. */
+export type FuentesDelConjuntoLeidas = Readonly<{
+  plantillas: Readonly<Record<"ADMINISTRADOR" | "OPERADOR", readonly string[] | null>>;
+  /** El rol propio al que apunta la membresía: `null` si no tiene o su versión no se pudo leer. */
+  rolPropio: Readonly<{ activo: boolean; acciones: readonly string[] }> | null;
+}>;
 
 /** Todo lo que el adaptador de lectura de soporte ofrece. */
 export type LecturaDeSoporte = LecturaDeNivel1 & LecturaParaExplicar;

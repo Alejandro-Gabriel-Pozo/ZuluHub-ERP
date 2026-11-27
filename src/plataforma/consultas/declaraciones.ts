@@ -18,4 +18,5 @@ export const DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA = {
   verConfiguracion: { accion: "configuracion.ver" },
   catalogoDePerillas: { accion: "configuracion.ver" },
   buscarReferencia: { accion: "soporte.buscar_referencia" },
+  listarDominios: { accion: "dominios.ver" },
 } as const satisfies Record<string, DeclaracionDeAccionDePlataforma>;

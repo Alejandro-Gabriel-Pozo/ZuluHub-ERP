@@ -1,6 +1,13 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { crearDirectorioDePartes } from "../../clientes/publico";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
+import {
+  importeAJson,
+  importeDesdeTexto,
+  type ImporteJson,
+} from "../../../primitivas/dinero/importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
 import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -32,6 +39,23 @@ export type EntradaDeCerrarCuenta = Readonly<{
   /** Lo manda la pantalla: es el id del ejemplar ORIGINAL del ticket (idempotencia). */
   ejemplarId: string;
   confirmaciones?: readonly string[] | undefined;
+  /**
+   * El cliente al que se le carga la venta (R2 mínimo): una parte activa de la empresa con rol de cliente. Es un dato informativo del ticket: este caso de uso no crea
+   * deuda, asiento ni cobro (el cargo al libro es de la cuenta corriente). Sin él, el cierre es exactamente el de siempre. Si la cuenta ya estaba cerrada, se devuelve su ticket
+   * tal como quedó (con el cliente del que ganó) y este dato se ignora.
+   */
+  clienteId?: string | undefined;
+  /**
+   * El total que vio quien cierra (CC-5, B1a-2): OBLIGATORIO con `clienteId` (sin él, `ENTRADA_INVALIDA` y no se escribe nada) y sin efecto sin cliente. Si el total de la cuenta AHORA es otro (alguien agregó o
+   * quitó algo mientras se elegía el cliente), no se cierra ni se carga nada (`TOTAL_CAMBIO` con el total actual): lo que se carga a la cuenta del cliente es lo que la persona vio. Un cierre que ya se había
+   * hecho se devuelve igual (la idempotencia va primero), aunque este total ya sea viejo.
+   */
+  totalEsperado?: Readonly<{ moneda: string; monto: string }> | undefined;
+  /**
+   * CC-2: con `clienteId`, el motivo con el que quien cierra aprueba que la venta pase el límite de crédito del cliente. Solo cuenta si la venta lo supera Y quien cierra tiene
+   * `cuenta_corriente.aprobar_exceso` (lo decide el servidor): si no, el cierre no se hace. Sin cliente se ignora.
+   */
+  aprobacionDelExceso?: Readonly<{ motivo: string }> | undefined;
 }>;
 
 export type SalidaDeCerrarCuenta = Readonly<{
@@ -43,10 +67,14 @@ export type SalidaDeCerrarCuenta = Readonly<{
   fechaNegocio: FechaCivil;
   total: ImporteJson;
   yaEstabaCerrada: boolean;
+  /** El cliente cargado al ticket; la clave falta si el ticket no tiene cliente. */
+  clienteId?: string;
 }>;
 
+const directorio = crearDirectorioDePartes();
+
 /** La salida de un ticket que ya existía (repetición): el original, con el rótulo y el estado de hoy. */
-async function salidaDelTicketExistente(
+export async function salidaDelTicketExistente(
   tx: TxDeVentas,
   empresa: Parameters<TxDeVentas["tickets"]["ejemplarDeNumero"]>[0],
   ticket: Ticket,
@@ -62,6 +90,7 @@ async function salidaDelTicketExistente(
     fechaNegocio: ticket.fechaNegocio,
     total: { moneda: "ARS", monto: ticket.total },
     yaEstabaCerrada: true,
+    ...(ticket.cargadoAParteId === null ? {} : { clienteId: ticket.cargadoAParteId }),
   };
 }
 
@@ -163,10 +192,38 @@ export async function cerrarCuentaEnTx(
       if (actual !== null && actual.estado === "ANULADA") return err("CUENTA_ANULADA");
       throw new Error("la cuenta está cerrada pero no tiene ticket");
     }
+    // Un cierre ya hecho a nombre de OTRO cliente no se devuelve como si fuera este: la misma cuenta con otro cliente es un pedido distinto (`CLAVE_REUTILIZADA`). El mismo cliente, o ninguno, devuelve el ticket tal como quedó.
+    if (entrada.clienteId !== undefined && ticket.cargadoAParteId !== entrada.clienteId) {
+      return err("CLAVE_REUTILIZADA");
+    }
     return ok(await salidaDelTicketExistente(tx, empresaId, ticket));
   };
   if (decision.valor.tipo === "YA_CERRADA") return yaEmitido();
   const { estadoDelTicket, cortesia } = decision.valor;
+
+  // Cerrar a nombre de un cliente carga ese total a su cuenta: tiene que ser el que vio quien cierra. Va después de la idempotencia y antes de tocar nada.
+  if (entrada.clienteId !== undefined) {
+    if (entrada.totalEsperado === undefined) return err("ENTRADA_INVALIDA");
+    if (entrada.totalEsperado.moneda !== ARS) return err("MONEDA_NO_SOPORTADA");
+    if (!FORMA_DEL_IMPORTE.test(entrada.totalEsperado.monto)) return err("IMPORTE_INVALIDO");
+    if (calculado.total.unidades !== importeDesdeTexto(ARS, entrada.totalEsperado.monto).unidades) {
+      return err({ error: "TOTAL_CAMBIO", totalActual: importeAJson(calculado.total) });
+    }
+  }
+
+  // El cliente se valida DESPUÉS de saber que esta transacción va a cerrar (un cierre repetido o perdido devuelve el ticket que ya existe) y ANTES de tocar nada. Cualquier
+  // motivo (no existe, es de otra empresa, está inactiva o anonimizada, no es cliente, id mal formado) es el mismo `CLIENTE_NO_VALIDO`: no cuenta qué hay en otra empresa.
+  if (entrada.clienteId !== undefined) {
+    const cliente = await directorio.parteParaOperacion(
+      tx,
+      empresaId,
+      entrada.clienteId,
+      "CUSTOMER",
+    );
+    if (!cliente.ok) return err("CLIENTE_NO_VALIDO");
+    // Cerrar a nombre de un cliente carga la venta a su cuenta: sin el puerto de la cuenta corriente no se cierra (nace cerrado).
+    if (opciones.cuentaCorriente === undefined) return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
+  }
 
   const cerrada = await tx.cuentas.cerrar(empresaId, cuenta.id, persona, contexto.ahora);
   if (!cerrada) return yaEmitido();
@@ -181,6 +238,7 @@ export async function cerrarCuentaEnTx(
     emitidoPor: persona,
     emitidoEn: contexto.ahora,
     sesionDeCajaId: opciones.sesionDeCajaId,
+    cargadoAParteId: entrada.clienteId,
   });
   const original = ejemplarId(entrada.ejemplarId);
   await tx.tickets.insertarEjemplar(empresaId, {
@@ -232,6 +290,7 @@ export async function cerrarCuentaEnTx(
       estado: estadoDelTicket,
       total,
       ejemplarId: original,
+      ...(entrada.clienteId === undefined ? {} : { clienteId: entrada.clienteId }),
     },
   });
   if (cortesia !== null) {
@@ -250,6 +309,18 @@ export async function cerrarCuentaEnTx(
       },
     });
   }
+  // El cargo va AL FINAL de lo que escribe el cierre (el libro serializa el saldo del cliente hasta que confirme): si la cuenta no deja cargar, se revierte TODO el cierre.
+  if (entrada.clienteId !== undefined && opciones.cuentaCorriente !== undefined) {
+    const cargo = await opciones.cuentaCorriente.cargarEnTx(tx, contexto, {
+      clienteId: entrada.clienteId,
+      ticketId: ticket.id,
+      sucursalId: cuenta.sucursalId,
+      total,
+      fechaDeNegocio: ticket.fechaNegocio,
+      aprobacion: entrada.aprobacionDelExceso,
+    });
+    if (!cargo.ok) return cargo;
+  }
   return ok({
     ticketId: ticket.id,
     ejemplarId: original,
@@ -259,6 +330,7 @@ export async function cerrarCuentaEnTx(
     fechaNegocio: ticket.fechaNegocio,
     total: { moneda: "ARS", monto: total },
     yaEstabaCerrada: false,
+    ...(entrada.clienteId === undefined ? {} : { clienteId: entrada.clienteId }),
   });
 }
 
@@ -268,9 +340,20 @@ async function cerrar(
   contexto: ContextoOperativo,
   entrada: EntradaDeCerrarCuenta,
 ): Promise<R<SalidaDeCerrarCuenta>> {
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.cerrar"]);
+  // Cerrar a nombre de un cliente (CC-2) pide además la acción de cargar a cuenta, que el servidor comprueba aunque el pedido traiga el cliente en cualquier forma.
+  const persona = await prepararComando(
+    tx,
+    contexto,
+    dependencias.reglas,
+    entrada.clienteId === undefined
+      ? ["cuentas.cerrar"]
+      : ["cuentas.cerrar", "cuenta_corriente.cargar_a_cuenta"],
+  );
   if (!persona.ok) return persona;
-  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada, { stock: dependencias.stock });
+  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada, {
+    stock: dependencias.stock,
+    cuentaCorriente: dependencias.cuentaCorriente,
+  });
 }
 
 export function armarCerrarCuenta(dependencias: DependenciasDeVentas) {

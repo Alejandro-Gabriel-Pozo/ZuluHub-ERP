@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ContextoOperativo } from "../contexto/contexto";
+import { CONFIRMACION_DE_CUENTAS_ABIERTAS } from "../modulos/stock/publico";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
   fijarElControlDeStock,
   verElControlDeStock,
+  verLaExistenciaPropia,
   type DependenciasDeControlDeStockWeb,
 } from "./control-de-stock-web";
 
@@ -121,6 +123,63 @@ describe("fijarElControlDeStock", () => {
     ]);
   });
 
+  it("la función «Producción» apagada (error con forma de objeto) y la falta de receta salen como el genérico, no como un fallo inesperado", async () => {
+    for (const error of [
+      { error: "FUNCION_NO_INCLUIDA", perilla: "produccion" },
+      "SIN_COMPOSICION",
+    ]) {
+      const { d } = montar({ controlar: () => err(error) });
+      expect(
+        codigoDe(await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true })),
+      ).toBe(GENERICO);
+    }
+  });
+
+  it("solo `FUNCION_NO_INCLUIDA` con forma de objeto es el genérico: otro objeto, uno sin `error` o la ausencia de error siguen su camino común", async () => {
+    for (const error of [{ error: "OTRO_ERROR" }, { tipo: "X" }, { error: undefined }, null]) {
+      const { d } = montar({ controlar: () => err(error) });
+      const r = await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true });
+      expect(codigoDe(r)).not.toBe(GENERICO);
+    }
+  });
+
+  it("confirmar las cuentas abiertas pasa la confirmación declarada al caso de uso; sin confirmar o con otro valor no la pasa", async () => {
+    const a = montar();
+    await fijarElControlDeStock(a.d, contexto, {
+      productoId: ID,
+      controlado: true,
+      confirmarCuentasAbiertas: true,
+    });
+    expect(a.m.llamadas).toEqual([
+      {
+        que: "controlar",
+        entrada: {
+          c: contexto,
+          entrada: { productoId: ID, confirmaciones: [CONFIRMACION_DE_CUENTAS_ABIERTAS] },
+        },
+      },
+    ]);
+    const b = montar();
+    await fijarElControlDeStock(b.d, contexto, {
+      productoId: ID,
+      controlado: true,
+      confirmarCuentasAbiertas: false,
+    });
+    expect(b.m.llamadas).toEqual([
+      { que: "controlar", entrada: { c: contexto, entrada: { productoId: ID } } },
+    ]);
+  });
+
+  it("«hay cuentas abiertas con el plato» sale como el aviso de confirmar, sin la cantidad ni detalle, y no se registra como un fallo", async () => {
+    const { m, d } = montar({
+      controlar: () => err({ error: "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION", cuentas: 7 }),
+    });
+    const r = await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true });
+    expect(codigoDe(r)).toBe("PRODUCCION_CUENTAS_ABIERTAS");
+    expect(JSON.stringify(r)).not.toContain("7");
+    expect(m.registrados).toEqual([]);
+  });
+
   it("no altera: «true» nunca llama a dejarDeControlar ni «false» a controlarArticulo", async () => {
     const a = montar();
     await fijarElControlDeStock(a.d, contexto, { productoId: ID, controlado: true });
@@ -184,5 +243,130 @@ describe("fijarElControlDeStock", () => {
       expect(JSON.stringify(r)).not.toContain("se cayó");
       expect(m.registrados).toHaveLength(1);
     }
+  });
+});
+
+describe("verLaExistenciaPropia", () => {
+  const entrada = { productoId: ID, nombre: "Medialuna", unidadId: "UNIDAD" };
+  const fila = (productoId: string, existencia: string, unidadId = "UNIDAD") => ({
+    productoId,
+    existencia,
+    unidadId,
+  });
+  const con = (existencias: unknown) =>
+    ({
+      casosDeUso: () => ({}),
+      consultas: () => ({ existencias }),
+      respuesta: { registrar: () => undefined },
+    }) as unknown as DependenciasDeControlDeStockWeb;
+
+  it("una existencia que no es un decimal exacto no se suma: sale como inesperado y deja registrado de qué dato era", async () => {
+    const registrados: string[] = [];
+    const d = {
+      casosDeUso: () => ({}),
+      consultas: () => ({
+        existencias: () => Promise.resolve(ok({ existencias: [fila(ID, "1,5")], siguiente: null })),
+      }),
+      respuesta: { registrar: (detalle: string) => registrados.push(detalle) },
+    } as unknown as DependenciasDeControlDeStockWeb;
+    const r = await verLaExistenciaPropia(d, contexto, entrada);
+    expect(r.ok).toBe(false);
+    expect(registrados).toHaveLength(1);
+    expect(registrados[0]).toContain("existencia");
+  });
+
+  it("suma exacta de los saldos del producto en los depósitos que ve la persona y solo de ese producto (otro con nombre parecido no cuenta)", async () => {
+    const llamadas: unknown[] = [];
+    const d = con((c: unknown, e: unknown) => {
+      llamadas.push([c, e]);
+      return Promise.resolve(
+        ok({
+          existencias: [
+            fila(ID, "12.5000"),
+            fila("otro", "100.0000"),
+            fila(ID, "0.1250"),
+            fila(ID, "-2.0000"),
+          ],
+          siguiente: null,
+        }),
+      );
+    });
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "10.6250", unidadId: "UNIDAD" },
+    });
+    expect(llamadas).toEqual([[contexto, { texto: "Medialuna", despuesDe: undefined }]]);
+  });
+
+  it("sin filas (nunca se movió) es cero de verdad, en la unidad del producto", async () => {
+    const d = con(() => Promise.resolve(ok({ existencias: [], siguiente: null })));
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "0.0000", unidadId: "UNIDAD" },
+    });
+  });
+
+  it("recorre las páginas con el cursor de la anterior y suma todas", async () => {
+    const cursor = { nombreClave: "medialuna", articuloId: "a", depositoId: "d" };
+    const pedidos: unknown[] = [];
+    const paginas = [
+      ok({ existencias: [fila(ID, "1.0000", "KILOGRAMO")], siguiente: cursor }),
+      ok({ existencias: [fila(ID, "2.0000", "KILOGRAMO")], siguiente: null }),
+    ];
+    const d = con((_: unknown, e: unknown) => {
+      pedidos.push(e);
+      return Promise.resolve(paginas.shift());
+    });
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "3.0000", unidadId: "KILOGRAMO" },
+    });
+    expect(pedidos).toEqual([
+      { texto: "Medialuna", despuesDe: undefined },
+      { texto: "Medialuna", despuesDe: cursor },
+    ]);
+  });
+
+  it("falla cerrado: demasiadas páginas, o un nombre que no sirve de búsqueda, es «no se sabe» (null), nunca un cero", async () => {
+    const siempre = vi
+      .fn()
+      .mockResolvedValue(
+        ok({ existencias: [], siguiente: { nombreClave: "m", articuloId: "a", depositoId: "d" } }),
+      );
+    expect(await verLaExistenciaPropia(con(siempre), contexto, entrada)).toEqual({
+      ok: true,
+      dato: null,
+    });
+    expect(siempre).toHaveBeenCalledTimes(5);
+    const noPide = vi.fn();
+    for (const nombre of ["", "   ", "a\u0000b"]) {
+      expect(await verLaExistenciaPropia(con(noPide), contexto, { ...entrada, nombre })).toEqual({
+        ok: true,
+        dato: null,
+      });
+    }
+    expect(noPide).not.toHaveBeenCalled();
+  });
+
+  it("un id que no es uuid es el genérico y no consulta; un error de negocio sale como el genérico y una excepción con referencia", async () => {
+    const consulta = vi.fn();
+    expect(
+      await verLaExistenciaPropia(con(consulta), contexto, { ...entrada, productoId: "x" }),
+    ).toMatchObject({
+      ok: false,
+      error: { codigo: GENERICO },
+    });
+    expect(consulta).not.toHaveBeenCalled();
+    const sinPermiso = con(() => Promise.resolve(err("SIN_PERMISO")));
+    // Un error de negocio del módulo (aquí, sin permiso) sale como el genérico: no dice cuál.
+    expect(await verLaExistenciaPropia(sinPermiso, contexto, entrada)).toMatchObject({
+      ok: false,
+      error: { codigo: GENERICO },
+    });
+    const roto = con(() => Promise.reject(new Error("boom")));
+    expect(await verLaExistenciaPropia(roto, contexto, entrada)).toMatchObject({
+      ok: false,
+      error: { codigo: "ERROR_INTERNO" },
+    });
   });
 });

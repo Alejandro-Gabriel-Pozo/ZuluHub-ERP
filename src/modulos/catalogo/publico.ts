@@ -6,6 +6,7 @@ export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CATALOGO } 
 export { crearCasosDeUsoDeCatalogo, type CasosDeUsoDeCatalogo } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCatalogo, type ConsultasDeCatalogo } from "./consultas/consultas";
 export type { GrupoDeVistaPrevia } from "./consultas/consultas-de-copia-de-opciones";
+export type { PresentacionesDelProducto } from "./consultas/consultas-de-presentaciones";
 export type {
   EstadoDeProducto,
   FichaDeProducto,
@@ -17,6 +18,7 @@ export type {
   PrecioDeLista,
   ProductoDeLista,
 } from "./consultas/consultas";
+export { comoPrefijo } from "./persistencia/como-prefijo";
 export {
   cotizarParaVender,
   tienePrecioParaLaCartaEnSucursal,
@@ -94,6 +96,7 @@ export {
   esClaseDeUso,
   seConsumeLaClase,
   seControlaStockLaClase,
+  seProduceLaClase,
   vendeLaClase,
 } from "./dominio/clases";
 export type { AlcanceDePrecio, ErrorDeAlcanceDePrecio } from "./dominio/alcance-de-precio";
@@ -140,6 +143,11 @@ export {
   type CambiosDeCartaPublica,
   type RepositorioDeCartas,
 } from "./persistencia/repositorio-de-cartas";
+export {
+  crearRepositorioDeCuentasDeImagen,
+  type AltaDeCuentaDeImagen,
+  type RepositorioDeCuentasDeImagen,
+} from "./persistencia/repositorio-de-cuentas-de-imagen";
 export type {
   CartaLeida,
   GrupoLeido,
@@ -187,6 +195,15 @@ export type {
   SalidaDeGuardarCartaPublica,
 } from "./casos-de-uso/guardar-carta-publica";
 export type {
+  EntradaDeDeclararCuentaDeImagen,
+  SalidaDeDeclararCuentaDeImagen,
+} from "./casos-de-uso/declarar-cuenta-de-imagen";
+export type {
+  EntradaDeRetirarCuentaDeImagen,
+  SalidaDeRetirarCuentaDeImagen,
+} from "./casos-de-uso/retirar-cuenta-de-imagen";
+export type { CuentaDeImagenDeclarada } from "./dominio/cuenta-de-imagen";
+export type {
   AlcanceDeOcultamiento,
   EntradaDeOcultarProducto,
   SalidaDeOcultarProducto,
@@ -204,6 +221,7 @@ export type {
   PrecioParaVender,
   ProductoParaVender,
 } from "./casos-de-uso/productos-para-vender";
+export type { CuentaDeImagenParaAdministrar } from "./consultas/consultas-de-cuentas-de-imagen";
 export type {
   CartaParaAdministrar,
   ProductoOcultoParaAdministrar,

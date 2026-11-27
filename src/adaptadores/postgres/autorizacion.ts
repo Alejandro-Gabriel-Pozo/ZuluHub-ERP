@@ -1,9 +1,10 @@
 import { sql, type Kysely } from "kysely";
-import { esClaveDe } from "../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../../capacidades/modulos/catalogo";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
 import type { AlcanceDeSucursales } from "../../capacidades/permisos/alcance";
-import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../capacidades/permisos/roles";
+import { ROLES_DE_EMPRESA, type RolDeLaMembresia } from "../../capacidades/permisos/roles";
+import { listaDeAcciones, validarNombresDeModulo } from "./lecturas-de-permisos";
+import { conjuntoEfectivo } from "../../capacidades/roles/conjunto-efectivo";
 import { sucursalId } from "../../primitivas/identificadores/marca";
 import type { ContextoOperativo } from "../../contexto/contexto";
 import type {
@@ -34,7 +35,15 @@ import type {
  * marca B (la marca no viaja en el token firmado: no es frontera de aislamiento por sí sola, §B.10).
  */
 export type AutorizacionDb = {
-  membresia: { empresa_id: string; persona_id: string; rol: string; activo: boolean };
+  membresia: {
+    empresa_id: string;
+    persona_id: string;
+    rol: string;
+    rol_propio_id: string | null;
+    activo: boolean;
+  };
+  rol_de_empresa: { id: string; empresa_id: string; activo: boolean };
+  version_de_rol: { empresa_id: string; rol_id: string; numero: number; acciones: string[] };
   persona: { id: string; activo_global: boolean };
   asignacion_sucursal: {
     empresa_id: string;
@@ -45,13 +54,24 @@ export type AutorizacionDb = {
   sucursal: { id: string; empresa_id: string; activa: boolean };
   empresa: { id: string; tenant_id: string };
   tenant: { id: string; marca_id: string };
+  version_de_plantilla: { clave: string; numero: number; acciones: string[] };
 };
 
-const esRolDeEmpresa = (valor: string): valor is RolDeEmpresa =>
-  ROLES_DE_EMPRESA.some((rol) => rol === valor);
+const esRolDeLaMembresia = (valor: string): valor is RolDeLaMembresia =>
+  valor === "PROPIO" || ROLES_DE_EMPRESA.some((rol) => rol === valor);
 
-/** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar): falla cerrado. */
-const SIN_ROL: DatosDelActor = { rol: null, modulosActivados: [], modulosHabilitados: [] };
+/** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar ni ninguna acción): falla cerrado. */
+const SIN_ROL: DatosDelActor = {
+  rol: null,
+  acciones: [],
+  modulosActivados: [],
+  modulosHabilitados: [],
+};
+
+/** Todas las acciones del catálogo del código: el conjunto del gerente y el filtro de lo que guarda la base (una clave retirada no otorga nada). */
+const ACCIONES_DEL_CATALOGO: ReadonlySet<string> = new Set(
+  Object.values(CATALOGO_DE_MODULOS).flatMap((modulo) => Object.keys(modulo.acciones)),
+);
 
 /**
  * Una fila de la lectura de módulos (`modulosDe`): o un módulo ACTIVADO (`nombre`) o una ASIGNACIÓN de plan
@@ -66,23 +86,12 @@ type FilaDeModulos =
       modulos: string[] | null;
     }>;
 
-/** Quién es el actor en la empresa del contexto: su rol y el tenant de esa empresa (que da el plan). */
-type MembresiaDelActor = Readonly<{ rol: RolDeEmpresa; tenantId: string }>;
-
-/**
- * Un nombre de módulo que llega de la base tiene que ser una clave del catálogo (`esClaveDe`): la base solo
- * valida la FORMA (`^[a-z][a-z0-9_]{1,39}$`), y un nombre que el catálogo no conoce (o que ni siquiera tiene
- * esa forma) es un dato roto, no un módulo que haya que ignorar en silencio. Como el rol desconocido, es una
- * falla: ningún actor opera con un plan o una activación que el código no sabe leer.
- */
-function validarNombresDeModulo(origen: string, nombres: readonly string[]): readonly string[] {
-  for (const nombre of nombres) {
-    if (!esClaveDe(CATALOGO_DE_MODULOS, nombre)) {
-      throw new RangeError(`módulo desconocido en la base (${origen}): ${nombre}`);
-    }
-  }
-  return [...nombres].sort();
-}
+/** Quién es el actor en la empresa del contexto: su rol, sus acciones y el tenant de esa empresa (que da el plan). */
+type MembresiaDelActor = Readonly<{
+  rol: RolDeLaMembresia;
+  tenantId: string;
+  acciones: readonly string[];
+}>;
 
 /**
  * Dos fábricas, a propósito, y no una con una opción: la de ESCRITURA (`crearAutorizacionDePostgres`) no tiene cómo memorizar, así que
@@ -134,7 +143,28 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
       .innerJoin("persona as p", "p.id", "m.persona_id")
       .innerJoin("empresa as e", "e.id", "m.empresa_id")
       .innerJoin("tenant as t", "t.id", "e.tenant_id")
-      .select(["m.rol", "e.tenant_id"])
+      .select([
+        "m.rol",
+        "e.tenant_id",
+        // El rol propio (T4): si está activo y su versión vigente (la de mayor número). Archivado = conjunto vacío aunque la membresía siga apuntando a él.
+        sql<
+          boolean | null
+        >`(select r.activo from rol_de_empresa r where r.id = m.rol_propio_id and r.empresa_id = m.empresa_id)`.as(
+          "rol_propio_activo",
+        ),
+        sql<
+          string[] | null
+        >`(select v.acciones from version_de_rol v where v.rol_id = m.rol_propio_id and v.empresa_id = m.empresa_id order by v.numero desc limit 1)`.as(
+          "acciones_del_rol_propio",
+        ),
+        // La versión VIGENTE (la de mayor número) de la plantilla de su rol, en la MISMA consulta y la misma transacción: sin caché entre
+        // pedidos, un cambio de plantilla vale desde la transacción siguiente (DEC-0956). El gerente no tiene plantilla (su conjunto es todo el catálogo).
+        sql<
+          string[] | null
+        >`(select v.acciones from version_de_plantilla v where v.clave = m.rol order by v.numero desc limit 1)`.as(
+          "acciones_de_la_plantilla",
+        ),
+      ])
       .where("m.empresa_id", "=", contexto.empresaId)
       .where("t.marca_id", "=", contexto.marcaDeEntrada)
       .where("m.persona_id", "=", contexto.personaId)
@@ -143,8 +173,24 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
       .executeTakeFirst();
     if (fila === undefined) return null;
     // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
-    if (!esRolDeEmpresa(fila.rol)) throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
-    return { rol: fila.rol, tenantId: fila.tenant_id };
+    if (!esRolDeLaMembresia(fila.rol))
+      throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
+    // Sin versión legible de la plantilla (o del rol propio): ESE rol queda sin acciones (nace cerrado). El gerente no la usa: tiene todo el catálogo.
+    const plantilla = listaDeAcciones(fila.acciones_de_la_plantilla, `la plantilla de ${fila.rol}`);
+    const delRolPropio = listaDeAcciones(fila.acciones_del_rol_propio, "el rol propio");
+    const acciones = conjuntoEfectivo(fila.rol, {
+      catalogo: ACCIONES_DEL_CATALOGO,
+      plantilla: () => plantilla,
+      rolPropio:
+        fila.rol === "PROPIO" && delRolPropio !== null
+          ? { activo: fila.rol_propio_activo === true, acciones: delRolPropio }
+          : null,
+    });
+    return {
+      rol: fila.rol,
+      tenantId: fila.tenant_id,
+      acciones: Object.freeze([...acciones].sort()),
+    };
   }
 
   /**
@@ -213,7 +259,7 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
   }
 
   /** Solo el rol (para el alcance de sucursales, que no necesita módulos ni plan). */
-  async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeEmpresa | null> {
+  async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeLaMembresia | null> {
     return (await membresiaDelActor(contexto))?.rol ?? null;
   }
 
@@ -222,7 +268,11 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
       const membresia = await membresiaDelActor(contexto);
       // Sin rol no se lee ningún módulo: el actor no opera y no hay nada que activar (falla cerrado).
       if (membresia === null) return SIN_ROL;
-      return { rol: membresia.rol, ...(await modulosDe(contexto, membresia.tenantId)) };
+      return {
+        rol: membresia.rol,
+        acciones: membresia.acciones,
+        ...(await modulosDe(contexto, membresia.tenantId)),
+      };
     },
 
     sucursalesDelActor(contexto, opcionesDeAlcance): Promise<AlcanceDeSucursales> {

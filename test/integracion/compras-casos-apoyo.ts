@@ -5,7 +5,10 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { armarAnonimizacionDePartesEnTx } from "../../src/composicion/anonimizacion-de-partes";
 import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
+import { armarTxDeSaldos } from "../../src/composicion/libro-de-saldos";
+import { crearLibroDeProveedores } from "../../src/composicion/libro-de-proveedores";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
   crearRepositorioDeDatosFiscales,
@@ -94,7 +97,14 @@ export type EscenarioDeCompras = Readonly<{
 type TxDePruebaConCompras = TxDePrueba &
   RepositoriosDeStock &
   RepositoriosDeClientes &
+  ReturnType<typeof armarAnonimizacionDePartesEnTx> &
   RepositoriosDeCompras;
+
+/** Los repositorios del libro sobre la conexión de la transacción (la auditoría ya la trae la `Tx` base). */
+function piezasDelLibro(db: Parameters<typeof armarTxDeSaldos>[0]) {
+  const { asientos, imputaciones, saldos } = armarTxDeSaldos(db);
+  return { asientos, imputaciones, saldos };
+}
 
 export async function montarCompras(
   base: BaseDePruebas,
@@ -110,8 +120,61 @@ export async function montarCompras(
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
-  let falla: "oferta" | "lineas" | null = null;
+  let falla: "oferta" | "lineas" | "libro" | "libro-pago" | "libro-nota" | null = null;
   let condicionDeIva: CondicionDeIvaDeLaEmpresa | null = "RESPONSABLE_INSCRIPTO";
+  /** El libro real; con `inyectarFalla("libro")` falla en lugar de asentar (para probar que no queda nada a medias). */
+  const libroConFalla = () => {
+    const real = crearLibroDeProveedores();
+    const cae = () => {
+      if (falla === "libro") throw new Error("falla inyectada en el libro");
+    };
+    // `libro-pago` solo falla en el pago (el cargo de la factura se asienta): para probar que el pago no queda a medias.
+    const caePago = () => {
+      if (falla === "libro" || falla === "libro-pago") {
+        throw new Error("falla inyectada en el libro");
+      }
+    };
+    // `libro-nota` solo falla en las notas: para probar que la nota no queda a medias.
+    const caeNota = () => {
+      if (falla === "libro" || falla === "libro-nota") {
+        throw new Error("falla inyectada en el libro");
+      }
+    };
+    return {
+      registrarNotaDeCredito: (...a: Parameters<typeof real.registrarNotaDeCredito>) => {
+        caeNota();
+        return real.registrarNotaDeCredito(...a);
+      },
+      anularNotaDeCredito: (...a: Parameters<typeof real.anularNotaDeCredito>) => {
+        caeNota();
+        return real.anularNotaDeCredito(...a);
+      },
+      registrarNotaDeDebito: (...a: Parameters<typeof real.registrarNotaDeDebito>) => {
+        caeNota();
+        return real.registrarNotaDeDebito(...a);
+      },
+      anularNotaDeDebito: (...a: Parameters<typeof real.anularNotaDeDebito>) => {
+        caeNota();
+        return real.anularNotaDeDebito(...a);
+      },
+      registrarCargo: (...a: Parameters<typeof real.registrarCargo>) => {
+        cae();
+        return real.registrarCargo(...a);
+      },
+      anularCargo: (...a: Parameters<typeof real.anularCargo>) => {
+        cae();
+        return real.anularCargo(...a);
+      },
+      registrarPago: (...a: Parameters<typeof real.registrarPago>) => {
+        caePago();
+        return real.registrarPago(...a);
+      },
+      anularPago: (...a: Parameters<typeof real.anularPago>) => {
+        caePago();
+        return real.anularPago(...a);
+      },
+    };
+  };
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
     const repos = crearRepositoriosDeCompras(tx.db);
@@ -119,6 +182,8 @@ export async function montarCompras(
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
+      ...armarAnonimizacionDePartesEnTx(tx.db),
+      ...piezasDelLibro(tx.db),
       ...repos,
       // Fiscal (solo lectura para compras): el adaptador real de la condición de IVA de la empresa los usa sobre la misma conexión.
       emisores: crearRepositorioDeEmisores(tx.db.withTables<FiscalDb>()),
@@ -183,14 +248,16 @@ export async function montarCompras(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
-  const casos = crearCasosDeUsoDeCompras({
+  const dependencias = {
     transacciones: entorno,
     reglas,
     stock: crearPuertosDeStock({ reglas }),
     egresoDeCaja: crearEgresoDeCaja(),
+    libroDeProveedores: libroConFalla(),
     // La condición de la empresa frente al IVA: de entrada, responsable inscripto (el IVA de una Factura A es crédito fiscal); cada prueba la cambia con `fijarCondicionDeIva`.
     ivaDeLaEmpresa: { condicion: () => Promise.resolve(condicionDeIva) },
-  });
+  };
+  const casos = crearCasosDeUsoDeCompras(dependencias);
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
   const catalogoCasos = crearCasosDeUsoDeCatalogo({
@@ -335,7 +402,9 @@ export async function montarCompras(
     contar,
     auditoria,
     alcances,
-    inyectarFalla: (punto: "oferta" | "lineas" | null) => {
+    /** Las dependencias reales de los casos de uso (para armar uno con otro parámetro, por ejemplo el tope de la exportación). */
+    dependencias,
+    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | "libro-pago" | "libro-nota" | null) => {
       falla = punto;
     },
     armarBarrera: (participantes: number) => {

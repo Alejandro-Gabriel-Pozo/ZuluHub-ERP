@@ -2,5 +2,6 @@
   "grupo": "web (cierre del día)",
   "archivos": "src/composicion/entradas-de-cierre.ts,src/composicion/errores-de-cierre.ts,src/composicion/cierre-del-dia-web.ts,src/composicion/lectura-del-cierre.ts,apps/web/ui/plantillas/cierre/modelo-del-cierre.ts",
   "minutos": 4,
-  "pruebas": "src/composicion/entradas-de-cierre.test.ts src/composicion/errores-de-cierre.test.ts src/composicion/cierre-del-dia-web.test.ts src/capacidades/experiencia/respuesta-de-cierre.test.ts test/web/modelo-del-cierre.test.ts"
+  "pruebas": "src/composicion/entradas-de-cierre.test.ts src/composicion/errores-de-cierre.test.ts src/composicion/cierre-del-dia-web.test.ts src/capacidades/experiencia/respuesta-de-cierre.test.ts test/web/modelo-del-cierre.test.ts",
+  "nivel": "CRITICO"
 }

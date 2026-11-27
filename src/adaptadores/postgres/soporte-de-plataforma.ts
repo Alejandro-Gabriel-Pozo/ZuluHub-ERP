@@ -1,6 +1,11 @@
 import type { Kysely } from "kysely";
-import { ROLES_DE_EMPRESA } from "../../capacidades/permisos/roles";
+import { ROLES_DE_LA_MEMBRESIA } from "../../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../contexto/estados";
+import {
+  ESTADOS_DE_DOMINIO,
+  SUPERFICIES_DE_DOMINIO,
+  TITULARES_DE_DOMINIO,
+} from "../../modulos/marcas/publico";
 import type { Persona } from "../../modulos/identidad/publico";
 import {
   empresaId,
@@ -19,6 +24,7 @@ import {
   aDato,
 } from "./soporte-de-plataforma-comunes";
 import { crearListasDeSoporte } from "./soporte-de-plataforma-listas";
+import { crearLecturasParaExplicarPermisos } from "./soporte-de-plataforma-permisos";
 
 /**
  * Lectura de soporte de plataforma (H5 §B.5.9) sobre las tablas que el rol de plataforma PUEDE leer:
@@ -127,6 +133,43 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
       if (pagina.despuesDeId !== null) consulta = consulta.where("id", ">", pagina.despuesDeId);
       const ids = await consulta.execute();
       return cargarInvitaciones(ids.map((i) => i.id));
+    },
+
+    async listarDominios(filtro, pagina) {
+      let consulta = db
+        .selectFrom("dominio as d")
+        .innerJoin("empresa as e", "e.id", "d.duenio_empresa_id")
+        .select([
+          "d.id",
+          "d.host",
+          "d.superficie",
+          "d.titular",
+          "d.estado",
+          "d.verificado_en",
+          "d.motivo",
+          "d.version",
+          "e.id as empresa_id",
+          "e.razon_social",
+        ])
+        .orderBy("d.id")
+        .limit(pagina.limite);
+      if (filtro.dominioId !== null) consulta = consulta.where("d.id", "=", filtro.dominioId);
+      if (filtro.empresaId !== null) consulta = consulta.where("e.id", "=", filtro.empresaId);
+      if (filtro.estado !== null) consulta = consulta.where("d.estado", "=", filtro.estado);
+      if (pagina.despuesDeId !== null) consulta = consulta.where("d.id", ">", pagina.despuesDeId);
+      const filas = await consulta.execute();
+      return filas.map((f) => ({
+        id: f.id,
+        host: f.host,
+        superficie: deLaLista(SUPERFICIES_DE_DOMINIO, f.superficie, "superficie"),
+        titular: deLaLista(TITULARES_DE_DOMINIO, f.titular, "titular"),
+        estado: deLaLista(ESTADOS_DE_DOMINIO, f.estado, "estado de dominio"),
+        verificadoEn: f.verificado_en,
+        motivo: f.motivo,
+        version: f.version,
+        empresaId: empresaId(f.empresa_id),
+        razonSocial: f.razon_social,
+      }));
     },
 
     async listarTrabajosFallidos(pagina) {
@@ -252,7 +295,7 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
       return filas.map((f) => ({
         empresaId: empresaId(f.empresa_id),
         personaId: personaId(f.persona_id),
-        rol: deLaLista(ROLES_DE_EMPRESA, f.rol, "rol"),
+        rol: deLaLista(ROLES_DE_LA_MEMBRESIA, f.rol, "rol"),
         activo: f.activo,
       }));
     },
@@ -260,14 +303,6 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
     async invitacionPorId(id: InvitacionId) {
       return (await cargarInvitaciones([id]))[0] ?? null;
     },
-
-    /**
-     * Módulos activables por empresa: todavía no existe la tabla (el único módulo, `administracion`, es
-     * obligatorio y no se guarda), igual que en `autorizacion.ts`. Cuando aparezca el primero, cambian
-     * las dos a la vez; una prueba de fidelidad contra los casos reales lo delataría.
-     */
-    modulosActivadosDe() {
-      return Promise.resolve([]);
-    },
+    ...crearLecturasParaExplicarPermisos(db),
   };
 }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-002",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Al anular un ticket cobrado a cuenta corriente se anulan la cobranza y el cargo del cliente; el dinero de caja no se toca (el gerente registra la salida aparte), igual que en el mostrador.",
+  "que_cambia": "Si el dueño quiere que la anulación también devuelva el dinero de caja, se agrega ese paso en la misma transacción (hoy ninguna anulación de ticket lo hace). El saldo del cliente queda correcto en cualquier caso.",
+  "donde": "src/modulos/ventas/casos-de-uso/anular-ticket.ts; brief PR-CC-3 §1.5 (Pedernal-docs 11-especificaciones/briefs/cuenta-corriente/); confirmada por el dueño el 26/11/2026 en el chat («Coincido con todas las recomendaciones», vía el orquestador)"
+}

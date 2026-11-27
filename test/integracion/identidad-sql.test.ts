@@ -109,6 +109,10 @@ const DISPARADORES_DE_IDENTIDAD: Readonly<Record<string, readonly string[]>> = {
     "traspaso_cancela_sin_permiso",
   ],
   traspaso_gerencia_verificar_aceptado: ["traspaso_aceptado_incompleto"],
+  // 0094 y 0097 (H4b): los roles propios
+  rol_de_empresa_validar_cambio: ["rol_de_empresa_inmutable"],
+  rol_de_empresa_validar_archivado: ["rol_de_empresa_con_personas"],
+  version_de_rol_validar: ["version_de_rol_numero_invalido", "version_de_rol_pisos"],
 };
 const RESTRICCIONES_DE_DISPARADORES_DE_IDENTIDAD = [
   ...new Set(Object.values(DISPARADORES_DE_IDENTIDAD).flat()),
@@ -242,7 +246,13 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
     });
 
     it("toda restricción de las tablas de identidad tiene su traducción declarada, y no sobra ninguna", async () => {
-      const tablas = ["persona", ...TABLAS_NUEVAS, "traspaso_gerencia"];
+      const tablas = [
+        "persona",
+        ...TABLAS_NUEVAS,
+        "traspaso_gerencia",
+        "rol_de_empresa",
+        "version_de_rol",
+      ];
       const reales = await filas<{ nombre: string }>(
         `select conname as nombre from pg_constraint
          where conrelid = any($1::text[]::regclass[]) and contype in ('p', 'u', 'c', 'f', 'x')
@@ -347,6 +357,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "invitacion_sucursal.invitacion_sucursal_app_leer:SELECT:pedernal_app",
           "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:pedernal_app",
           "membresia.membresia_app_apagar:UPDATE:pedernal_app",
+          "membresia.membresia_app_asignar_rol:UPDATE:pedernal_app", // 0097
           "membresia.membresia_app_leer:SELECT:pedernal_app",
           "membresia.membresia_app_traspasar:UPDATE:pedernal_app", // 0005
           "membresia.membresia_invitado_alta:INSERT:pedernal_app",
@@ -387,6 +398,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         "invitacion_empresa_app_alta",
         "invitacion_sucursal_app_alta",
         "membresia_app_apagar",
+        "membresia_app_asignar_rol", // 0097
         "membresia_app_traspasar", // 0005
       ]);
       for (const p of politicas) {

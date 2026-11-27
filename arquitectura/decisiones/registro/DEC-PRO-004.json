@@ -1,0 +1,10 @@
+{
+  "id": "DEC-PRO-004",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Al encender el stock propio de un plato con cuentas abiertas que lo tienen, la ficha avisa que esas cuentas descontarán el plato y no sus ingredientes, y pide confirmar. No dice cuántas cuentas hay.",
+  "que_cambia": "Texto nuevo produccion.elaborado.aviso_cuentas_abiertas (condición del dueño sobre DEC-PRO-001). SUPUESTO: no dice cuántas cuentas ni cuáles, solo que hay. Revertir: mostrar la cantidad (el caso de uso ya la devuelve).",
+  "donde": "src/composicion/control-de-stock-web.ts; fila 173 de decisiones-del-dueno-2026-11.md; orquestador, 26/11/2026; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
+}

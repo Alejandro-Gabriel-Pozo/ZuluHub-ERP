@@ -35,6 +35,8 @@ export type EntradaDeCobrarMesa = Readonly<{
   totalEsperado: Readonly<{ moneda: string; monto: string }>;
   confirmaciones?: readonly string[] | undefined;
   cobro: Pick<EntradaDeCobrar, "cajaId" | "cobros">;
+  /** La sucursal con la que trabaja quien cobra (la fija el servidor): una cuenta de OTRA, o sin sucursal de trabajo, es como si no existiera (`CUENTA_NO_ENCONTRADA`): no se cobra ni se consume un número de ticket. */
+  sucursalDeTrabajo: string;
 }>;
 
 /**
@@ -42,7 +44,7 @@ export type EntradaDeCobrarMesa = Readonly<{
  * `UNIDA_COBRADA`) y, si es la ÚLTIMA cuenta hija de una división, la cuenta madre (`DIVISION_COBRADA`). Con eso la mesa queda libre. Idempotente: anular
  * una cuenta ya anulada no escribe.
  */
-async function liberarLoQueDepende(
+export async function liberarLoQueDepende(
   tx: TxDeSalon,
   contexto: ContextoOperativo,
   persona: PersonaId,
@@ -97,6 +99,9 @@ async function cobrar(
   if (cuenta === null) return err("CUENTA_NO_ENCONTRADA");
   const alcance = await exigirAlcance(tx, contexto, cuenta.sucursalId);
   if (!alcance.ok) return alcance;
+  if (entrada.sucursalDeTrabajo !== cuenta.sucursalId) {
+    return err("CUENTA_NO_ENCONTRADA");
+  }
   const usable = exigirCuentaUsable(await claseDeCuenta(tx, contexto, cuenta), true);
   if (!usable.ok) return usable;
   if (cuenta.estado === "ABIERTA") {

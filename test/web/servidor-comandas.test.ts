@@ -44,6 +44,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     }),
     casosDeUsoDeComandas: () => ({
       cambiarSalida: registrar("cambiarSalida", { salida: "DESPUES", yaEstaba: false }),
+      quitarSinEnviar: registrar("quitarSinEnviar", { yaEstabaQuitada: false }),
       registrarImpresora: registrar("registrarImpresora", {
         impresoraId: "i",
         version: 1,
@@ -97,6 +98,7 @@ type Comandas = {
   nuevoIdDeIntento: () => string;
   enviarLaCuentaALaCocina: Accion;
   cambiarElOrdenDeSalida: Accion;
+  quitarElPlatoSinEnviar: Accion;
   darDeAltaLaImpresora: Accion;
   guardarLaImpresora: Accion;
   desactivarLaImpresoraDelSalon: Accion;
@@ -138,12 +140,33 @@ describe("servidor de comandas", () => {
     expect(Object.keys((r as { dato: object }).dato)).not.toContain("enviadoEn");
   });
 
+  it("quitar un plato sin enviar: el pedido lleva solo la cuenta y la línea; el motivo, la sucursal y lo demás del navegador se descartan", async () => {
+    const { quitarElPlatoSinEnviar } = await cargar();
+    const LINEA = "33333333-3333-4333-8333-333333333333";
+    const r = await quitarElPlatoSinEnviar({
+      cuentaId: CUENTA,
+      lineaId: LINEA,
+      motivo: "otro",
+      sucursalId: "otra",
+    });
+    expect(r).toEqual({ ok: true, dato: { yaEstabaQuitada: false } });
+    expect(mundo.llamadas.find((l) => l.caso === "quitarSinEnviar")?.entrada).toEqual({
+      cuentaId: CUENTA,
+      lineaId: LINEA,
+    });
+    expect(mundo.llamadas.find((l) => l.caso === "mapaDeMesas")?.entrada).toMatchObject({
+      sucursalId: SUCURSAL,
+    });
+    expect(await quitarElPlatoSinEnviar({ cuentaId: CUENTA, lineaId: "x" })).toEqual(GENERICO);
+  });
+
   it("sin sucursal efectiva no se asume «todas»: el genérico y ninguna llamada, en cada operación", async () => {
     mundo.efectiva = "";
     const c = await cargar();
     for (const accion of [
       c.enviarLaCuentaALaCocina,
       c.cambiarElOrdenDeSalida,
+      c.quitarElPlatoSinEnviar,
       c.darDeAltaLaImpresora,
       c.guardarLaImpresora,
       c.desactivarLaImpresoraDelSalon,

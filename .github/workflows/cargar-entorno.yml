@@ -30,6 +30,10 @@ name: Cargar entorno (preview y producción)
 #                                 Sin ella, la clave de contexto queda para el dueño y lo demás se carga igual.
 #      PEDERNAL_VERCEL_TOKEN      token de Vercel con alcance al equipo `alepozod` y vencimiento corto.
 #    El proyecto y el equipo de Vercel no son secretos: están en el código (`plan-de-variables.ts`), no hay variables que cargar.
+#  - CLIENTES CON BASE PROPIA (extra de plan; dueño, 25/11/2026): cada uno es un ambiente `cliente-<codigo>` con SU Environment y SU
+#    proyecto de Vercel, que sale de la lista CERRADA `PROYECTOS_DE_VERCEL_DE_CLIENTES` (hoy: `cliente-hdn`): sumar un cliente son dos líneas
+#    acá (una opción y un caso en «validar»), una en esa lista y una prueba que las compara; un código que no está en la lista no
+#    resuelve a ningún proyecto y el comando falla antes de tocar nada. Sus variables NUNCA caen en `pedernal-erp`.
 #
 # Los scripts leen la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el secreto PEDERNAL_DB_DUENO_DIRECTA.
 # Ningún paso imprime la cadena, el token ni un valor generado.
@@ -44,6 +48,8 @@ on:
         options:
           - preview
           - produccion
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
+          - cliente-hdn
       confirmacion:
         description: "Escribir CARGAR PREVIEW (preview) o CARGAR PRODUCCION (produccion)"
         type: string
@@ -88,7 +94,10 @@ jobs:
           case "$AMBIENTE" in
             preview) esperado="CARGAR PREVIEW"; destino="preview" ;;
             produccion) esperado="CARGAR PRODUCCION"; destino="production" ;;
-            *) echo "::error::Ambiente no permitido (preview o produccion)."; exit 1 ;;
+            # Un cliente con base propia (lista cerrada), con su frase y su destino:
+            #   cliente-<codigo>) esperado="CARGAR CLIENTE-<CODIGO>"; destino="cliente-<codigo>" ;;
+            cliente-hdn) esperado="CARGAR CLIENTE-HDN"; destino="cliente-hdn" ;;
+            *) echo "::error::Ambiente no permitido."; exit 1 ;;
           esac
           if [ "$CONFIRMACION" != "$esperado" ]; then
             echo "::error::Para cargar el entorno de $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
@@ -157,8 +166,10 @@ jobs:
           set -eu
           if [ "$DESTINO" = "production" ]; then
             npm run migrar -- --preparar-roles --con-autenticacion --vercel production --confirmo production
-          else
+          elif [ "$DESTINO" = "preview" ]; then
             npm run migrar -- --preparar-roles --con-autenticacion --vercel preview
+          else
+            npm run migrar -- --preparar-roles --con-autenticacion --vercel "$DESTINO" --confirmo "$DESTINO"
           fi
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
@@ -170,8 +181,10 @@ jobs:
           set -eu
           if [ "$DESTINO" = "production" ]; then
             npm run cargar-entorno -- --vercel production --confirmo production
-          else
+          elif [ "$DESTINO" = "preview" ]; then
             npm run cargar-entorno -- --vercel preview
+          else
+            npm run cargar-entorno -- --vercel "$DESTINO" --confirmo "$DESTINO"
           fi
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}

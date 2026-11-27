@@ -10,7 +10,7 @@ import {
   marcaComercialId,
   type DominioId,
 } from "../../primitivas/identificadores/marca";
-import { ok, type Resultado } from "../../primitivas/resultado/resultado";
+import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { DeclaracionDeAccionDePlataforma } from "../consultas/declaraciones";
 import { uuidDesdeTexto } from "../dominio/soporte/consulta";
 import {
@@ -62,10 +62,15 @@ const MOTIVOS_QUE_ADMITE = [
   "MARCA_NO_ENCONTRADA",
   "MARCA_RETIRADA",
   "EMPRESA_NO_ENCONTRADA",
+  "EMPRESA_YA_TIENE_HOST_DE_ESA_SUPERFICIE",
 ] as const;
 
 export type ErrorAlAgregarDominio =
-  ErrorComunDeDominios | ErrorDeAltaDeDominio | "ID_INVALIDO" | (typeof MOTIVOS_QUE_ADMITE)[number];
+  | ErrorComunDeDominios
+  | ErrorDeAltaDeDominio
+  | "ID_INVALIDO"
+  | "HOST_PROTEGIDO"
+  | (typeof MOTIVOS_QUE_ADMITE)[number];
 
 type Duenio = DominioPorAgregar["duenio"];
 
@@ -94,7 +99,7 @@ export function armarAgregarDominio(dependencias: DependenciasDeDominios) {
     const resultado = await ejecutarCasoDeDominios<
       SalidaDeAgregarDominio,
       DominioPorAgregar,
-      ErrorDeAltaDeDominio | "ID_INVALIDO"
+      ErrorDeAltaDeDominio | "ID_INVALIDO" | "HOST_PROTEGIDO"
     >(dependencias, {
       contexto,
       accion: DECLARACION_DE_AGREGAR_DOMINIO.accion,
@@ -112,6 +117,8 @@ export function armarAgregarDominio(dependencias: DependenciasDeDominios) {
         });
         if (!alta.ok) return alta;
         const a = alta.valor;
+        // Un host de la propia plataforma no se registra como dominio de un cliente (sobre el host ya normalizado).
+        if (dependencias.hostsProtegidos.has(a.host)) return err("HOST_PROTEGIDO");
         return ok({
           // La huella lleva lo ya normalizado: el mismo host escrito distinto es el mismo pedido.
           entrada: {

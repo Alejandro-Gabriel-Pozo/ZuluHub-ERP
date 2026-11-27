@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  leerElPedidoDeAgregarAlPedido,
   leerElPedidoDeCambiarDeMesa,
   leerElPedidoDeTomarPedido,
   leerElPedidoDeUnaCuenta,
@@ -58,5 +59,69 @@ describe("entradas de la cuenta de mesa", () => {
     expect(
       leerElPedidoDeCambiarDeMesa({ cuentaId: CUENTA, mesaDestinoId: MESA, sucursalId: "otra" }),
     ).toEqual({ ok: true, valor: { cuentaId: CUENTA, mesaDestinoId: MESA } });
+  });
+
+  it("agregar al pedido: lee solo lo declarado; el precio, el total, la sucursal y la persona se descartan y la cantidad es texto", () => {
+    const base = {
+      cuentaId: CUENTA,
+      lineaId: MESA,
+      productoId: CUENTA,
+      opcionIds: [MESA],
+      cantidad: "1.5",
+    };
+    expect(
+      leerElPedidoDeAgregarAlPedido({
+        ...base,
+        varianteId: MESA,
+        salida: "DESPUES",
+        precioAbierto: "10.00",
+        confirmaciones: ["VENTA_A_CERO"],
+        precioUnitario: "1",
+        sucursalId: "x",
+        personaId: "x",
+      }),
+    ).toEqual({
+      ok: true,
+      valor: {
+        ...base,
+        varianteId: MESA,
+        salida: "DESPUES",
+        precioAbierto: "10.00",
+        confirmaciones: ["VENTA_A_CERO"],
+      },
+    });
+    expect(leerElPedidoDeAgregarAlPedido(base)).toEqual({ ok: true, valor: base });
+    for (const malo of [
+      { ...base, cantidad: 1 },
+      { ...base, cantidad: "1".repeat(41) },
+      { ...base, lineaId: "no-es-un-id" },
+      { ...base, opcionIds: ["x"] },
+      { ...base, opcionIds: Array.from({ length: 51 }, () => MESA) },
+      { ...base, salida: "AHORITA" },
+      { ...base, confirmaciones: Array.from({ length: 11 }, () => "VENTA_A_CERO") },
+      { ...base, precioAbierto: 5 },
+      { cuentaId: CUENTA },
+      undefined,
+    ]) {
+      expect(leerElPedidoDeAgregarAlPedido(malo).ok).toBe(false);
+    }
+  });
+
+  it("agregar al pedido lee la nota para la cocina como TEXTO (nunca otra cosa); el largo y los caracteres los valida el servidor", () => {
+    const base = {
+      cuentaId: CUENTA,
+      lineaId: MESA,
+      productoId: CUENTA,
+      opcionIds: [],
+      cantidad: "1",
+    };
+    expect(leerElPedidoDeAgregarAlPedido({ ...base, nota: "sin cebolla" })).toMatchObject({
+      ok: true,
+      valor: { nota: "sin cebolla" },
+    });
+    expect(leerElPedidoDeAgregarAlPedido(base)).toMatchObject({ ok: true });
+    for (const nota of [1, null, {}, ["a"], true]) {
+      expect(leerElPedidoDeAgregarAlPedido({ ...base, nota }).ok).toBe(false);
+    }
   });
 });

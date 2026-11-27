@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
+  agregarAlPedidoDeLaMesa,
   cambiarDeMesaLaCuenta,
   liberarLaMesa,
   tomarElPedido,
@@ -7,9 +8,12 @@ import {
   verLaFichaDeLaMesa,
   type DependenciasDeCuentaDeMesaWeb,
 } from "../../src/composicion/cuenta-de-mesa-web";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import { crearCasosDeUsoDeCierre } from "../../src/modulos/cierre/publico";
 import { agotadaSegunElRegistro, repetirSiAgotada } from "./concurrencia-apoyo";
 import { montarSalon, type MundoDeSalon } from "./salon-apoyo";
-import { nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-apoyo";
+import { FECHA_DE_NEGOCIO, nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-apoyo";
 
 /**
  * La cuenta de mesa de la web (`cuenta-de-mesa-web.ts`, S-0r) contra una base real y los roles reales: el mapa y la ficha con lo declarado y nada más, «Tomar pedido» repetido o desde dos pestañas a la vez
@@ -29,7 +33,6 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
   let e: EscenarioDeVentas;
   let registrados: string[];
   let d: DependenciasDeCuentaDeMesaWeb;
-  let proxima = 0;
   beforeAll(async () => {
     if (base === null) return;
     m = await montarSalon(base);
@@ -45,8 +48,11 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
     await m.cerrar();
   });
 
+  /** El número de mesa sigue por empresa: el salón es de 14 × 9 y cada empresa tiene el suyo (con una cuenta global se salía del plano a la mesa 36). */
+  const mesasPorEmpresa = new Map<string, number>();
   const mesa = async (escenario = e) => {
-    const n = ++proxima;
+    const n = (mesasPorEmpresa.get(escenario.empresa) ?? 0) + 1;
+    mesasPorEmpresa.set(escenario.empresa, n);
     const id = nuevoId();
     valorDe(
       await m.salon.crearMesa(escenario.gerente, {
@@ -113,9 +119,12 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
         "compartida",
         "deLaMesa",
         "descripcion",
+        "envioId",
         "importe",
         "lineaId",
+        "nota",
         "numeroDeEnvio",
+        "pasoDeCantidad",
         "posicion",
         "precioUnitario",
         "varianteNombre",
@@ -317,5 +326,212 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
     expect((await tomar(await mesa(), nuevoId(), e, { ...e.gerente, personaId: null })).ok).toBe(
       false,
     );
+  });
+
+  describe("«Agregar» al pedido (SAL-B)", () => {
+    // Su propia empresa: el salón de pruebas es de 14 × 9 y las otras pruebas del archivo ya usan buena parte de las casillas de `e`.
+    let x: EscenarioDeVentas;
+    beforeAll(async () => {
+      x = await m.escenario();
+    });
+    const lineas = (cuentaId: string, estado = "VIGENTE") =>
+      m.contar("select count(*) as n from linea_cuenta where cuenta_id = $1 and estado = $2", [
+        cuentaId,
+        estado,
+      ]);
+    const agregar = (
+      cuentaId: string,
+      extra: Record<string, unknown> = {},
+      contexto = x.gerente,
+      sucursal: string = x.sucursal,
+      escenario = x,
+    ) =>
+      agregarAlPedidoDeLaMesa(d, contexto, sucursal, {
+        cuentaId,
+        lineaId: nuevoId(),
+        productoId: escenario.producto,
+        opcionIds: [],
+        cantidad: "1",
+        ...extra,
+      });
+    const conCuenta = async (escenario = x) => {
+      const id = await mesa(escenario);
+      const cuentaId = nuevoId();
+      valorDe(await m.salon.tomarPedido(escenario.gerente, { cuentaId, mesaId: id }));
+      return { id, cuentaId };
+    };
+
+    it("agrega con el precio del catálogo; el precio, el total y el estado de comanda que mande el navegador se descartan", async () => {
+      const { cuentaId } = await conCuenta();
+      const r = await agregar(cuentaId, {
+        cantidad: "2",
+        precioUnitario: { moneda: "ARS", monto: "1.00" },
+        totalProvisorio: { moneda: "ARS", monto: "1.00" },
+        comanda: "ENVIADA",
+        sucursalId: x.otraSucursal,
+      });
+      expect(r).toMatchObject({
+        ok: true,
+        dato: {
+          posicion: 1,
+          precioUnitario: { moneda: "ARS", monto: "1000.000000" },
+          totalProvisorio: { moneda: "ARS", monto: "2000.00" },
+          yaExistia: false,
+        },
+      });
+      expect(Object.keys(r.ok ? r.dato : {}).sort()).toEqual(
+        ["posicion", "precioUnitario", "totalProvisorio", "yaExistia"].sort(),
+      );
+      const comanda = await m.filas<{ salida: string; envio_id: string | null }>(
+        "select salida, envio_id from linea_de_comanda where cuenta_id = $1",
+        [cuentaId],
+      );
+      expect(comanda).toEqual([{ salida: "AHORA", envio_id: null }]);
+    });
+
+    it("«Sale después» queda registrado; una salida inexistente es el genérico y no escribe", async () => {
+      const { cuentaId } = await conCuenta();
+      expect((await agregar(cuentaId, { salida: "DESPUES" })).ok).toBe(true);
+      expect(codigo(await agregar(cuentaId, { salida: "CUANDO_QUIERA" }))).toBe(GENERICO);
+      expect(await lineas(cuentaId)).toBe(1);
+      const salidas = await m.filas<{ salida: string }>(
+        "select salida from linea_de_comanda where cuenta_id = $1",
+        [cuentaId],
+      );
+      expect(salidas).toEqual([{ salida: "DESPUES" }]);
+    });
+
+    it("IDEMPOTENCIA: repetir con el mismo lineaId (doble clic, reintento) es una sola línea y audita una vez", async () => {
+      const { cuentaId } = await conCuenta();
+      const lineaId = nuevoId();
+      const primera = await agregar(cuentaId, { lineaId });
+      const segunda = await agregar(cuentaId, { lineaId });
+      expect(primera).toMatchObject({ ok: true, dato: { posicion: 1, yaExistia: false } });
+      expect(segunda).toMatchObject({ ok: true, dato: { posicion: 1, yaExistia: true } });
+      expect(await lineas(cuentaId)).toBe(1);
+      expect(
+        await m.contar(
+          "select count(*) as n from linea_de_comanda where cuenta_id = $1 and linea_id = $2",
+          [cuentaId, lineaId],
+        ),
+      ).toBe(1);
+      const auditadas = (await m.auditoria(x.empresa, "LINEA_AGREGADA")).filter(
+        (a) => a["entidad_id"] === lineaId,
+      );
+      expect(auditadas).toHaveLength(1);
+    });
+
+    it("CONCURRENCIA: dos mozos agregan a la misma cuenta a la vez: dos líneas, posiciones 1 y 2 sin huecos, total = suma", async () => {
+      const { cuentaId } = await conCuenta();
+      const [a, b] = await Promise.all([
+        repetir(() => agregar(cuentaId, {}, x.gerente)),
+        repetir(() => agregar(cuentaId, { cantidad: "2" }, x.administrador)),
+      ]);
+      expect(a).toMatchObject({ ok: true });
+      expect(b).toMatchObject({ ok: true });
+      expect(await lineas(cuentaId)).toBe(2);
+      const posiciones = await m.filas<{ posicion: number }>(
+        "select posicion from linea_cuenta where cuenta_id = $1 order by posicion",
+        [cuentaId],
+      );
+      expect(posiciones.map((p) => Number(p.posicion))).toEqual([1, 2]);
+      const total = await m.filas<{ total_provisorio: string }>(
+        "select total_provisorio from cuenta_consumo where id = $1",
+        [cuentaId],
+      );
+      expect(total[0]?.total_provisorio).toBe("3000.00");
+    });
+
+    it("CONCURRENCIA: liberar la mesa a la vez que otro agrega: nunca queda un ítem vigente sobre una cuenta anulada", async () => {
+      for (let i = 0; i < 4; i++) {
+        const { cuentaId } = await conCuenta();
+        const [liberada, agregada] = await Promise.all([
+          repetir(() => liberarLaMesa(d, x.gerente, x.sucursal, { cuentaId })),
+          repetir(() => agregar(cuentaId, {}, x.administrador)),
+        ]);
+        const estado = await m.filas<{ estado: string }>(
+          "select estado from cuenta_consumo where id = $1",
+          [cuentaId],
+        );
+        const vigentes = await lineas(cuentaId);
+        if (estado[0]?.estado === "ANULADA") {
+          expect(vigentes).toBe(0);
+          expect(agregada.ok).toBe(false);
+        } else {
+          expect(vigentes).toBe(1);
+          expect(liberada.ok).toBe(false);
+          expect(codigo(liberada)).toBe(GENERICO);
+        }
+      }
+    });
+
+    it("AISLAMIENTO: una cuenta de otra sucursal o de otra empresa no existe; sin sucursal cierra; no se escribe nada", async () => {
+      const { cuentaId } = await conCuenta();
+      expect(codigo(await agregar(cuentaId, {}, x.gerente, x.otraSucursal))).toBe(GENERICO);
+      expect(codigo(await agregar(cuentaId, {}, x.gerente, ""))).toBe(GENERICO);
+      const otra = await m.escenario();
+      const ajena = await conCuenta(otra);
+      expect(codigo(await agregar(ajena.cuentaId))).toBe(GENERICO);
+      expect(codigo(await agregar(ajena.cuentaId, {}, x.gerente, otra.sucursal))).not.toBeNull();
+      expect(await lineas(cuentaId)).toBe(0);
+      expect(await lineas(ajena.cuentaId)).toBe(0);
+    });
+
+    it("PERMISOS: sin persona no se escribe; un pedido mal formado (cantidad como número, id inválido, de más) es el genérico", async () => {
+      const { cuentaId } = await conCuenta();
+      expect((await agregar(cuentaId, {}, { ...x.gerente, personaId: null })).ok).toBe(false);
+      expect(codigo(await agregar(cuentaId, { cantidad: 1 }))).toBe(GENERICO);
+      expect(codigo(await agregar(cuentaId, { lineaId: "no-es-un-id" }))).toBe(GENERICO);
+      expect(codigo(await agregar(cuentaId, { productoId: undefined }))).toBe(GENERICO);
+      expect(codigo(await agregar(cuentaId, { opcionIds: ["x"] }))).toBe(GENERICO);
+      expect(await lineas(cuentaId)).toBe(0);
+      expect((await agregar(cuentaId, {}, x.operador)).ok).toBe(true);
+    });
+
+    it("DINERO: la cantidad con coma o inválida se rechaza sin escribir, y el precio abierto en un producto con precio también", async () => {
+      const { cuentaId } = await conCuenta();
+      expect((await agregar(cuentaId, { cantidad: "1,5" })).ok).toBe(false);
+      expect((await agregar(cuentaId, { cantidad: "-1" })).ok).toBe(false);
+      expect((await agregar(cuentaId, { cantidad: "0" })).ok).toBe(false);
+      expect((await agregar(cuentaId, { precioAbierto: "1.00" })).ok).toBe(false);
+      expect(await lineas(cuentaId)).toBe(0);
+      expect(await agregar(cuentaId, { cantidad: "3" })).toMatchObject({
+        ok: true,
+        dato: { totalProvisorio: { monto: "3000.00" } },
+      });
+    });
+
+    it("FECHAS: con la jornada en auditoría no se agrega (el genérico) y no se escribe nada", async () => {
+      const otra = await m.escenario();
+      const { cuentaId } = await conCuenta(otra);
+      const cierre = crearCasosDeUsoDeCierre({
+        transacciones: m.entorno,
+        reglas: {
+          catalogo: {
+            ...CATALOGO_DE_MODULOS,
+            catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+            caja: { ...CATALOGO_DE_MODULOS.caja, estado: "disponible" },
+            ventas: { ...CATALOGO_DE_MODULOS.ventas, estado: "disponible" },
+          },
+          permisos: PERMISOS_DE_EMPRESA,
+        },
+        aportes: [],
+      });
+      valorDe(
+        await cierre.iniciarAuditoria(otra.gerente, {
+          sucursalId: otra.sucursal,
+          fechaDeNegocio: FECHA_DE_NEGOCIO,
+        }),
+      );
+      expect(codigo(await agregar(cuentaId, {}, otra.gerente, otra.sucursal, otra))).toBe(GENERICO);
+      expect(await lineas(cuentaId)).toBe(0);
+    });
+
+    it("una cuenta que ya no está abierta o una mesa unida no admite pedidos (el genérico)", async () => {
+      const { cuentaId } = await conCuenta();
+      expect((await liberarLaMesa(d, x.gerente, x.sucursal, { cuentaId })).ok).toBe(true);
+      expect(codigo(await agregar(cuentaId))).toBe(GENERICO);
+      expect(await lineas(cuentaId)).toBe(0);
+    });
   });
 });

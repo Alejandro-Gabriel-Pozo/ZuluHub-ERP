@@ -11,12 +11,14 @@ import type { DetalleDeNegativo, ErrorDeStock } from "./errores";
 import { costosDeclaradosDe } from "./costos";
 import { buscarRepeticion, registrarMovimientoEnTx } from "./movimiento-en-tx";
 import {
+  hayQueAvisarLaCarga,
   cargarDeposito,
   comprobarFecha,
   leerClave,
   leerConfirmaciones,
   leerDetalle,
   leerRenglones,
+  lotesDeLaEntrada,
   renglonDeLibro,
   renglonesDeHuella,
   resolverRenglones,
@@ -36,6 +38,11 @@ export type EntradaDeRegistrarEntrada = Readonly<{
   /** Cuándo ocurrió; sin él, el `ahora` del contexto. No puede ser anterior al inicio de la jornada vigente (S-2). */
   hechoEn?: Date | undefined;
   renglones: readonly RenglonPedido[];
+  /**
+   * Solo para `CARGA_INICIAL` (P-8): la persona vio el aviso «este depósito ya tiene existencia» y confirmó. Sin él (y con existencia previa) no se escribe y vuelve `YA_HAY_EXISTENCIA`. No entra a la huella:
+   * repetir la misma clave devuelve lo hecho, con o sin confirmación.
+   */
+  confirmaExistenciaPrevia?: boolean | undefined;
 }>;
 export type SalidaDeRegistrarEntrada = Readonly<{ movimientoId: string; yaExistia: boolean }>;
 
@@ -109,9 +116,10 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
     const resultado = await dependencias.transacciones.ejecutar(
       { contexto },
       async (tx): Promise<R<S>> => {
-        // `VENCIMIENTO` exige además `stock.ajustar` (S-7): el guard evalúa las dos y el primer rechazo es el que vuelve.
-        const acciones: readonly [ClaveAccion, ...ClaveAccion[]] =
-          !entrada && motivoExigeAjustar(pedido.motivo) ? [accion, "stock.ajustar"] : [accion];
+        // `VENCIMIENTO` (S-7) y `CARGA_INICIAL` (DEC-STK-004) exigen además `stock.ajustar`: el guard evalúa las dos y el primer rechazo es el que vuelve.
+        const acciones: readonly [ClaveAccion, ...ClaveAccion[]] = motivoExigeAjustar(pedido.motivo)
+          ? [accion, "stock.ajustar"]
+          : [accion];
         const permiso = await autorizar(tx, contexto, dependencias.reglas, acciones);
         if (!permiso.ok) return permiso;
         const clave = leerClave(pedido.clave);
@@ -125,7 +133,7 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
         if (!confirmaciones.ok) return confirmaciones;
         // Solo una entrada con motivo que declara costo (compra, carga inicial) puede traer `costoUnitario`.
         const admiteCosto = entrada && buscarMotivo(clase, pedido.motivo)?.entraConCosto === true;
-        const leidos = leerRenglones(pedido.renglones, admiteCosto);
+        const leidos = leerRenglones(pedido.renglones, admiteCosto, entrada);
         if (!leidos.ok) return leidos;
         const deposito = await cargarDeposito(tx, contexto, pedido.depositoId);
         if (!deposito.ok) return deposito;
@@ -149,6 +157,13 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
         if (!hechoEn.ok) return hechoEn;
         const resueltos = await resolverRenglones(tx, contexto, leidos.valor);
         if (!resueltos.ok) return resueltos;
+        // P-8: la carga inicial sobre un depósito con existencia se AVISA, después de validar todo (la repetición ya volvió arriba).
+        if (await hayQueAvisarLaCarga(tx, contexto, pedido, deposito.valor.id)) {
+          return err({ error: "YA_HAY_EXISTENCIA" });
+        }
+
+        const lotes = await lotesDeLaEntrada(tx, contexto, deposito.valor.id, resueltos.valor);
+        if (!lotes.ok) return lotes;
 
         const registrado = await registrarMovimientoEnTx(tx, contexto, {
           clase,
@@ -166,6 +181,7 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
           renglones: renglonesDe(deposito.valor.id, resueltos.valor, entrada ? 1 : -1),
           confirmaciones: confirmaciones.valor,
           costos: costosDeclaradosDe(deposito.valor.id, resueltos.valor),
+          lotes: lotes.valor,
         });
         if (!registrado.ok) return registrado;
         return ok(

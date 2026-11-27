@@ -1,3 +1,5 @@
+import { TEXTOS_DE_EXPORTACION_DE_COMPRAS } from "./textos-de-exportacion-de-compras";
+
 /**
  * Los textos del módulo `compras` (prefijo `compras.`, E9-T15; `e9-compras-especificacion.md` §10). Ninguno es nuevo: todos salen de los que el
  * dueño aprobó el 09/11/2026 en los prototipos `compra.html` («Textos aprobados»), `control.html` y `orden.html` («Textos nuevos»), que son la
@@ -8,6 +10,7 @@
  * pantallas de pago y de corrección no tienen texto ni prototipo (D142 y D143; decisión D175). Un texto repetido en dos filas de los prototipos
  * («Pedida», «Cuarentena») tiene una sola clave, la del primer grupo.
  */
+const D = { decision: "DEC-0937" } as const;
 export const TEXTOS_DE_COMPRAS = {
   // compra.html, «Textos aprobados» (09/11/2026), filas «Lista» y «Nueva compra» (D175: «Recibida sin facturar» y «Comprar y recibir» son de la decisión 35)
   "compras.compra.compras": { porDefecto: "Compras" },
@@ -108,6 +111,66 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.recepcion.cantidad_recibida": { porDefecto: "Cantidad recibida" },
   "compras.recepcion.peso_recibido": { porDefecto: "Peso recibido" },
   "compras.recepcion.validar_recepcion": { porDefecto: "Confirmar recepción" },
+  // «Recepciones» (Compras 4, recepción separada; maqueta compra-recibir.html): textos propuestos por el ingeniero y aceptados por el orquestador por delegación de textos (DDD:173), con el chat del dueño del 25/11/2026 (DEC-0906).
+  "compras.recepcion.titulo_lista": { porDefecto: "Recepciones", fuente: { decision: "DEC-0906" } },
+  "compras.recepcion.recepcion": { porDefecto: "Recepción", fuente: { decision: "DEC-0906" } },
+  "compras.recepcion.anular_recepcion": {
+    porDefecto: "Anular recepción",
+    fuente: { decision: "DEC-0906" },
+  },
+  "compras.recepcion.estado_por_validar": {
+    porDefecto: "Por confirmar",
+    fuente: { decision: "DEC-0906" },
+  },
+  "compras.recepcion.estado_facturada_en_parte": {
+    porDefecto: "Facturada en parte",
+    fuente: { decision: "DEC-0906" },
+  },
+  "compras.recepcion.estado_facturada": {
+    porDefecto: "Facturada",
+    fuente: { decision: "DEC-0906" },
+  },
+  // «Facturas» y «Conciliar» (Compras 4; maqueta compra-conciliar.html): «Conciliar», «Confirmar conciliación», «Facturado», «Recibido» y «Todo coincide» ya estaban aprobados en compra.html (09/11/2026); «Falta conciliar» y «Conciliada en parte» los aprobó el dueño el 25/11/2026; el resto lo propuso el ingeniero y lo aceptó el orquestador por delegación (DDD:173). DEC-0935.
+  "compras.factura.titulo_lista": { porDefecto: "Facturas", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.conciliar": { porDefecto: "Conciliar", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.validar_conciliacion": {
+    porDefecto: "Confirmar conciliación",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.facturado": { porDefecto: "Facturado", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.recibido": { porDefecto: "Recibido", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.todo_coincide": {
+    porDefecto: "Todo coincide",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.a_conciliar": {
+    porDefecto: "A conciliar",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.conciliado": { porDefecto: "Conciliado", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.conciliaciones": {
+    porDefecto: "Conciliaciones",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.anular": {
+    porDefecto: "Anular conciliación",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.estado_falta_conciliar": {
+    porDefecto: "Falta conciliar",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.estado_conciliada_en_parte": {
+    porDefecto: "Conciliada en parte",
+    fuente: { decision: "DEC-0935" },
+  },
+  // «Corregir lo recibido» (Compras 4, PR D): lista corta de motivos, decisión del dueño del 25/11/2026; textos propuestos por el ingeniero (DEC-0937).
+  "compras.recepcion.corregir_recibido": { porDefecto: "Corregir lo recibido", fuente: D },
+  "compras.recepcion.motivo_correccion": { porDefecto: "Motivo de la corrección", fuente: D },
+  "compras.recepcion.causa_error_de_carga": { porDefecto: "Error de carga", fuente: D },
+  "compras.recepcion.causa_reparto_interno": { porDefecto: "Reparto interno", fuente: D },
+  "compras.recepcion.causa_faltante": { porDefecto: "Faltante del proveedor", fuente: D },
+  "compras.recepcion.aviso_reparto": { porDefecto: "Corregí también la otra sucursal.", fuente: D },
   "compras.recepcion.caja_de_peso_variable": { porDefecto: "Caja de peso variable" },
   "compras.recepcion.el_peso_real_se_carga_al_recibir": {
     porDefecto: "el peso real se carga al recibir",
@@ -332,4 +395,6 @@ export const TEXTOS_DE_COMPRAS = {
     ],
     fuente: { decision: "DEC-0891" },
   },
+  // La exportación a Excel (25/11/2026): su archivo propio para no pasar el tope de líneas.
+  ...TEXTOS_DE_EXPORTACION_DE_COMPRAS,
 } as const;

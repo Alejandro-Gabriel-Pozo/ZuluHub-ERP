@@ -8,6 +8,7 @@ import type { TonoDeEstado } from "../../componentes/Insignia";
 import { formatearCantidad } from "../../patrones/formato-fiscal";
 import {
   direccionDeLaLista,
+  RUTA_DE_NUEVA_ORDEN,
   rutaDeLaOrden,
   type EstadoDelFiltroDeLaLista,
 } from "./filtros-de-ordenes";
@@ -49,14 +50,19 @@ export function marcaDeEstado(
     : { texto: texto(d, clave), tono: TONO_DE_ESTADO[estado as keyof typeof TONO_DE_ESTADO] };
 }
 
+/** «KILOGRAMO» pasa a «Kilogramo»; una unidad que la pantalla no conoce se dice con el propio valor. */
+export function textoDeLaUnidad(unidadId: string, d: DiccionarioResuelto = {}): string {
+  const clave = conocido(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId);
+  return clave === null ? unidadId : texto(d, clave);
+}
+
 /** «10» y «KILOGRAMO» pasan a «10 Kilogramo»; sin unidad, solo la cantidad. La cantidad es texto decimal: nunca pasa por `Number` (ADR-006). */
 export function cantidadConUnidad(
   cantidad: string,
   unidadId: string,
   d: DiccionarioResuelto = {},
 ): string {
-  const clave = conocido(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId);
-  const unidad = clave === null ? unidadId : texto(d, clave);
+  const unidad = textoDeLaUnidad(unidadId, d);
   return unidad === "" ? formatearCantidad(cantidad) : `${formatearCantidad(cantidad)} ${unidad}`;
 }
 
@@ -88,7 +94,12 @@ export type ListaArmada = Readonly<{
   filas: readonly FilaDeOrden[];
   /** «Sin resultados» si no hay filas; `null` si las hay. */
   vacio: string | null;
+  /** «Nueva orden»: solo si el servidor ofrece abrir hoy; `null` si no. Una ayuda: abrir vuelve a pasar por el guard. */
+  nueva: Readonly<{ href: string; texto: string }> | null;
 }>;
+
+/** Qué se ofrece hoy en la lista (lo calcula el servidor con la oferta de `transformaciones.abrir`). */
+export type AccionesDeLaLista = Readonly<{ abrir?: boolean | undefined }>;
 
 /** «Todas» y «Abiertas»: los textos de la maqueta (`produccion.html`, línea 341), aceptados por delegación del dueño (DEC-0555). */
 const FILTROS = [
@@ -100,6 +111,7 @@ export function armarLaLista(
   lista: OrdenesDeLaLista,
   estado: EstadoDelFiltroDeLaLista,
   d: DiccionarioResuelto = {},
+  acciones: AccionesDeLaLista = {},
 ): ListaArmada {
   return {
     filtros: FILTROS.map((f) => ({
@@ -115,5 +127,9 @@ export function armarLaLista(
       cantidad: cantidadConUnidad(o.cantidad, o.unidadId, d),
     })),
     vacio: lista.ordenes.length === 0 ? texto(d, "catalogo.lista.sin_resultados") : null,
+    nueva:
+      acciones.abrir === true
+        ? { href: RUTA_DE_NUEVA_ORDEN, texto: texto(d, "produccion.pantalla.nueva_orden") }
+        : null,
   };
 }

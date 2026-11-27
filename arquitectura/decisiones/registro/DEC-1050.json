@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1050",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "El módulo de producción se abre para el hotel: pasa a disponible; el plan comercial no lo bloquea y cada empresa lo usa solo con el módulo activo y la perilla de producción encendida.",
+  "que_cambia": "Qué ve y puede usar la empresa. Revertir: volver el estado a en_desarrollo en el catálogo de módulos.",
+  "donde": "src/capacidades/modulos/catalogo-lotes-y-produccion.ts; plan de producción del día uno (P-1), respuesta del dueño del 25/11/2026"
+}

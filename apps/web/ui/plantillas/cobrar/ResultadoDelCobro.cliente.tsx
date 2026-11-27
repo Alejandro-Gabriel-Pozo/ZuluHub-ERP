@@ -32,6 +32,12 @@ export type PropsDeResultadoDelCobro = Readonly<{
   /** Avisa a la pantalla si se está viendo el ticket del cliente (que trae su propia barra) o el resultado. */
   alCambiarLaVista: (viendoElTicket: boolean) => void;
   alNuevaVenta: () => void;
+  /** El resultado de cobrar una mesa (SAL-D y SAL-C2): lleva «Anular» como el del mostrador (la mesa NO se reabre: queda libre) y el último botón es «Volver» (al salón), no «Nueva venta». */
+  deLaMesa?: boolean | undefined;
+  /** La venta quedó cargada a la cuenta de un cliente (CC-5 B1b): no entró plata a la caja, así que el aviso es solo el número del ticket (sin «Cobrado»), como el de una venta a $ 0. «Imprimir» y «Anular» siguen. */
+  aCuenta?: boolean | undefined;
+  /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el botón dice «Volver a las cuentas» y, si era la última, el resultado avisa «Mesa cobrada» (la mesa quedó libre). */
+  deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
   nuevoId: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
 }>;
@@ -51,6 +57,9 @@ export function ResultadoDelCobro({
   imprimir,
   alCambiarLaVista,
   alNuevaVenta,
+  deLaMesa = false,
+  aCuenta = false,
+  deLaDivision,
   nuevoId,
   esperaEntreVerificacionesMs,
 }: PropsDeResultadoDelCobro) {
@@ -82,6 +91,9 @@ export function ResultadoDelCobro({
       setPidiendoElPapel(false);
     }
   };
+  // El último botón: «Nueva venta» en el mostrador; «Volver» (o «Volver a las cuentas») en una mesa, que anulada NO se reabre.
+  const rotuloFinal =
+    deLaDivision?.rotuloDeVolver ?? (deLaMesa ? textos.volver : textos.nuevaVenta);
   if (anulado !== null) {
     return (
       <div className={estilos["cuerpo"]}>
@@ -90,7 +102,7 @@ export function ResultadoDelCobro({
           <span data-motivo-anulado>{anulado.motivo}</span>
         </Aviso>
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {textos.nuevaVenta}
+          {rotuloFinal}
         </Boton>
       </div>
     );
@@ -127,9 +139,15 @@ export function ResultadoDelCobro({
           esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
         />
       ) : null}
-      <Aviso tono={aCero ? "info" : "exito"} {...(aCero ? {} : { titulo: textos.cobrado })}>
+      <Aviso
+        tono={aCero || aCuenta ? "info" : "exito"}
+        {...(aCero || aCuenta ? {} : { titulo: textos.cobrado })}
+      >
         <span data-ticket>{rotuloDelTicket(venta.numero)}</span>
       </Aviso>
+      {deLaDivision?.mesaCobrada == null ? null : (
+        <Aviso tono="info">{deLaDivision.mesaCobrada}</Aviso>
+      )}
       <ul className={estilos["resumen"]}>
         <li>
           <strong>{textos.total}</strong>
@@ -172,7 +190,7 @@ export function ResultadoDelCobro({
           {textos.anular}
         </Boton>
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {textos.nuevaVenta}
+          {rotuloFinal}
         </Boton>
       </div>
       {errorDelPapel === null ? null : <ErrorDeRespuesta error={errorDelPapel} />}

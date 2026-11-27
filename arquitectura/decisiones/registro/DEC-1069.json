@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1069",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Antes de guardar se muestra el costo antes, el costo ahora y la diferencia de una unidad, calculados por el servidor y solo con costos.ver; si falta algún costo dice «Sin costo», nunca cero.",
+  "que_cambia": "Qué ve quien confirma una receta. El costo antes y la diferencia aparecen solo al editar. Revertir: sacar las filas de la confirmación.",
+  "donde": "src/composicion/recetas-web.ts; apps/web/ui/plantillas/recetas/modelo-de-formulario-de-receta.ts; DDD 14/11 y 15/11/2026; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
+}

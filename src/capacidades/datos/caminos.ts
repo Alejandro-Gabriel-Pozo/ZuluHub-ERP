@@ -1,8 +1,13 @@
 import { CAMINOS_DE_CAJA } from "./caminos-de-caja";
 import { CAMINOS_DE_PRODUCCION } from "./caminos-de-produccion";
 import { CAMINOS_DE_CIERRE } from "./caminos-de-cierre";
+import { CAMINOS_DE_PRESENTACIONES } from "./caminos-de-presentaciones";
 import { CAMINOS_DE_PRODUCTOS } from "./caminos-de-productos";
+import { CAMINOS_DE_RECETAS } from "./caminos-de-recetas";
+import { CAMINOS_DE_STOCK_CONTEO } from "./caminos-de-stock-conteo";
+import { CAMINOS_DE_STOCK_LOTES } from "./caminos-de-stock-lotes";
 import { CAMINOS_DE_STOCK_DEPOSITOS } from "./caminos-de-stock-depositos";
+import { CAMINOS_DE_STOCK_MOVIMIENTOS } from "./caminos-de-stock-movimientos";
 import type { DefinicionDeCamino } from "./tipos-de-caminos";
 
 export type { DefinicionDeCamino, PasoDeCamino } from "./tipos-de-caminos";
@@ -29,17 +34,27 @@ export type { DefinicionDeCamino, PasoDeCamino } from "./tipos-de-caminos";
 export const FRAGMENTOS_DE_CAMINOS = {
   caja: CAMINOS_DE_CAJA,
   produccion: CAMINOS_DE_PRODUCCION,
+  recetas: CAMINOS_DE_RECETAS,
   cierre: CAMINOS_DE_CIERRE,
+  presentaciones: CAMINOS_DE_PRESENTACIONES,
   productos: CAMINOS_DE_PRODUCTOS,
+  "stock-conteo": CAMINOS_DE_STOCK_CONTEO,
+  "stock-lotes": CAMINOS_DE_STOCK_LOTES,
   "stock-depositos": CAMINOS_DE_STOCK_DEPOSITOS,
+  "stock-movimientos": CAMINOS_DE_STOCK_MOVIMIENTOS,
 } as const;
 
 export const CAMINOS = {
   ...CAMINOS_DE_CAJA,
   ...CAMINOS_DE_PRODUCCION,
+  ...CAMINOS_DE_RECETAS,
   ...CAMINOS_DE_CIERRE,
+  ...CAMINOS_DE_PRESENTACIONES,
   ...CAMINOS_DE_PRODUCTOS,
+  ...CAMINOS_DE_STOCK_CONTEO,
+  ...CAMINOS_DE_STOCK_LOTES,
   ...CAMINOS_DE_STOCK_DEPOSITOS,
+  ...CAMINOS_DE_STOCK_MOVIMIENTOS,
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;
 
 export type IdDeCamino = keyof typeof CAMINOS;

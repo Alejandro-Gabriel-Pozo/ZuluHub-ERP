@@ -4,7 +4,7 @@
  * el signo contrario al de su clase (una factura que resta, un pago que suma) y una clase inventada que la base rechazaría tarde.
  *
  * El signo es el del IMPORTE del asiento: `+` aumenta lo que se debe (A_PAGAR: lo que se le debe al proveedor; A_COBRAR: lo que debe el
- * cliente); `-` lo reduce o es saldo a favor; `±` lo decide el asiento y exige un detalle (el motivo). Las clases de A_COBRAR las siembra CC-1.
+ * cliente); `-` lo reduce o es saldo a favor; `±` lo decide el asiento y exige un detalle (el motivo). Las de A_COBRAR de v1 las sembró CC-1 (0106).
  */
 export const SENTIDOS = ["A_COBRAR", "A_PAGAR"] as const;
 export type Sentido = (typeof SENTIDOS)[number];
@@ -48,6 +48,14 @@ export const CLASES_DE_ASIENTO: readonly ClaseDeAsiento[] = [
     exigeDetalle: false,
     admiteVencimiento: false,
   },
+  // La nota de débito del proveedor (siembra 0110, L3a): un cargo suelto que se paga aparte.
+  {
+    sentido: "A_PAGAR",
+    clase: "NOTA_DE_DEBITO_DE_COMPRA",
+    signo: "+",
+    exigeDetalle: false,
+    admiteVencimiento: false,
+  },
   {
     sentido: "A_PAGAR",
     clase: "CREDITO_A_FAVOR",
@@ -64,6 +72,28 @@ export const CLASES_DE_ASIENTO: readonly ClaseDeAsiento[] = [
   },
   {
     sentido: "A_PAGAR",
+    clase: "AJUSTE_DE_SALDO",
+    signo: "±",
+    exigeDetalle: true,
+    admiteVencimiento: false,
+  },
+  // A_COBRAR (clientes): las tres de v1, que siembra la migración 0106 (CC-1). Las demás (crédito a favor, nota de crédito de venta) nacen cerradas y las siembra CC-6.
+  {
+    sentido: "A_COBRAR",
+    clase: "CARGO_DE_VENTA_A_CUENTA",
+    signo: "+",
+    exigeDetalle: false,
+    admiteVencimiento: true,
+  },
+  {
+    sentido: "A_COBRAR",
+    clase: "COBRANZA",
+    signo: "-",
+    exigeDetalle: false,
+    admiteVencimiento: false,
+  },
+  {
+    sentido: "A_COBRAR",
     clase: "AJUSTE_DE_SALDO",
     signo: "±",
     exigeDetalle: true,

@@ -45,7 +45,14 @@ const ficha = (cambios: Record<string, unknown> = {}): FichaDeCompraParaLaPantal
   ...cambios,
 });
 
-const TODO = { corregir: true, anular: true, pagar: true, anularPago: true };
+const TODO = {
+  corregir: true,
+  anular: true,
+  pagar: true,
+  anularPago: true,
+  verNotas: false,
+  cambiarElComprobante: false,
+};
 
 describe("la ficha de una compra con «Corregir» y «Anular»", () => {
   it("sin permisos (o sin decir nada) no hay ningún botón: todo nace cerrado", () => {
@@ -56,6 +63,8 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
         anular: false,
         pagar: false,
         anularPago: false,
+        verNotas: false,
+        cambiarElComprobante: false,
       }),
     ]) {
       expect(f.anular).toBe(false);
@@ -77,6 +86,8 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       anular: true,
       pagar: false,
       anularPago: false,
+      verNotas: false,
+      cambiarElComprobante: false,
     });
     expect(soloAnula.anular).toBe(true);
     expect(soloAnula.lineas[0]?.corregir).toBeNull();
@@ -85,6 +96,8 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       anular: false,
       pagar: false,
       anularPago: false,
+      verNotas: false,
+      cambiarElComprobante: false,
     });
     expect(soloCorrige.anular).toBe(false);
     expect(soloCorrige.lineas[0]?.corregir).not.toBeNull();

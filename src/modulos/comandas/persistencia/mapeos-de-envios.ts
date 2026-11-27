@@ -37,6 +37,7 @@ export const aRenglon = (f: {
   rol: RolDeRenglon;
   nombre_de_cocina: string;
   detalle_de_cocina: string[];
+  nota: string | null;
 }): Renglon => ({
   orden: f.orden,
   lineaId: f.linea_id,
@@ -44,4 +45,5 @@ export const aRenglon = (f: {
   rol: f.rol,
   nombreDeCocina: f.nombre_de_cocina,
   detalleDeCocina: f.detalle_de_cocina,
+  nota: f.nota,
 });

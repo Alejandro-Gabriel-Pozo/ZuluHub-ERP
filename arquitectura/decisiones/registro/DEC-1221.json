@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1221",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "El plazo de un cliente con cuenta corriente es un entero de 1 a 365 días (la pantalla ofrecerá 30 y 60); el límite de crédito va de 0 a 999.999.999,99 pesos, y cero está permitido.",
+  "que_cambia": "Con límite cero toda venta a cuenta pide aprobación; revertir el rango es una constante y un CHECK. Dueño 26/11: «Plazo: cualquier valor de 1 a 365 en la base, con 30 y 60 como atajos en la pantalla.»",
+  "donde": "src/modulos/cuenta_corriente/dominio/condiciones.ts; migración 0106 (`cuenta_cliente_plazo_ck`, `cuenta_cliente_limite_ck`); brief PR-CC-1 §2; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
+}

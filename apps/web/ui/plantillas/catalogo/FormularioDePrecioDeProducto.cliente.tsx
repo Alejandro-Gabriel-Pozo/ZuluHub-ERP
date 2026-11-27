@@ -12,6 +12,7 @@ import { Pila } from "../../primitivas/Pila";
 import { Texto } from "../../primitivas/Texto";
 import estilos from "./FormularioDePrecioDeProducto.module.css";
 import { textoDelError, type PreciosArmados } from "./modelo-de-precios-de-producto";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDePrecioDeProducto = Readonly<{
   precios: PreciosArmados;
@@ -45,7 +46,7 @@ export function FormularioDePrecioDeProducto({
   const error = resultado.error;
   const sinCampo = error !== null && error.campo !== CAMPO;
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <CampoImporte

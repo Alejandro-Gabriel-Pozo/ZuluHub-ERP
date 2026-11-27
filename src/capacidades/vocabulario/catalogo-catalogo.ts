@@ -356,4 +356,38 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.error.cantidad_mayor_que_cero": {
     porDefecto: "La cantidad tiene que ser mayor que cero",
   },
+  // T0, solapa «Cómo se compra» (presentaciones de compra de un producto). Fuente: la maqueta `presentaciones.html` (plan `plan-t0-pantalla-de-presentaciones-2026-11-25.md` §C.1) y la tabla «Textos
+  // nuevos» de `productos.html` (aprobada por el dueño el 09/11/2026, fila «Clase, compra y alta rápida»: «Presentación · Cantidad en la unidad base · De peso variable · Peso aproximado ·
+  // Agregar presentación»). «Peso aproximado» como rótulo de la MISMA cantidad (un solo campo) y «Sin presentaciones» (de la maqueta aprobada, `productos.html:595`): respuestas del dueño del
+  // 25/11/2026 a las preguntas 3 y 4 del plan. «Cómo se compra» es `compras.compra.como_se_compra` (se reusa, no se repite).
+  "catalogo.presentacion.nombre": {
+    porDefecto: "Presentación",
+    usos: [{ como: "DATO", dato: "nombre-de-presentacion" }],
+    fuente: { decision: "DEC-0899" },
+  },
+  "catalogo.presentacion.cantidad": {
+    porDefecto: "Cantidad en la unidad base",
+    usos: [{ como: "DATO", dato: "cantidad-de-presentacion" }],
+    fuente: { decision: "DEC-0899" },
+  },
+  "catalogo.presentacion.peso_variable": {
+    porDefecto: "De peso variable",
+    usos: [{ como: "DATO", dato: "presentacion-de-peso-variable" }],
+    fuente: { decision: "DEC-0899" },
+  },
+  "catalogo.presentacion.peso_aproximado": {
+    porDefecto: "Peso aproximado",
+    usos: [{ como: "DATO", dato: "cantidad-de-presentacion" }],
+    fuente: { decision: "DEC-0899" },
+  },
+  "catalogo.presentacion.agregar": {
+    porDefecto: "Agregar presentación",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-0899" },
+  },
+  "catalogo.presentacion.vacia": {
+    porDefecto: "Sin presentaciones",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-0899" },
+  },
 } as const;

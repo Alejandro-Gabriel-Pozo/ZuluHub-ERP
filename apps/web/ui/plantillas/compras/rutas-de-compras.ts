@@ -9,6 +9,48 @@ export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
 /** «Nueva compra» (Compras PR 6b). */
 export const RUTA_DE_NUEVA_COMPRA = `${RUTA_DE_COMPRAS}/nueva`;
 
+/** La descarga del archivo de compras (Excel) del período aplicado en la lista. */
+const RUTA_DE_EXPORTAR_COMPRAS = `${RUTA_DE_COMPRAS}/exportar`;
+
+/** «Recepciones» (Compras 4, recepción separada): la lista, «Recibir» y el detalle de una recepción. El id del detalle es un UUID que sale de la consulta del servidor, nunca de un texto libre. */
+export const RUTA_DE_RECEPCIONES = `${RUTA_DE_COMPRAS}/recepciones`;
+export const RUTA_DE_RECIBIR = `${RUTA_DE_RECEPCIONES}/recibir`;
+export const rutaDeLaRecepcion = (recepcionId: string): string =>
+  `${RUTA_DE_RECEPCIONES}/${recepcionId}`;
+
+/** La lista de recepciones; con cursor, la página que sigue (lo único que la dirección aporta: la sucursal la pone el servidor). */
+export const direccionDeLaListaDeRecepciones = (despues: string | null): string =>
+  despues === null
+    ? RUTA_DE_RECEPCIONES
+    : `${RUTA_DE_RECEPCIONES}?${new URLSearchParams([["despues", despues]]).toString()}`;
+
+/** «Facturas» (Compras 4, la factura de la empresa y su conciliación): la lista, «Cargar factura», el detalle y «Conciliar». El id es un UUID que sale de la consulta del servidor, nunca de un texto libre. */
+export const RUTA_DE_FACTURAS = `${RUTA_DE_COMPRAS}/facturas`;
+export const RUTA_DE_CARGAR_FACTURA = `${RUTA_DE_FACTURAS}/nueva`;
+export const rutaDeLaFactura = (comprobanteId: string): string =>
+  `${RUTA_DE_FACTURAS}/${comprobanteId}`;
+export const rutaDeConciliar = (comprobanteId: string): string =>
+  `${rutaDeLaFactura(comprobanteId)}/conciliar`;
+
+/** «Notas de la factura» (NOTAS-2c-1) y «Cargar una nota del proveedor» de crédito o de débito: la factura sale de la consulta del servidor y la clase es una de dos palabras fijas, nunca un texto libre. */
+export const rutaDeLasNotas = (comprobanteId: string): string =>
+  `${rutaDeLaFactura(comprobanteId)}/notas`;
+export type ClaseDeNotaParaLaRuta = "credito" | "debito";
+export const rutaDeCargarNota = (comprobanteId: string, clase: ClaseDeNotaParaLaRuta): string =>
+  `${rutaDeLasNotas(comprobanteId)}/nueva?clase=${clase}`;
+
+/** «Reemplazar el comprobante» (NOTAS-2c-2): la factura que se reemplaza (N3/N4) o la compra cuyo comprobante se cambia (N1/N2) sale de la consulta del servidor; nunca un texto libre. */
+export const rutaDeReemplazar = (comprobanteId: string): string =>
+  `${rutaDeLaFactura(comprobanteId)}/reemplazar`;
+export const rutaDeCambiarElComprobante = (recepcionId: string): string =>
+  `${RUTA_DE_COMPRAS}/${recepcionId}/cambiar-comprobante`;
+
+/** La lista de facturas; con cursor, la página que sigue (lo único que la dirección aporta). */
+export const direccionDeLaListaDeFacturas = (despues: string | null): string =>
+  despues === null
+    ? RUTA_DE_FACTURAS
+    : `${RUTA_DE_FACTURAS}?${new URLSearchParams([["despues", despues]]).toString()}`;
+
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
 /** El formulario de «Corregir» una línea de la compra (Compras PR 10): el número de línea es un entero que sale de la ficha. */
@@ -34,4 +76,16 @@ export function direccionDeLaLista(filtro: FiltroAplicado, despues: string | nul
   return pares.length === 0
     ? RUTA_DE_COMPRAS
     : `${RUTA_DE_COMPRAS}?${new URLSearchParams(pares).toString()}`;
+}
+
+/**
+ * La dirección de la descarga con el período YA APLICADO en la lista (lo que el servidor tomó de la dirección, no lo que se tipeó sin aplicar). Sin las dos fechas no hay archivo: `null`
+ * (no se supone un período). El servidor valida de nuevo y rechaza más de 12 meses.
+ */
+export function direccionDeExportar(filtro: FiltroAplicado): string | null {
+  if (filtro.desde === null || filtro.hasta === null) return null;
+  return `${RUTA_DE_EXPORTAR_COMPRAS}?${new URLSearchParams([
+    ["desde", filtro.desde],
+    ["hasta", filtro.hasta],
+  ]).toString()}`;
 }

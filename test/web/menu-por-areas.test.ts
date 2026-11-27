@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { seOfrece } from "../../src/capacidades/integracion/ofrecer";
 import {
   AREAS_DEL_MENU,
   FILAS_DEL_MENU,
@@ -140,20 +141,18 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
     );
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `produccion`, que sigue en desarrollo)", () => {
-    // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
-    const enDesarrollo = { ...productos, modulo: "produccion" as const };
-    expect(CATALOGO_DE_MODULOS.produccion.estado).toBe("en_desarrollo");
-    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["produccion"]), null)).toEqual(
-      [],
-    );
-    expect(
-      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["produccion"]), null),
-    ).toEqual([]);
-    // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
-    const disponible = { ...productos, modulo: "catalogo" as const };
-    expect(armarElMenu([disponible], permisos(["productos.ver"], ["catalogo"]), null)).not.toEqual(
-      [],
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (se prueba con una copia del catálogo donde `produccion` lo está, como lo fue hasta PRO-A)", () => {
+    // Ningún módulo real está en desarrollo: se prueba la regla con el mismo cálculo del menú (`seOfrece`) sobre una copia del catálogo.
+    const catalogo = {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    };
+    const pedido = { modulo: "produccion", accion: "productos.ver", perilla: null };
+    expect(seOfrece(catalogo, permisos(["productos.ver"], ["produccion"]), pedido)).toBe(false);
+    expect(seOfrece(catalogo, permisos(["productos.ver"], [], ["produccion"]), pedido)).toBe(false);
+    // El mismo pedido con el módulo disponible sí se ve: lo que lo oculta es el estado, no la forma del pedido.
+    expect(seOfrece(CATALOGO_DE_MODULOS, permisos(["productos.ver"], ["produccion"]), pedido)).toBe(
+      true,
     );
   });
 
@@ -211,6 +210,16 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/caja/cierre-del-dia",
         "cierre.titulo",
       ],
+      [
+        "cuenta-corriente",
+        "ventas",
+        "caja",
+        "cuenta_corriente",
+        "cuenta_corriente.ver",
+        "/caja/cuenta-corriente",
+        "cuenta_corriente.menu.entrada",
+      ],
+      ["salon", "ventas", "salon", "salon", "mesas.ver", "/salon", "salon.texto.grupo_salon"],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
         "impresoras",
@@ -220,6 +229,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "impresoras.ver",
         "/salon/impresoras",
         "comandas.texto.imprimir_impresoras",
+      ],
+      [
+        "comandas",
+        "ventas",
+        "salon",
+        "comandas",
+        "comandas.ver",
+        "/salon/comandas",
+        "comandas.texto.cocina_comandas",
       ],
       [
         "clientes",
@@ -263,7 +281,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "stock",
         "stock",
         "stock.ver",
-        "/stock/depositos",
+        "/stock/existencias",
         "stock.pantalla.stock",
       ],
       [
@@ -274,6 +292,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "transformaciones.ver",
         "/catalogo/produccion",
         "produccion.pantalla.produccion",
+      ],
+      [
+        "recetas",
+        "catalogo",
+        "produccion",
+        "stock",
+        "stock.ver",
+        "/catalogo/recetas",
+        "receta.pantalla.recetas",
       ],
       [
         "compras",
@@ -292,6 +319,24 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "compras.configurar",
         "/compras/nivel",
         "compras.nivel.titulo",
+      ],
+      [
+        "recepciones",
+        "compras",
+        "compras",
+        "compras",
+        "recepciones.ver",
+        "/compras/recepciones",
+        "compras.recepcion.titulo_lista",
+      ],
+      [
+        "facturas",
+        "compras",
+        "compras",
+        "compras",
+        "comprobantes_de_proveedor.ver",
+        "/compras/facturas",
+        "compras.factura.titulo_lista",
       ],
       [
         "proveedores",
@@ -328,6 +373,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "usuarios.ver",
         "/cuenta/usuarios",
         "usuarios.lista.titulo",
+      ],
+      [
+        "roles",
+        "cuenta",
+        "empresa",
+        "administracion",
+        "roles.ver",
+        "/cuenta/roles",
+        "roles.lista.titulo",
       ],
       [
         "contacto",
@@ -469,6 +523,39 @@ describe("«Venta rápida»: la fila del grupo «Mostrador» del área Ventas (d
   });
 });
 
+describe("«Salón» (SAL-A): la fila del mapa nace cerrada", () => {
+  const salon = fila("salon");
+  const conFunciones = (
+    acciones: readonly string[],
+    modulos: readonly string[],
+    funciones?: readonly string[],
+  ) => ({
+    ...permisos(acciones, modulos),
+    ...(funciones === undefined ? {} : { funcionesEncendidas: funciones }),
+  });
+
+  it("apunta al mapa, con la acción de lectura de mesas y la perilla `salon`", () => {
+    expect(salon).toMatchObject({
+      href: "/salon",
+      modulo: "salon",
+      accion: "mesas.ver",
+      perilla: "salon",
+      etiqueta: "salon.texto.grupo_salon",
+    });
+  });
+  it("con el módulo, `mesas.ver` y la perilla encendida aparece", () => {
+    expect(
+      claves(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"], ["salon"]), null)),
+    ).toEqual([["ventas", [["salon"]]]]);
+  });
+  it("sin `mesas.ver`, con la perilla apagada, sin leer las funciones o con el módulo apagado no aparece", () => {
+    expect(armarElMenu([salon], conFunciones([], ["salon"], ["salon"]), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"], []), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"]), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], [], ["salon"]), null)).toEqual([]);
+  });
+});
+
 describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => {
   const mesas = fila("mesas");
   const conFunciones = (funciones?: readonly string[]) => ({
@@ -478,9 +565,11 @@ describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => 
 
   it("lleva la función `salon` y es del mismo módulo", () => {
     expect(mesas.perilla).toBe("salon");
-    expect(FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla !== null)).toHaveLength(
-      1,
-    );
+    expect(
+      FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla === "salon").map(
+        (f) => f.clave,
+      ),
+    ).toEqual(["salon", "mesas"]);
   });
   it("con el módulo, la acción y la función encendida aparece", () => {
     expect(claves(armarElMenu([mesas], conFunciones(["salon"]), null))).toEqual([
@@ -508,20 +597,27 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "comprobantes",
     "caja",
     "cierre-del-dia",
+    "cuenta-corriente",
+    "salon",
     "mesas",
     "impresoras",
+    "comandas",
     "clientes",
     "productos",
     "clasificacion",
     "secciones",
     "stock",
     "produccion",
+    "recetas",
     "compras",
     "nivel-de-compras",
+    "recepciones",
+    "facturas",
     "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
     "usuarios",
+    "roles",
     "contacto",
     "cerrar-sesion",
   ];
@@ -552,13 +648,21 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
           [
             ["pantalla", "caja", "/caja", "caja.pantalla.titulo"],
             ["pantalla", "cierre-del-dia", "/caja/cierre-del-dia", "cierre.titulo"],
+            [
+              "pantalla",
+              "cuenta-corriente",
+              "/caja/cuenta-corriente",
+              "cuenta_corriente.menu.entrada",
+            ],
           ],
         ],
         [
           "salon",
           [
+            ["pantalla", "salon", "/salon", "salon.texto.grupo_salon"],
             ["pantalla", "mesas", "/salon/mesas", "salon.texto.admin_mesas"],
             ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
+            ["pantalla", "comandas", "/salon/comandas", "comandas.texto.cocina_comandas"],
           ],
         ],
         [
@@ -583,7 +687,14 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
           ],
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
-        ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+        ["stock", [["pantalla", "stock", "/stock/existencias", "stock.pantalla.stock"]]],
+        [
+          "produccion",
+          [
+            ["pantalla", "produccion", "/catalogo/produccion", "produccion.pantalla.produccion"],
+            ["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"],
+          ],
+        ],
       ],
     ],
     [
@@ -616,6 +727,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ],
             ["pantalla", "medios-de-pago", "/caja/medios-de-pago", "caja.medios.titulo"],
             ["pantalla", "usuarios", "/cuenta/usuarios", "usuarios.lista.titulo"],
+            ["pantalla", "roles", "/cuenta/roles", "roles.lista.titulo"],
           ],
         ],
         [

@@ -16,10 +16,13 @@ import {
 import { PantallaDeDepositos } from "../../../../../../../ui/plantillas/stock/depositos/PantallaDeDepositos";
 import { pestanasDeStock } from "../../../../../../../ui/plantillas/stock/pestanas-de-stock";
 import { PestanasDeStock } from "../../../../../../../ui/plantillas/stock/PestanasDeStock";
-import { agregarDepositoAccion } from "../../../../acciones-de-depositos";
+import {
+  agregarDepositoAccion,
+  cambiarElEstadoDelDepositoAccion,
+} from "../../../../acciones-de-depositos";
 
 // `/stock/depositos/nuevo`: agregar un depósito a la sucursal elegida (la fija el servidor, no el formulario). Se ve como en la maqueta `stock.html` (09/11/2026): las pestañas y la lista de
-// depósitos a la vista y el formulario debajo, con «Cancelar» y «Agregar depósito» al pie. El identificador del alta se genera una vez al abrir el formulario y viaja ligado a la acción:
+// depósitos a la vista y el formulario debajo, con «Cancelar» y «Agregar depósito» al pie (la lista, sin los botones de cada fila: acá se agrega). El identificador del alta se genera una vez al abrir el formulario y viaja ligado a la acción:
 // repetir el envío (doble toque, red cortada) devuelve el mismo depósito sin duplicarlo.
 export default async function PaginaDeAltaDeDeposito() {
   return pantallaDeOperacion({ titulo: "stock.pantalla.depositos" }, async ({ contexto }) => {
@@ -33,7 +36,14 @@ export default async function PaginaDeAltaDeDeposito() {
           textos={{
             agregar: texto({}, "stock.deposito.agregar"),
             deVenta: texto({}, "stock.deposito.de_venta"),
+            desactivado: texto({}, "catalogo.estado.desactivado"),
+            editar: texto({}, "catalogo.accion.editar"),
+            desactivar: texto({}, "catalogo.accion.desactivar"),
+            reactivar: texto({}, "catalogo.accion.reactivar"),
           }}
+          puede={{ editar: false, desactivar: false, reactivar: false }}
+          hrefDeEditar={RUTAS_DE_DEPOSITOS.editar}
+          accionDeEstado={(id, activar) => cambiarElEstadoDelDepositoAccion.bind(null, id, activar)}
           puedeAgregar={false}
           hrefDeAgregar={RUTAS_DE_DEPOSITOS.nuevo}
           pie={

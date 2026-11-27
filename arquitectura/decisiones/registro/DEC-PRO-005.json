@@ -1,0 +1,11 @@
+{
+  "id": "DEC-PRO-005",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "Stock recibe por un puerto opcional la consulta de cuentas abiertas con el plato; la composición lo cablea con una lectura de ventas en la misma transacción.",
+  "que_cambia": "Stock no importa ventas (módulos aislados). Sin el puerto no se pide confirmación. Revertir: sacar el puerto y la consulta de solo lectura de ventas.",
+  "donde": "src/composicion/cuentas-abiertas-de-stock.ts; src/modulos/stock/casos-de-uso/articulos.ts; PR PRO-D1; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
+  "motivo": "Es un detalle técnico de cómo se conectan dos módulos aislados; no cambia qué ve ni qué decide el negocio."
+}

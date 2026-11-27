@@ -132,11 +132,16 @@ describe("cargar-entorno: uso, token y cadena", () => {
     [["--vercel", "production", "--confirmo", "preview"]],
     [["--vercel", "production", "--confirmo", "production", "--rotar"]],
     [["--preparar-roles"]],
+    // Un cliente con base propia que no está en la lista cerrada (hoy vacía) no resuelve a ningún proyecto de Vercel.
+    [["--vercel", "cliente-ejemplo", "--confirmo", "cliente-ejemplo"]],
+    [["--vercel", "cliente-ejemplo"]],
   ])("el uso incorrecto %j se rechaza sin hacer ningún pedido", async (argumentos) => {
     const falso = crearVercelFalso();
     const salida = await correr(argumentos, { falso });
     expect(salida.codigo).toBe(2);
-    expect(salida.error).toContain("uso: cargar-entorno --vercel <preview|production>");
+    expect(salida.error).toContain(
+      "uso: cargar-entorno --vercel <preview|production|cliente-<codigo>>",
+    );
     expect(falso.pedidos).toEqual([]);
   });
 

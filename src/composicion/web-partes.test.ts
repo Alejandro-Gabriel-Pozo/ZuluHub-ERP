@@ -9,6 +9,7 @@ import { armarWebDeCierre } from "./web-de-cierre";
 import { armarWebDeClientes } from "./web-de-clientes";
 import { armarWebDeComandas } from "./web-de-comandas";
 import { armarWebDeCompras } from "./web-de-compras";
+import { armarWebDeCuentaCorriente } from "./web-de-cuenta_corriente";
 import { armarWebDeEmpresas } from "./web-de-empresas";
 import { armarWebDeFiscal } from "./web-de-fiscal";
 import { armarWebDeIdentidad } from "./web-de-identidad";
@@ -24,7 +25,7 @@ import { armarWebDeVentas } from "./web-de-ventas";
  *  2. ninguna clave aparece en dos partes ni en las de infraestructura (un spread que pisa a otro en silencio: TypeScript no avisa);
  *  3. armar no lee nada (perder la pereza rompería `next build`, que corre sin secretos);
  *  4. las listas blancas de fiscal, una por una (agregar o quitar una función cambia lo que la web puede llamar).
- * Las claves de abajo son las de `web.ts` antes de partirlo (35, contadas en `main` b4f3f0b; 37 desde V1c: `imagenesExternas` y `memoriaDeLogos` de la carta).
+ * Las claves de abajo son las de `web.ts` antes de partirlo (35, contadas en `main` b4f3f0b; 37 desde V1c: `imagenesExternas` y `memoriaDeLogos` de la carta; 38 desde el dominio propio: `hostPropioDeLaCarta`; 39 desde NOTAS-1: `cuentaDelProveedor`).
  */
 
 const CLAVES_DE_INFRAESTRUCTURA = [
@@ -46,6 +47,7 @@ const CLAVES_DE_WEB = [
   "casosDeUsoDeComandas",
   "casosDeUsoDeCompras",
   "casosDeUsoDeConfiguracionFiscal",
+  "casosDeUsoDeCuentaCorriente",
   "casosDeUsoDeEmpresas",
   "casosDeUsoDeFacturacion",
   "casosDeUsoDeIdentidad",
@@ -53,6 +55,7 @@ const CLAVES_DE_WEB = [
   "casosDeUsoDeSalon",
   "casosDeUsoDeStock",
   "casosDeUsoDeVentas",
+  "cobroACuenta",
   "configuracionPublicaDeHost",
   "consultasDeCaja",
   "consultasDeCatalogo",
@@ -60,6 +63,7 @@ const CLAVES_DE_WEB = [
   "consultasDeClientes",
   "consultasDeComandas",
   "consultasDeCompras",
+  "consultasDeCuentaCorriente",
   "consultasDeEmpresas",
   "consultasDeFacturacion",
   "consultasDeIdentidad",
@@ -68,6 +72,8 @@ const CLAVES_DE_WEB = [
   "consultasDeSesion",
   "consultasDeStock",
   "consultasDeVentas",
+  "cuentaDelProveedor",
+  "hostPropioDeLaCarta",
   "imagenesExternas",
   "lecturasCompartidas",
   "memoriaDeLogos",
@@ -156,7 +162,7 @@ describe("armarWeb por partes: las mismas claves que antes", () => {
   it("la lista de claves de Web es exactamente la de antes de partir el archivo", () => {
     const web = armarWeb(conexionesQueLanzan());
     expect(Object.keys(web).sort()).toEqual([...CLAVES_DE_WEB].sort());
-    expect(CLAVES_DE_WEB).toHaveLength(37);
+    expect(CLAVES_DE_WEB).toHaveLength(42);
   });
 
   it("cada entrada de Web se pide como función (no hay valores sueltos)", () => {
@@ -168,7 +174,7 @@ describe("armarWeb por partes: las mismas claves que antes", () => {
 });
 
 describe("ninguna clave repetida entre partes", () => {
-  it("las 13 partes y las cinco de infraestructura no comparten ninguna clave", () => {
+  it("las 14 partes y las cinco de infraestructura no comparten ninguna clave", () => {
     const base = baseDeMentira(conexionesQueLanzan());
     const grupos = {
       infraestructura: CLAVES_DE_INFRAESTRUCTURA,
@@ -183,6 +189,7 @@ describe("ninguna clave repetida entre partes", () => {
       salon: Object.keys(armarWebDeSalon(base)),
       clientes: Object.keys(armarWebDeClientes(base)),
       compras: Object.keys(armarWebDeCompras(base)),
+      cuentaCorriente: Object.keys(armarWebDeCuentaCorriente(base)),
       identidad: Object.keys(armarWebDeIdentidad(base)),
       fiscal: Object.keys(armarWebDeFiscal(base)),
     };
@@ -220,6 +227,7 @@ describe("armar no lee nada", () => {
       armarWebDeSalon,
       armarWebDeClientes,
       armarWebDeCompras,
+      armarWebDeCuentaCorriente,
       armarWebDeIdentidad,
       armarWebDeFiscal,
     ];

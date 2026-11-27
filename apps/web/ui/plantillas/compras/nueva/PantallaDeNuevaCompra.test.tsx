@@ -39,11 +39,25 @@ afterEach(async () => {
   await page.viewport(390, 844);
 });
 
+type ProductoDelServidor = Readonly<{
+  productoId: string;
+  nombre: string;
+  unidadBase: string;
+  clase: string;
+  presentaciones: readonly Readonly<{
+    id: string;
+    nombre: string;
+    cantidad: string;
+    dePesoVariable: boolean;
+  }>[];
+}>;
+
 function servidorFalso(
   respuestaDeRegistrar: (
     n: number,
   ) => Promise<Respuesta<{ recepcionId: string; yaExistia: boolean }>> = () =>
     Promise.resolve({ ok: true, dato: { recepcionId: ID_COMPRA, yaExistia: false } }),
+  catalogo: readonly ProductoDelServidor[] = [BIFE],
 ) {
   const pedidos: Record<string, unknown>[] = [];
   const cotizaciones: unknown[] = [];
@@ -54,7 +68,11 @@ function servidorFalso(
     buscarProductos: (texto) =>
       Promise.resolve({
         ok: true,
-        dato: { productos: texto.toLowerCase().includes("bife") ? [BIFE] : [] },
+        dato: {
+          productos: catalogo.filter(
+            (p) => texto.trim() !== "" && p.nombre.toLowerCase().includes(texto.toLowerCase()),
+          ),
+        },
       }),
     buscarProveedores: (texto) =>
       Promise.resolve({
@@ -143,8 +161,10 @@ describe("Nueva compra: lo que se ve y lo que calcula el servidor", () => {
     expect(servidor.cotizaciones.at(-1)).toEqual([
       {
         productoId: ID_PRODUCTO,
+        presentacionId: null,
         unidadDeCompraId: "KILOGRAMO",
         cantidad: "2",
+        pesoReal: null,
         precioPor: "UNIDAD",
         unidadDePrecioId: "KILOGRAMO",
         precio: "11000.00",
@@ -291,8 +311,10 @@ describe("Nueva compra: el envío", () => {
       renglones: [
         {
           productoId: ID_PRODUCTO,
+          presentacionId: null,
           unidadDeCompraId: "KILOGRAMO",
           cantidad: "2",
+          pesoReal: null,
           precioPor: "UNIDAD",
           unidadDePrecioId: "KILOGRAMO",
           precio: "11000.00",
@@ -443,7 +465,11 @@ describe("Nueva compra «Con factura» (Compras PR 7)", () => {
     await userEvent.selectOptions(page.getByLabelText("Tipo"), "FACTURA_A");
     await expect.element(page.getByLabelText("IVA: Bife de chorizo")).toHaveValue("21");
     await userEvent.type(page.getByLabelText("Total según la factura"), "26620");
-    await vi.waitFor(() => expect(cotizadas.length).toBeGreaterThan(0));
+    // Se espera la cotización FINAL (con el total completo), no la primera que aparezca: la lectura espera una pausa al tipear y, con la suite en paralelo, una tecla puede tardar más que esa pausa
+    // y salir una cotización de un número parcial («26»): leer la primera daba «26.00» en vez de «26620.00».
+    await vi.waitFor(() =>
+      expect(cotizadas.at(-1)).toMatchObject({ totalSegunFactura: "26620.00" }),
+    );
     const ultima = cotizadas.at(-1) as {
       tipo: string;
       lineas: Record<string, unknown>[];
@@ -507,5 +533,106 @@ describe("Nueva compra «Con factura» (Compras PR 7)", () => {
     await render(conFactura(conCuit, true).pantalla);
     await cargarLaCompra("2", "11000");
     expect(page.getByLabelText("CUIT").elements()).toHaveLength(0);
+  });
+});
+
+describe("Nueva compra: presentaciones (T0b)", () => {
+  const ID_CAJA = "c1c1c1c1-1111-4222-8333-444444444444";
+  const ID_PIEZA = "c2c2c2c2-1111-4222-8333-444444444444";
+  const GASEOSA = {
+    productoId: "0a0a0a0a-1111-4222-8333-444444444444",
+    nombre: "Gaseosa cola",
+    unidadBase: "UNIDAD",
+    clase: "REVENTA",
+    presentaciones: [
+      { id: ID_CAJA, nombre: "Caja de 12", cantidad: "12.0000", dePesoVariable: false },
+    ],
+  };
+  const CARNE = {
+    ...BIFE,
+    presentaciones: [{ id: ID_PIEZA, nombre: "Pieza", cantidad: "4.0000", dePesoVariable: true }],
+  };
+  const servidorConPresentaciones = () => servidorFalso(undefined, [GASEOSA, CARNE]);
+  async function agregar(nombre: string, busqueda: string) {
+    await userEvent.type(page.getByRole("combobox", { name: "Agregar producto" }), busqueda);
+    await userEvent.click(page.getByRole("option", { name: new RegExp(nombre) }));
+  }
+
+  it("ofrece la presentación en «Cómo se compra» y manda su id; «Precio por» ofrece la presentación con su nombre", async () => {
+    const servidor = servidorConPresentaciones();
+    await render(pantalla(servidor));
+    await elegirElProveedor();
+    await agregar("Gaseosa cola", "gaseosa");
+    const como = page.getByRole("combobox", { name: /Cómo se compra/ });
+    await userEvent.selectOptions(como, `presentacion:${ID_CAJA}`);
+    await userEvent.type(page.getByLabelText("Cantidad"), "2");
+    await userEvent.selectOptions(
+      page.getByRole("combobox", { name: /Precio por/ }),
+      "PRESENTACION",
+    );
+    await userEvent.type(page.getByLabelText("Precio", { exact: true }), "12000");
+    await vi.waitFor(() =>
+      expect(servidor.cotizaciones.at(-1)).toEqual([
+        {
+          productoId: GASEOSA.productoId,
+          presentacionId: ID_CAJA,
+          unidadDeCompraId: "UNIDAD",
+          cantidad: "2",
+          pesoReal: null,
+          precioPor: "PRESENTACION",
+          unidadDePrecioId: null,
+          precio: "12000.00",
+        },
+      ]),
+    );
+    expect(page.getByLabelText(/Peso recibido/).elements()).toHaveLength(0);
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("peso variable: aparece «Peso recibido»; sin peso no se cotiza y el peso viaja como texto", async () => {
+    const servidor = servidorConPresentaciones();
+    await render(pantalla(servidor));
+    await elegirElProveedor();
+    await agregar("Bife de chorizo", "bife");
+    await userEvent.selectOptions(
+      page.getByRole("combobox", { name: /Cómo se compra/ }),
+      `presentacion:${ID_PIEZA}`,
+    );
+    await userEvent.type(page.getByLabelText("Cantidad"), "2");
+    await expect.element(page.getByLabelText(/Peso recibido/)).toBeVisible();
+    expect(servidor.cotizaciones).toHaveLength(0);
+    await userEvent.type(page.getByLabelText(/Peso recibido/), "8,35");
+    await vi.waitFor(() =>
+      expect(servidor.cotizaciones.at(-1)).toMatchObject([
+        { presentacionId: ID_PIEZA, pesoReal: "8.35", unidadDeCompraId: "KILOGRAMO" },
+      ]),
+    );
+  });
+
+  it("volver a una unidad borra la presentación y el campo del peso", async () => {
+    const servidor = servidorConPresentaciones();
+    await render(pantalla(servidor));
+    await elegirElProveedor();
+    await agregar("Bife de chorizo", "bife");
+    const como = page.getByRole("combobox", { name: /Cómo se compra/ });
+    await userEvent.selectOptions(como, `presentacion:${ID_PIEZA}`);
+    await expect.element(page.getByLabelText(/Peso recibido/)).toBeVisible();
+    await userEvent.selectOptions(como, "KILOGRAMO");
+    expect(page.getByLabelText(/Peso recibido/).elements()).toHaveLength(0);
+    await userEvent.type(page.getByLabelText("Cantidad"), "2");
+    await vi.waitFor(() =>
+      expect(servidor.cotizaciones.at(-1)).toMatchObject([
+        { presentacionId: null, pesoReal: null, unidadDeCompraId: "KILOGRAMO" },
+      ]),
+    );
+  });
+
+  it("un producto sin presentaciones ofrece solo unidades: ninguna opción de presentación", async () => {
+    const servidor = servidorFalso();
+    await render(pantalla(servidor));
+    await elegirElProveedor();
+    await agregarElBife();
+    const como = page.getByRole("combobox", { name: /Cómo se compra/ }).element();
+    expect(como.querySelector('option[value^="presentacion:"]')).toBeNull();
   });
 });

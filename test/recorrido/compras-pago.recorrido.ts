@@ -95,6 +95,16 @@ describe.skipIf(base === null)(
          values ($1, $2, 1, 'Bife de chorizo', 'kg', 10, 100, '21', 1000, 210, $3, 1)`,
           [mundo.empresa, comprobanteId, recepcionId],
         );
+        // El cargo de la factura en el libro, como lo deja «Registrar» (L1): sin él el pago falla cerrado (una factura anterior al libro no se paga).
+        const asiento = await c.query<{ id: string }>(
+          `insert into asiento_de_saldo (empresa_id, parte_id, sentido, clase, importe, origen_tipo, origen_id, origen_orden, clave_idempotencia, huella, hecho_en, registrado_por)
+         values ($1, $2, 'A_PAGAR', 'CARGO_DE_FACTURA_DE_COMPRA', 1210, 'compras.factura', $3, 1, $4, $5, now(), $6) returning id`,
+          [mundo.empresa, proveedor, comprobanteId, claveDeCompra(), huellaAlAzar(), persona],
+        );
+        await c.query(
+          `insert into distribucion_de_asiento (empresa_id, asiento_id, sucursal_id, importe) values ($1, $2, $3, 1210)`,
+          [mundo.empresa, asiento.rows[0]?.id, sucursal],
+        );
         await c.query("commit");
       } catch (error) {
         await c.query("rollback");

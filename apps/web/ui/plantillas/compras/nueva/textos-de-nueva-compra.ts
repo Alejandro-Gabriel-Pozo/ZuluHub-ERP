@@ -24,6 +24,8 @@ export type TextosDeNuevaCompra = Readonly<{
   agregarProducto: string;
   comoSeCompra: string;
   cantidad: string;
+  /** «Peso recibido»: el peso real de una presentación de peso variable (texto de la maqueta `compra.html`, aprobado el 09/11/2026). */
+  pesoRecibido: string;
   precioPor: string;
   precio: string;
   entraATuStock: string;
@@ -38,6 +40,8 @@ export type TextosDeNuevaCompra = Readonly<{
   quitar: string;
   sinElegir: string;
   comprarYRecibir: string;
+  /** «Recibir»: el botón de la recepción separada (mismo componente, sin precio). */
+  recibir: string;
   enviando: string;
   reintentar: string;
   sinResultados: string;
@@ -78,6 +82,7 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     agregarProducto: texto({}, "catalogo.seccion.agregar_producto"),
     comoSeCompra: texto({}, "compras.compra.como_se_compra"),
     cantidad: texto({}, "compras.compra.cantidad"),
+    pesoRecibido: texto({}, "compras.recepcion.peso_recibido"),
     precioPor: texto({}, "compras.compra.precio_por"),
     precio: texto({}, "fiscal.pantalla.emitir_precio"),
     entraATuStock: texto({}, "compras.compra.entra_a_tu_stock"),
@@ -92,6 +97,7 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     quitar: texto({}, "catalogo.accion.quitar"),
     sinElegir: texto({}, "catalogo.dato.sin_elegir"),
     comprarYRecibir: texto({}, "compras.compra.comprar_y_recibir"),
+    recibir: texto({}, "compras.recepcion.recibir"),
     enviando: texto({}, "conexion.enviando"),
     reintentar: texto({}, "estado.reintentar"),
     sinResultados: texto({}, "catalogo.lista.sin_resultados"),

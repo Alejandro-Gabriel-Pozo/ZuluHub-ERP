@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0922",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "CONFIRMADA",
+  "decision": "La biblioteca write-excel-file 4.1.1 se suma a la raíz, aislada en el adaptador xlsx con su regla de arquitectura.",
+  "que_cambia": "Es la única dependencia nueva. Revertir: revertir el commit de la dependencia y el adaptador.",
+  "donde": "Aprobada por el dueño el 25/11/2026 por nombre y versión; condiciones del orquestador del 25/11/2026; package.json, reglas-de-xlsx.cjs"
+}

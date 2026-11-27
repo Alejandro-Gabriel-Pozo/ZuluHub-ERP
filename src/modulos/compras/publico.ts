@@ -5,9 +5,31 @@
 export { DECLARACIONES as DECLARACIONES_DE_COMPRAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
+export {
+  CLASE_DE_LA_NOTA_DE_CREDITO,
+  CLASE_DE_LA_NOTA_DE_DEBITO,
+  CLASE_DEL_CARGO_DE_FACTURA,
+  CLASE_DEL_PAGO,
+  DETALLE_DE_LA_ANULACION_DE_LA_NOTA,
+  DETALLE_DE_LA_ANULACION_DEL_CARGO,
+  DETALLE_DE_LA_ANULACION_DEL_PAGO,
+  ORIGEN_DE_LA_NOTA,
+  ORIGEN_DEL_CARGO_DE_FACTURA,
+  ORIGEN_DEL_PAGO,
+  claveDeLaAnulacionDeLaNota,
+  claveDeLaAnulacionDelCargo,
+  claveDeLaAnulacionDelPago,
+  claveDeLaImputacionDeLaNota,
+  claveDeLaImputacionDelPago,
+  claveDeLaNota,
+  claveDelCargo,
+  claveDelPago,
+} from "./dominio/cargo-de-factura";
 export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/consultas";
 export type {
   CodigoDeEgresoDeCaja,
+  CodigoDelLibroDeProveedores,
+  LibroDeProveedores,
   DependenciasDeCompras,
   DependenciasDeConsultasDeCompras,
   EgresoDeCaja,
@@ -44,6 +66,33 @@ export {
   type PaginaDeCompras,
 } from "./casos-de-uso/lectura";
 export type {
+  EstadoDeFacturaSeparada,
+  EstadoDeRecepcionSeparada,
+} from "./dominio/recepcion-separada";
+export {
+  CAUSAS_DE_CORRECCION,
+  MAXIMO_DE_LA_NOTA_DE_CORRECCION,
+  type CausaDeCorreccion,
+} from "./dominio/correccion-de-lo-recibido";
+export { FORMA_DEL_CURSOR_SEPARADO as FORMA_DEL_CURSOR_DE_RECEPCIONES } from "./casos-de-uso/lectura-separada";
+export type {
+  FacturaSeparadaDeLista,
+  FichaDeRecepcionSeparada,
+  PaginaDe as PaginaDeSeparadas,
+  RecepcionSeparadaDeLista,
+} from "./casos-de-uso/lectura-separada";
+export type {
+  ConciliacionDeFactura,
+  FichaDeFacturaSeparada,
+  LineaDeFacturaSeparada,
+  RecibidoPorSucursal,
+} from "./casos-de-uso/lectura-de-factura";
+export type {
+  LineaFacturadaParaConciliar,
+  LineaRecibidaParaConciliar,
+  PropuestaDeConciliacion,
+} from "./casos-de-uso/proponer-conciliacion";
+export type {
   EntradaDeComprobanteDeFicha,
   EntradaDePuntoDeVenta,
   EntradaDeResolverPedido,
@@ -57,3 +106,29 @@ export {
   type RepositoriosDeCompras,
 } from "./persistencia/repositorios-de-compras";
 export { ERRORES_DE_COMPRAS_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";
+export {
+  armarCabecera,
+  armarDetalle,
+  armarResumen,
+  COLUMNAS_DE_CABECERA,
+  COLUMNAS_DE_DETALLE,
+  COLUMNAS_DE_RESUMEN,
+  type ColumnaDeCabecera,
+  type ColumnaDeDetalle,
+  type ColumnaDeResumen,
+} from "./dominio/exportacion/armar-hojas";
+export {
+  armarPagos,
+  COLUMNAS_DE_PAGOS,
+  type ColumnaDePagos,
+} from "./dominio/exportacion/armar-hoja-de-pagos";
+export type { Celda, HojaDeExportacion } from "./dominio/exportacion/celdas";
+export type { CompraParaExportar, RotulosDeExportacion } from "./dominio/exportacion/datos";
+export {
+  FILAS_MAXIMAS_DE_LA_EXPORTACION,
+  periodoDeLaExportacionValido,
+} from "./dominio/exportacion/limites";
+export type {
+  EntradaDeExportarCompras,
+  SalidaDeExportarCompras,
+} from "./casos-de-uso/exportar-compras";

@@ -9,6 +9,7 @@ import { PERMISOS_DE_CIERRE } from "./permisos-de-cierre";
 import { PERMISOS_DE_CLIENTES } from "./permisos-de-clientes";
 import { PERMISOS_DE_COMANDAS } from "./permisos-de-comandas";
 import { PERMISOS_DE_COMPRAS } from "./permisos-de-compras";
+import { PERMISOS_DE_CUENTA_CORRIENTE } from "./permisos-de-cuenta_corriente";
 import { PERMISOS_DE_FACTURACION } from "./permisos-de-facturacion";
 import { PERMISOS_DE_PRODUCCION } from "./permisos-de-produccion";
 import { PERMISOS_DE_SALON } from "./permisos-de-salon";
@@ -38,6 +39,7 @@ const PARTES = {
   salon: PERMISOS_DE_SALON,
   clientes: PERMISOS_DE_CLIENTES,
   compras: PERMISOS_DE_COMPRAS,
+  cuenta_corriente: PERMISOS_DE_CUENTA_CORRIENTE,
   produccion: PERMISOS_DE_PRODUCCION,
 } as const satisfies Record<ClaveModulo, Partes[string]>;
 
@@ -78,7 +80,7 @@ describe("ninguna acción está en dos partes", () => {
     expect(enMasDeUnaParte(PARTES).size).toBe(0);
     const suma = Object.values(PARTES).reduce((n, filas) => n + Object.keys(filas).length, 0);
     expect(suma).toBe(Object.keys(PERMISOS_DE_EMPRESA).length);
-    expect(suma).toBe(171);
+    expect(suma).toBe(189);
   });
 
   it("violación inyectada: una acción en dos partes se detecta (la segunda pisaría a la primera)", () => {

@@ -94,7 +94,7 @@ const cabecera = (m: Movimiento): CabeceraDeMovimiento => ({
   registradoPor: m.registradoPor,
 });
 
-const enAlcance = (alcance: AlcanceDeSucursales, sucursal: string): boolean =>
+export const enAlcance = (alcance: AlcanceDeSucursales, sucursal: string): boolean =>
   alcance === "TODAS" || (alcance as readonly string[]).includes(sucursal);
 
 /**
@@ -148,7 +148,6 @@ async function fichaVisible(
 const FORMA_DE_ORIGEN = /^[A-Z][A-Z_]{1,39}$/;
 
 const PAGINA_VACIA: PaginaDeLibro = { renglones: [], siguiente: null };
-
 function cursorDeLibro(c: CursorDeLibro | undefined): c is CursorDeLibro | undefined {
   return (
     c === undefined ||

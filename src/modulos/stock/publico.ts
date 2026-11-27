@@ -24,6 +24,8 @@ export type {
   SalidaDeEditarDeposito,
   SalidaDeCambiarActivoDeDeposito,
 } from "./casos-de-uso/depositos";
+export { CONFIRMACION_DE_CUENTAS_ABIERTAS } from "./casos-de-uso/articulos";
+export type { CuentasAbiertasConElProducto } from "./casos-de-uso/contrato";
 export type {
   EntradaDeControlarArticulo,
   EntradaDeDejarDeControlar,
@@ -53,6 +55,7 @@ export type {
   SalidaDeCancelarConteo,
   SalidaDeRegistrarConteo,
 } from "./casos-de-uso/conteos";
+export { MOTIVOS_DE_DIFERENCIA, type MotivoDeDiferencia } from "./dominio/motivos-de-diferencia";
 export type {
   EntradaDeAplicarConteo,
   MarcaPedida,
@@ -84,13 +87,14 @@ export { anularPorEspejoEnTx } from "./casos-de-uso/espejo-de-movimiento";
 export { evaluarFaltantes } from "./casos-de-uso/faltantes";
 export { productosParaExplotar } from "./casos-de-uso/lectura-de-venta";
 export { CONTROL_DE_NEGATIVO } from "./casos-de-uso/movimiento-en-tx";
-export { leerCantidad, leerDetalle } from "./casos-de-uso/movimientos-comun";
-export { fechaValida as fechaCivilValida } from "./casos-de-uso/corregir-lote";
+export { leerCantidad, leerDetalle, MAXIMO_DE_RENGLONES } from "./casos-de-uso/movimientos-comun";
+export { fechaValida as fechaCivilValida } from "./dominio/disponibilidad";
 export { explotarConsumo, type ProductoParaExplotar } from "./dominio/explosion";
-export { ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
+export { CLASES_DE_MOVIMIENTO, ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
 export {
   MOTIVO_CONSUMO_DE_TRANSFORMACION,
   MOTIVO_PRODUCTO_DE_TRANSFORMACION,
+  motivosManualesDe,
 } from "./dominio/motivos";
 export type { LoteDeEntrada } from "./casos-de-uso/lotes-del-libro";
 export type { ControlDeStock } from "./casos-de-uso/errores";
@@ -101,6 +105,7 @@ export {
   crearAjusteDeCostoPorOrigen,
   crearArticulosDeVenta,
   crearConsumoDeStock,
+  crearCorreccionDeRecepcion,
   crearDepositoDeVenta,
   crearEntradaPorOrigen,
   crearExistenciaParaMostrar,
@@ -110,6 +115,7 @@ export {
   type AjusteDeCostoPorOrigen,
   type ArticulosDeVenta,
   type ConsumoDeStock,
+  type CorreccionDeRecepcion,
   type DepositoDeVenta,
   type DependenciasDePuertosDeStock,
   type EntradaPorOrigen,
@@ -123,6 +129,7 @@ export type {
   AvisoDeSalidaPorVenta,
   ControlDeUnProducto,
   EntradaDeAnulacionPorOrigen,
+  EntradaDeCorreccionDeRecepcion,
   EntradaDeEntradaPorOrigen,
   EntradaDeReversionPorOrigen,
   EntradaDeSalidaPorOrigen,
@@ -135,6 +142,7 @@ export type {
   RenglonDeEntradaPorOrigen,
   RenglonDeVenta,
   SalidaDeAnulacionPorOrigen,
+  SalidaDeCorreccionDeRecepcion,
   SalidaDeEntradaPorOrigen,
   SalidaDeReversionPorOrigen,
   SalidaDeSalidaPorOrigen,
@@ -143,6 +151,11 @@ export type {
 } from "./casos-de-uso/tipos-de-puertos";
 export type { ComponenteDeLaReceta, ComposicionDeProducto } from "./consultas/composiciones";
 export type { DepositoDeLista } from "./consultas/depositos";
+export {
+  MAXIMO_DE_DIAS_POR_VENCER,
+  type LoteQueVence,
+  type LotesDeUnArticulo,
+} from "./consultas/lotes";
 export type {
   CursorDeExistencias,
   EntradaDeExistencias,
@@ -157,6 +170,13 @@ export type {
   PaginaDeLibro,
   RenglonDeFicha,
 } from "./consultas/libro";
+export type {
+  ArticuloControlado,
+  CursorDeMovimientosDeDeposito,
+  EntradaDeMovimientosDeDeposito,
+  MovimientoDeDeposito,
+  PaginaDeMovimientosDeDeposito,
+} from "./consultas/libro-del-deposito";
 export type {
   CandidatoDeConteo,
   ConteoDeLista,
@@ -174,7 +194,13 @@ export type {
   ExistenciaValorizada,
   UltimoCostoDeCompra,
 } from "./consultas/costos";
-export type { FichaDeReceta, LineaDeFicha, VersionDeReceta } from "./consultas/recetas";
+export type {
+  FichaDeCocina,
+  FichaDeReceta,
+  LineaDeCocina,
+  LineaDeFicha,
+  VersionDeReceta,
+} from "./consultas/recetas";
 export type {
   EntradaDeIngredientes,
   EntradaDeListarRecetas,

@@ -46,6 +46,18 @@ export const FILAS_DE_CUENTA = [
   },
   {
     tipo: "pantalla",
+    clave: "roles",
+    area: "cuenta",
+    grupo: "empresa",
+    modulo: "administracion",
+    accion: "roles.ver",
+    perilla: null,
+    href: RUTAS_DE_CUENTA.roles,
+    etiqueta: "roles.lista.titulo",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "contacto",
     area: "cuenta",
     grupo: "sucursal",

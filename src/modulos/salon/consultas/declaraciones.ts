@@ -5,4 +5,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarMesas: { accion: "mesas.ver" },
   mapaDeMesas: { accion: "mesas.ver" },
   fichaDeMesa: { accion: "mesas.ver" },
+  numerosDeMesaDeCuentas: { accion: "mesas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

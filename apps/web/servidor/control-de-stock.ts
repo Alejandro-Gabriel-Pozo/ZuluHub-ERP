@@ -3,6 +3,8 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   fijarElControlDeStock,
   verElControlDeStock,
+  verLaExistenciaPropia,
+  type ExistenciaPropia,
   type DependenciasDeControlDeStockWeb,
   type ResultadoDeControlDeStock,
 } from "../../../src/composicion/control-de-stock-web";
@@ -30,11 +32,24 @@ export function cargarElControlDeStock(
   return verElControlDeStock(dependencias, contexto, productoId);
 }
 
-/** Fija (no alterna) el control de stock del producto; repetirlo no duplica nada. */
+/** Fija (no alterna) el control de stock del producto; repetirlo no duplica nada. Al encender un plato con cuentas abiertas pide confirmar (`confirmarCuentasAbiertas`, DEC-PRO-004). */
 export function fijarElControl(
   contexto: ContextoOperativo,
   productoId: string,
   controlado: boolean,
+  confirmarCuentasAbiertas = false,
 ): Promise<Respuesta<ResultadoDeControlDeStock>> {
-  return fijarElControlDeStock(dependencias, contexto, { productoId, controlado });
+  return fijarElControlDeStock(dependencias, contexto, {
+    productoId,
+    controlado,
+    ...(confirmarCuentasAbiertas ? { confirmarCuentasAbiertas } : {}),
+  });
+}
+
+/** La existencia propia de un producto con stock propio, o `null` si no se pudo saber (la franja no muestra número). Solo lectura. */
+export function cargarLaExistenciaPropia(
+  contexto: ContextoOperativo,
+  entrada: Readonly<{ productoId: string; nombre: string; unidadId: string }>,
+): Promise<Respuesta<ExistenciaPropia | null>> {
+  return verLaExistenciaPropia(dependencias, contexto, entrada);
 }

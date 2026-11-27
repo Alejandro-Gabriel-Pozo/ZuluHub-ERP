@@ -23,6 +23,13 @@ describe("traducirErrorDeCompras", () => {
     expect(traducirErrorDeCompras(error)).toEqual({ codigo: "COMPRAS_REMITO_REPETIDO" });
   });
 
+  it("anular una nota ya descontada por un pago sale con su texto propio (el del dueño, 26/11/2026), no como el genérico", () => {
+    expect(traducirErrorDeCompras("NOTA_DE_CREDITO_CON_PAGO")).toEqual({
+      codigo: "COMPRAS_NOTA_CON_PAGO",
+    });
+    expect(traducirErrorDeCompras("NOTA_DE_CREDITO_NO_ENCONTRADA")).toEqual(GENERICO);
+  });
+
   it("una factura ya cargada sale como COMPRAS_FACTURA_REPETIDA y no lleva el id", () => {
     expect(
       traducirErrorDeCompras({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: ID }),
@@ -34,6 +41,10 @@ describe("traducirErrorDeCompras", () => {
     "CORRECCION_DE_CANTIDAD_NO_DISPONIBLE",
     "CORRECCION_DESACTUALIZADA",
     "CORRECCION_SIN_CAMBIOS_PEDIDOS",
+    "COSTO_SIN_FACTURA_UNICA",
+    "COSTO_YA_TOMADO",
+    "LIBRO_DE_SALDOS_RECHAZADO",
+    "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO",
     "CUIT_REQUERIDO_EN_PRIMERA_FACTURA",
     "CONDICION_DE_IVA_NO_DISPONIBLE",
     "SIN_SESION_ABIERTA",
@@ -108,9 +119,12 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "CONCILIACION_YA_ANULADA",
     "CONDICION_DE_IVA_NO_DISPONIBLE",
     "CONDICION_INVALIDA",
+    "CAUSA_DE_CORRECCION_INVALIDA",
     "CONTROL_INVALIDO",
+    "CORRECCION_BAJO_LO_CONCILIADO",
     "CORRECCION_DE_CANTIDAD_NO_DISPONIBLE",
     "CORRECCION_DESACTUALIZADA",
+    "CORRECCION_NO_SOPORTADA_PARA_LA_LINEA",
     "CORRECCION_SIN_CAMBIOS_PEDIDOS",
     "CUIT_INVALIDO",
     "CUIT_REQUERIDO_EN_PRIMERA_FACTURA",
@@ -126,6 +140,7 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "DIFERENCIA_YA_RESUELTA",
     "EGRESO_DE_CAJA_NO_ANULABLE",
     "EGRESO_DE_CAJA_RECHAZADO",
+    "EXPORTACION_DEMASIADO_GRANDE",
     "FACTURA_NO_CORRESPONDE_AL_NIVEL",
     "FACTURA_REQUERIDA",
     "FECHA_INVALIDA",
@@ -134,6 +149,7 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "LINEAS_REQUERIDAS",
     "LINEA_DE_ORDEN_DE_OTRO_PRODUCTO",
     "LINEA_DE_ORDEN_RETIRADA",
+    "LINEA_NO_CONCILIADA_ENTERA",
     "LINEA_NO_ENCONTRADA",
     "LINEA_REPETIDA",
     "LINEA_SIN_PRECIO",
@@ -142,6 +158,7 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "MOTIVO_DE_DEVOLUCION_INVALIDO",
     "NIVEL_INVALIDO",
     "NOTA_DE_CREDITO_DE_FACTURA_ANULADA",
+    "NOTA_DE_CORRECCION_INVALIDA",
     "NOTA_DE_CREDITO_DE_OTRO_PROVEEDOR",
     "NOTA_DE_CREDITO_EXCEDE_LA_FACTURA",
     "NOTA_DE_CREDITO_NO_ENCONTRADA",
@@ -173,6 +190,7 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "PUNTO_DE_VENTA_INVALIDO",
     "RECEPCION_EXCEDE_LA_ORDEN",
     "RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR",
+    "RECEPCION_NO_CONFIRMADA",
     "RECEPCION_NO_ENCONTRADA",
     "RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL",
     "RECEPCION_YA_ANULADA",

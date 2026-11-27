@@ -75,6 +75,7 @@ type Constancia = Readonly<{
     | "cuenta_de_cobro"
     | "sesion_caja"
     | "movimiento_caja"
+    | "movimiento_de_dinero"
     | "correccion_de_medio"
     | "declaracion_de_total"
     | "conforme_de_jornada";

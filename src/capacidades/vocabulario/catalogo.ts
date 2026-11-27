@@ -29,15 +29,18 @@ import { TEXTOS_DE_CIERRE } from "./catalogo-cierre";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
+import { TEXTOS_DE_COMPRAS_COSTO } from "./catalogo-compras-costo";
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
 import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
+import { TEXTOS_DE_CUENTA_CORRIENTE } from "./catalogo-cuenta_corriente";
 import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
+import { TEXTOS_DE_ADMINISTRACION } from "./catalogo-administracion";
 import { TEXTOS_DE_USUARIOS } from "./catalogo-usuarios";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
@@ -65,25 +68,26 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DEL_NUCLEO,
   ...TEXTOS_DE_CARTA_PUBLICA,
   ...TEXTOS_DE_SESION_Y_EMPRESA,
-  // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
   ...TEXTOS_DE_FISCAL,
   ...TEXTOS_DE_FISCAL_PANTALLAS,
   ...TEXTOS_DE_FISCAL_CONFIGURACION,
   ...TEXTOS_DE_FISCAL_EMITIR,
   ...TEXTOS_DE_FISCAL_IMPRIMIR,
-  // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
   ...TEXTOS_DE_CATALOGO,
   ...TEXTOS_DE_CAJA,
   ...TEXTOS_DE_CIERRE,
   ...TEXTOS_DE_VENTAS,
   ...TEXTOS_DE_STOCK,
   ...TEXTOS_DE_PRODUCCION,
+  ...TEXTOS_DE_CUENTA_CORRIENTE,
   ...TEXTOS_DE_LOTES,
   ...TEXTOS_DE_SALON,
   ...TEXTOS_DE_COMANDAS,
   ...TEXTOS_DE_CLIENTES,
   ...TEXTOS_DE_COMPRAS,
+  ...TEXTOS_DE_COMPRAS_COSTO,
   ...TEXTOS_DE_USUARIOS,
+  ...TEXTOS_DE_ADMINISTRACION,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

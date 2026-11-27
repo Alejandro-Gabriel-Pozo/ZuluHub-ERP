@@ -138,9 +138,9 @@ async function ticketsDeJornada(
   limite: number | null,
 ): Promise<TicketDeJornada[]> {
   const filas = await sql<Fila>`
-    select t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
+    select t.id, t.cuenta_id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
            (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado,
-           (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en
+           (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en, t.cargado_a_parte_id
       from ticket t
       join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
       left join cobranza_de_ticket c on c.empresa_id = t.empresa_id and c.ticket_id = t.id
@@ -171,6 +171,7 @@ async function ticketsDeJornada(
   }
   return filas.rows.map((f) => ({
     ticketId: texto(f["id"]),
+    cuentaId: texto(f["cuenta_id"]),
     numero: numero(f["numero"]),
     estado: f["estado"] as EstadoDeTicket,
     ejemplarVigente: numero(f["ejemplar_vigente"]),
@@ -183,6 +184,7 @@ async function ticketsDeJornada(
     cobros: f["cobranza_id"] === null ? [] : (cobros.get(texto(f["cobranza_id"])) ?? []),
     emitidoPor: texto(f["emitido_por"]),
     emitidoEn: fecha(f["emitido_en"]),
+    cargadoAParteId: f["cargado_a_parte_id"] === null ? null : texto(f["cargado_a_parte_id"]),
   }));
 }
 
@@ -355,8 +357,9 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
                co.creada_en as cobrado_en
           from ticket t
           join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
-          join cobranza_de_ticket co on co.empresa_id = t.empresa_id and co.ticket_id = t.id
-         where t.empresa_id = ${empresa} and t.estado = 'COBRADO'
+          left join cobranza_de_ticket co on co.empresa_id = t.empresa_id and co.ticket_id = t.id
+         where t.empresa_id = ${empresa}
+           and (t.estado = 'COBRADO' or (${filtro.conEmitidos}::boolean and t.estado = 'EMITIDO'))
            and (${sucursales}::uuid[] is null or t.sucursal_id = any(${sucursales}::uuid[]))
            and (${filtro.fechaDesde}::date is null or t.fecha_negocio >= ${filtro.fechaDesde}::date)
            and (${filtro.fechaHasta}::date is null or t.fecha_negocio <= ${filtro.fechaHasta}::date)
@@ -371,7 +374,7 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
         fechaNegocio: texto(f["fecha_negocio"]),
         ejemplarVigente: numero(f["ejemplar_vigente"]),
         total: texto(f["total"]),
-        cobradoEn: fecha(f["cobrado_en"]),
+        cobradoEn: f["cobrado_en"] === null ? null : fecha(f["cobrado_en"]),
       }));
     },
   };

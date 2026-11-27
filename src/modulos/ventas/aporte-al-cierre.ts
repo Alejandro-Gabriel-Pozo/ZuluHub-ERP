@@ -16,9 +16,9 @@ import type { LecturasDeVentas } from "./persistencia/repositorio-de-lecturas";
 
 /**
  * LO QUE VENTAS REVISA AL CIERRE DEL DÍA (E4 §3.15): implementa `AporteAlCierreDelDia` de `cierre`, que la composición registra. Solo lee y
- * reporta; el reconocimiento (quién y por qué) lo guarda `cierre`. Seis controles, por jornada `(sucursal, fecha de negocio)`:
+ * reporta; el reconocimiento (quién y por qué) lo guarda `cierre`. Siete controles, por jornada `(sucursal, fecha de negocio)`:
  * `cuentas_abiertas` BLOQUEA (una cuenta abierta no se puede cerrar ni cobrar mientras se audita; la salida es anularla), `tickets_por_cobrar`
- * y `cortesias` piden reconocimiento, y `anulaciones`, `correcciones` y `pendientes_de_facturar` informan. Determinista: la misma jornada da
+ * y `cortesias` piden reconocimiento, y `anulaciones`, `correcciones`, `pendientes_de_facturar` y `tickets_a_cuenta_corriente` (los cargados a la cuenta de un cliente, CC-2) informan. Determinista: la misma jornada da
  * la misma huella. `congelarEnTx` no escribe (tickets, anulaciones y correcciones ya son inmutables y con quién y cuándo). Si una lectura
  * falla, `APORTE_NO_DISPONIBLE`: el día no se cierra con un dato que no se pudo leer.
  */
@@ -73,8 +73,17 @@ async function leerControles(
       "tickets_por_cobrar",
       "RECONOCIBLE",
       "ventas.ticket",
+      // Un ticket cargado a la cuenta corriente de un cliente (CC-2) es una venta a crédito, no un olvido de cobrar: no se reconoce todos los días; lo cuenta el control de abajo.
       tickets
-        .filter((t) => t.estado === "EMITIDO")
+        .filter((t) => t.estado === "EMITIDO" && t.cargadoAParteId === null)
+        .map((t) => ({ numero: t.numero, id: t.ticketId, datos: t.totalVigente })),
+    ),
+    control(
+      "tickets_a_cuenta_corriente",
+      "INFORMA",
+      "ventas.ticket",
+      tickets
+        .filter((t) => t.estado === "EMITIDO" && t.cargadoAParteId !== null)
         .map((t) => ({ numero: t.numero, id: t.ticketId, datos: t.totalVigente })),
     ),
     control(

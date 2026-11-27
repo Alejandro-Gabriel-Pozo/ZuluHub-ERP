@@ -22,13 +22,14 @@ export type EntradaDeCambiarEstado = Readonly<{
   versionEsperada: number;
 }>;
 
-type Forma<T> = { ok: true; valor: T } | { ok: false };
+export type Forma<T> = { ok: true; valor: T } | { ok: false };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
+export const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
-const esUuid = (valor: unknown): valor is string => typeof valor === "string" && UUID.test(valor);
+export const esUuid = (valor: unknown): valor is string =>
+  typeof valor === "string" && UUID.test(valor);
 const esVersion = (valor: unknown): valor is number =>
   Number.isSafeInteger(valor) && (valor as number) >= 1;
 

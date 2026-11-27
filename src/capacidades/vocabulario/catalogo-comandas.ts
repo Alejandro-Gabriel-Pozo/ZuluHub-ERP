@@ -67,6 +67,9 @@ export const TEXTOS_DE_COMANDAS = {
   "comandas.texto.anulacion_anulo": { porDefecto: "Anuló" },
   "comandas.texto.anulacion_quedan": { porDefecto: "Quedan" },
 
+  // SAL-G (maqueta de notas libres aprobada por el dueño el 25/11/2026; DEC-SAL-006): el rótulo del campo de la nota de un plato, en la hoja de producto y en la ficha de la mesa (sin ayuda del largo).
+  "comandas.texto.nota_nota_para_la_cocina": { porDefecto: "Nota para la cocina" },
+
   // salida.html:256-260: grupo «Orden de salida».
   "comandas.texto.salida_sale_ahora": { porDefecto: "Sale ahora" },
   "comandas.texto.salida_sale_despues": { porDefecto: "Sale después" },
@@ -192,4 +195,21 @@ export const TEXTOS_DE_COMANDAS = {
     fuente: FUENTE_DE_IMPRIMIR,
   },
   "comandas.texto.imprimir_configurar_impresoras": { porDefecto: "Configurar impresoras" },
+  // La pantalla de la cocina (SAL-H): el nombre «Comandas» lo aprobó el dueño (DDD:125) y la maqueta, el 25/11/2026.
+  "comandas.texto.cocina_comandas": {
+    porDefecto: "Comandas",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/salon/modelo-de-la-cocina.ts",
+        nombre: "armarLaCocina",
+      },
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/navegacion/menu.ts",
+        nombre: "FILAS_DEL_MENU",
+      },
+    ],
+    fuente: { decision: "DEC-1042" },
+  },
 } as const;

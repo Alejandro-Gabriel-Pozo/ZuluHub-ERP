@@ -189,6 +189,7 @@ const FICHA: FichaDeCompraParaLaPantalla = {
     fecha: "2026-10-31",
     vencimientoDePago: "2026-11-30",
     totalSegunLaFactura: pesos("29225040.00"),
+    netoAPagar: pesos("29225040.00"),
   },
   pagos: [],
 };
@@ -239,5 +240,47 @@ describe("PantallaDeFichaDeCompra", () => {
     await expect.element(page.getByText("bea@ejemplo.com · 02/11/2026 12:00")).toBeVisible();
     await expect.element(page.getByText("Sin remito")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+});
+
+describe("PantallaDeListaDeCompras: el enlace «Exportar»", () => {
+  const conPeriodo = { filtros: { estado: "TODAS", desde: "2026-07-01", hasta: "2026-09-30" } };
+  const exportar = () => document.querySelector<HTMLAnchorElement>('a[href^="/compras/exportar"]');
+
+  it("con permiso y el período completo aplicado baja el archivo de ESE período; sin violaciones de accesibilidad", async () => {
+    await render(
+      <PantallaDeListaDeCompras
+        lista={lista([fila(1)], conPeriodo)}
+        textos={textosDeCompras()}
+        puedeExportar
+      />,
+    );
+    expect(exportar()?.textContent).toBe("Exportar");
+    expect(exportar()?.getAttribute("href")).toBe(
+      "/compras/exportar?desde=2026-07-01&hasta=2026-09-30",
+    );
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("sin permiso no hay enlace", async () => {
+    await render(
+      <PantallaDeListaDeCompras lista={lista([fila(1)], conPeriodo)} textos={textosDeCompras()} />,
+    );
+    expect(exportar()).toBeNull();
+  });
+
+  it.each([
+    ["sin ninguna fecha", { estado: "TODAS", desde: null, hasta: null }],
+    ["solo con «Desde»", { estado: "TODAS", desde: "2026-07-01", hasta: null }],
+    ["solo con «Hasta»", { estado: "TODAS", desde: null, hasta: "2026-09-30" }],
+  ])("con permiso pero %s no hay enlace (no se supone un período)", async (_nombre, filtros) => {
+    await render(
+      <PantallaDeListaDeCompras
+        lista={lista([fila(1)], { filtros })}
+        textos={textosDeCompras()}
+        puedeExportar
+      />,
+    );
+    expect(exportar()).toBeNull();
   });
 });

@@ -143,12 +143,16 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     fecha: string | null;
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
+    /** Lo que se paga: el total menos lo que acreditan sus notas de crédito (lo calcula el servidor). */
+    netoAPagar: Importe;
   }> | null;
   /** Los pagos de la factura, del más viejo al más nuevo (a lo sumo uno vigente). Vacía sin factura o sin pagos. */
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios (sus líneas, en `medios`). */
     medio: string;
+    medios: readonly Readonly<{ medio: string; importe: Importe }>[];
     importe: Importe;
     estado: "VIGENTE" | "ANULADO";
     /** El correo de quien lo declaró; `null` si no se puede mostrar. */
@@ -268,12 +272,17 @@ export function fichaDeLaCompra(
               fecha: f.comprobante.fecha,
               vencimientoDePago: f.comprobante.vencimientoDePago,
               totalSegunLaFactura: { moneda: MONEDA, monto: f.comprobante.totalSegunFactura },
+              netoAPagar: { moneda: MONEDA, monto: f.comprobante.netoAPagar },
             }
           : null,
       pagos: f.pagos.map((p) => ({
         id: p.id,
         fechaDePago: p.fechaDePago,
         medio: p.medio,
+        medios: p.medios.map((m) => ({
+          medio: m.medio,
+          importe: { moneda: MONEDA, monto: m.importe },
+        })),
         importe: { moneda: MONEDA, monto: p.importe },
         estado: p.estado === "ANULADO" ? "ANULADO" : "VIGENTE",
         declaradoPor: correoDe(p.registradoPor),

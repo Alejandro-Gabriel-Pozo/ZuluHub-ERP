@@ -8,6 +8,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarProductos: { accion: "productos.ver" },
   productosParaVender: { accion: "productos.ver" },
   verProducto: { accion: "productos.ver" },
+  verPresentacionesDelProducto: { accion: "productos.ver" },
   preciosDelProducto: { accion: "productos.ver" },
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },
@@ -22,4 +23,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   verClasificacionDelProducto: { accion: "productos.ver" },
   verCartaPublica: { accion: "vidrieras.ver" },
   productosOcultos: { accion: "vidrieras.ver" },
+  listarCuentasDeImagen: { accion: "vidrieras.administrar_cuentas_de_imagen" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

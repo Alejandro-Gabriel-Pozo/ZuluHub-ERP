@@ -46,7 +46,10 @@ const cerrada: OrdenDeLaFicha = {
   costo: { costoUnitario: "2833.333333", costoEstado: "DEFINITIVO" },
 };
 const ok: AccionDeFormulario = () => Promise.resolve({ error: null });
-const PUEDE = { cancelar: true, anular: true };
+const PUEDE: { cancelar: boolean; anular: boolean; cerrar?: boolean } = {
+  cancelar: true,
+  anular: true,
+};
 
 const pantalla = (
   orden: OrdenDeLaFicha,
@@ -161,6 +164,21 @@ describe("ficha de una orden de producción", () => {
     expect(t).not.toContain("La receta cambió");
     await expect.element(page.getByRole("button", { name: "Anular la orden" })).toBeVisible();
     expect(page.getByRole("button", { name: "Cancelar la orden" }).elements()).toHaveLength(0);
+  });
+
+  it("«Cerrar con lo real» es un enlace a la pantalla de cierre, tocable y accesible, en una orden abierta y si se ofrece; una cerrada o sin la oferta, no", async () => {
+    await render(pantalla(abierta, { ...PUEDE, cerrar: true }));
+    const cerrar = page.getByRole("link", { name: "Cerrar con lo real" });
+    await expect
+      .element(cerrar)
+      .toHaveAttribute("href", `/catalogo/produccion/${abierta.id}/cerrar`);
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
+  it("sin la oferta de cerrar (o en una orden cerrada) no hay enlace «Cerrar con lo real»", async () => {
+    await render(pantalla(abierta));
+    expect(page.getByRole("link", { name: "Cerrar con lo real" }).elements()).toHaveLength(0);
   });
 
   it("sin permiso (el modelo no ofrece la acción) no hay botón", async () => {

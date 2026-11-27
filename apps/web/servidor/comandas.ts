@@ -2,9 +2,11 @@ import "server-only";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   anularUnItemEnviado,
+  cambiarLaNota,
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
+  quitarUnPlatoSinEnviar,
   type DependenciasDeComandasWeb,
 } from "../../../src/composicion/comandas-web";
 import {
@@ -15,6 +17,7 @@ import {
   pedirUnaCopia,
   registrarLaImpresora,
   verElPapelDelDocumento,
+  verLaCocinaDeLaSucursal,
   verLasImpresoras,
   verLosTrabajosDeImpresion,
   type DependenciasDeImpresionWeb,
@@ -75,10 +78,26 @@ export const anularElItemEnviado = (crudo: unknown) =>
 export const cambiarElOrdenDeSalida = (crudo: unknown) =>
   enLaSucursal((c, s) => cambiarLaSalida(dependencias, c, s, crudo));
 
+/** La nota libre de un plato no enviado (`{ cuentaId, lineaId, nota }`; vacía la quita). */
+export const cambiarLaNotaDelPlato = (crudo: unknown) =>
+  enLaSucursal((c, s) => cambiarLaNota(dependencias, c, s, crudo));
+
+/** Quitar un plato que todavía no se envió (`{ cuentaId, lineaId }`): sin motivo y sin papel. */
+export const quitarElPlatoSinEnviar = (crudo: unknown) =>
+  enLaSucursal((c, s) => quitarUnPlatoSinEnviar(dependencias, c, s, crudo));
+
 /** Las impresoras de la sucursal de trabajo. */
 export const cargarLasImpresoras = (contexto: ContextoOperativo) =>
   sucursalDeTrabajo(contexto).then((sucursal) =>
     sucursal.ok ? verLasImpresoras(dependenciasDeImpresion, contexto, sucursal.dato) : sucursal,
+  );
+
+/** Los envíos de la sucursal de trabajo que esperan papel o cuyo papel falló (la pantalla de la cocina). */
+export const cargarLaCocina = (contexto: ContextoOperativo) =>
+  sucursalDeTrabajo(contexto).then((sucursal) =>
+    sucursal.ok
+      ? verLaCocinaDeLaSucursal(dependenciasDeImpresion, contexto, sucursal.dato)
+      : sucursal,
   );
 
 /** Alta de impresora (`{ impresoraId, nombre, uso, papelMm }`). */

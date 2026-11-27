@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1033",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Los cobros parciales sucesivos con saldo no entran en el día uno del salón: la mesa se cobra en un solo acto y cada cuenta hija de una mesa dividida se cobra completa.",
+  "que_cambia": "Una mesa no se puede pagar en partes dejando saldo; el cobro tiene que cubrir el total al centavo. Los cobros parciales son trabajo de ventas con migración.",
+  "donde": "src/modulos/salon/casos-de-uso/cobro.ts (cobrarMesa); apps/web/ui/plantillas/cobrar/PantallaDeCobro.cliente.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1033; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1412",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Al guardar una carta, la cuenta del logo se exige declarada solo si el logo es nuevo o cambia; un logo anterior que no cambia no se revalida y no se muestra hasta declarar su cuenta.",
+  "que_cambia": "Si una carta con un logo de una cuenta no declarada se puede seguir renombrando. Revertir: validar siempre en el servidor y en el disparador de carta_publica (esas cartas no se podrían editar hasta declarar la cuenta o quitar el logo).",
+  "donde": "src/modulos/catalogo/casos-de-uso/guardar-carta-publica.ts; migraciones/0102_cuentas_de_imagen_declaradas.sql (carta_publica_logo_declarado); decisión del dueño, fila 453; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja C, fila del ID)"
+}

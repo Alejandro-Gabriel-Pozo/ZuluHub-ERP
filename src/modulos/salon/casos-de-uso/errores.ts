@@ -5,7 +5,7 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { ErrorDeComandas } from "../../comandas/publico";
 import type { ErrorDeVentas } from "../../ventas/publico";
-import type { ErrorDeDivision } from "../dominio/division";
+import type { ErrorDeDivision } from "../../../primitivas/cuentas/division";
 import type { ErrorDeMesa } from "../dominio/mesa";
 import type { ErrorDeUnion } from "../dominio/union";
 

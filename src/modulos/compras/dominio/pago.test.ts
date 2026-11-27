@@ -4,8 +4,14 @@ import {
   esClasePagable,
   esMedioDePago,
   leerPago,
+  leerPagoConMedios,
   leerSalidaDeCaja,
+  medioDeLaCabecera,
+  MEDIOS_DE_LA_CABECERA,
   MEDIOS_DE_PAGO,
+  resolverLosMedios,
+  netoAPagar,
+  elPagoCubreSinLaNota,
 } from "./pago";
 
 const AHORA = new Date("2026-10-11T12:00:00Z");
@@ -82,28 +88,156 @@ describe("medios, clases y huella", () => {
     for (const c of ["NOTA_DE_CREDITO", "SIN_COMPROBANTE", "", "factura"])
       expect(esClasePagable(c)).toBe(false);
   });
-  it("los campos de la huella son fecha, medio e importe, en ese orden", () => {
-    expect(camposDeHuellaDePago({ fechaDePago: "2026-10-11", medio: "QR" }, "2420.00")).toEqual([
-      "2026-10-11",
-      "QR",
-      "2420.00",
-    ]);
+  it("los campos de la huella son la fecha y los medios; el total derivado no entra (H-N3)", () => {
+    expect(
+      camposDeHuellaDePago({ fechaDePago: "2026-10-11", medios: [{ medio: "QR", importe: null }] }),
+    ).toEqual(["2026-10-11", "QR"]);
+    expect(
+      camposDeHuellaDePago({
+        fechaDePago: "2026-10-11",
+        medios: [
+          { medio: "EFECTIVO", importe: "1000.00" },
+          { medio: "QR", importe: "1420.00" },
+        ],
+      }),
+    ).toEqual(["2026-10-11", "EFECTIVO:1000.00", "QR:1420.00"]);
   });
   it("con salida de caja la huella suma la caja y el motivo; sin ella, la lista de siempre", () => {
-    const pago = { fechaDePago: "2026-10-11", medio: "EFECTIVO" } as const;
+    const pago = {
+      fechaDePago: "2026-10-11",
+      medios: [{ medio: "EFECTIVO", importe: null }],
+    } as const;
     const salida = { cajaId: CAJA, motivo: "Pago de la factura" };
-    expect(camposDeHuellaDePago(pago, "2420.00", salida)).toEqual([
+    expect(camposDeHuellaDePago(pago, salida)).toEqual([
       "2026-10-11",
       "EFECTIVO",
-      "2420.00",
       CAJA,
       "Pago de la factura",
     ]);
-    expect(camposDeHuellaDePago(pago, "2420.00", null)).toEqual([
-      "2026-10-11",
-      "EFECTIVO",
-      "2420.00",
-    ]);
+    expect(camposDeHuellaDePago(pago, null)).toEqual(["2026-10-11", "EFECTIVO"]);
+  });
+});
+
+describe("leerPagoConMedios", () => {
+  const fecha = "2026-10-11";
+  it("un solo `medio` es una línea sin importe: lleva el total que lee el servidor", () => {
+    expect(leerPagoConMedios({ fechaDePago: fecha, medio: "QR" }, AHORA)).toEqual({
+      ok: true,
+      valor: { fechaDePago: fecha, medios: [{ medio: "QR", importe: null }] },
+    });
+  });
+  it("varios `medios` salen en el orden de la lista y con el importe canónico, sin importar cómo llegaron", () => {
+    const r = leerPagoConMedios(
+      {
+        fechaDePago: fecha,
+        medios: [
+          { medio: "QR", importe: "1420" },
+          { medio: "EFECTIVO", importe: "1000.50" },
+        ],
+      },
+      AHORA,
+    );
+    expect(r).toEqual({
+      ok: true,
+      valor: {
+        fechaDePago: fecha,
+        medios: [
+          { medio: "EFECTIVO", importe: "1000.50" },
+          { medio: "QR", importe: "1420.00" },
+        ],
+      },
+    });
+  });
+  it("`medio` y `medios` juntos, o ninguno, no se admiten", () => {
+    expect(
+      leerPagoConMedios(
+        { fechaDePago: fecha, medio: "QR", medios: [{ medio: "QR", importe: "1.00" }] },
+        AHORA,
+      ),
+    ).toEqual({ ok: false, error: "MEDIO_INVALIDO" });
+    expect(leerPagoConMedios({ fechaDePago: fecha }, AHORA)).toEqual({
+      ok: false,
+      error: "MEDIO_INVALIDO",
+    });
+  });
+  it("sin fecha, con fecha futura o con una fecha que no es texto: FECHA_INVALIDA", () => {
+    expect(leerPagoConMedios({ medio: "QR" }, AHORA)).toEqual({
+      ok: false,
+      error: "FECHA_INVALIDA",
+    });
+    expect(
+      leerPagoConMedios(
+        { fechaDePago: "2026-10-12", medios: [{ medio: "QR", importe: "1.00" }] },
+        AHORA,
+      ),
+    ).toEqual({ ok: false, error: "FECHA_INVALIDA" });
+    expect(leerPagoConMedios({ fechaDePago: 5, medio: "QR" }, AHORA)).toEqual({
+      ok: false,
+      error: "FECHA_INVALIDA",
+    });
+  });
+  it("lista vacía, más de seis, no lista, medio repetido o desconocido: MEDIO_INVALIDO", () => {
+    const invalido = { ok: false, error: "MEDIO_INVALIDO" };
+    const uno = { medio: "QR", importe: "1.00" };
+    for (const medios of [
+      [],
+      "QR",
+      null,
+      [uno, uno],
+      [{ medio: "CHEQUE", importe: "1.00" }],
+      [...MEDIOS_DE_PAGO, "OTRO2"].map((medio) => ({ medio, importe: "1.00" })),
+    ]) {
+      expect(leerPagoConMedios({ fechaDePago: fecha, medios }, AHORA)).toEqual(invalido);
+    }
+  });
+  it("un importe que no es un decimal positivo de hasta 2 decimales: MEDIO_INVALIDO", () => {
+    for (const importe of ["0", "0.00", "-5.00", "1.005", "1,5", "", "abc", 10, null, undefined]) {
+      expect(
+        leerPagoConMedios({ fechaDePago: fecha, medios: [{ medio: "QR", importe }] }, AHORA),
+      ).toEqual({ ok: false, error: "MEDIO_INVALIDO" });
+    }
+  });
+  it("un elemento que no es un objeto: MEDIO_INVALIDO", () => {
+    expect(leerPagoConMedios({ fechaDePago: fecha, medios: ["QR"] }, AHORA)).toEqual({
+      ok: false,
+      error: "MEDIO_INVALIDO",
+    });
+  });
+});
+
+describe("resolverLosMedios", () => {
+  it("un medio sin importe lleva el total", () => {
+    expect(resolverLosMedios([{ medio: "QR", importe: null }], "2420.00")).toEqual({
+      ok: true,
+      valor: [{ medio: "QR", importe: "2420.00" }],
+    });
+  });
+  it("con importes, la suma en centavos tiene que ser exactamente el total", () => {
+    const medios = [
+      { medio: "EFECTIVO", importe: "0.10" },
+      { medio: "QR", importe: "0.20" },
+    ] as const;
+    expect(resolverLosMedios(medios, "0.30").ok).toBe(true);
+    for (const total of ["0.29", "0.31", "0.00", "30.00"]) {
+      expect(resolverLosMedios(medios, total)).toEqual({
+        ok: false,
+        error: "LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL",
+      });
+    }
+  });
+  it("un total ilegible falla cerrado", () => {
+    expect(resolverLosMedios([{ medio: "QR", importe: null }], "abc")).toEqual({
+      ok: false,
+      error: "LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL",
+    });
+  });
+});
+
+describe("medioDeLaCabecera", () => {
+  it("el medio único, o COMPUESTO si hay más de uno; ambos están en la lista de la cabecera", () => {
+    expect(medioDeLaCabecera([{ medio: "QR" }])).toBe("QR");
+    expect(medioDeLaCabecera([{ medio: "QR" }, { medio: "OTRO" }])).toBe("COMPUESTO");
+    expect(MEDIOS_DE_LA_CABECERA).toContain("COMPUESTO");
   });
 });
 
@@ -155,5 +289,37 @@ describe("leerSalidaDeCaja", () => {
       ok: false,
       error: "SALIDA_DE_CAJA_INVALIDA",
     });
+  });
+});
+
+describe("netoAPagar", () => {
+  it("el total menos lo acreditado, en centavos exactos; sin notas, el total", () => {
+    expect(netoAPagar("2420.00", "0.00")).toBe("2420.00");
+    expect(netoAPagar("2420.00", "420.00")).toBe("2000.00");
+    expect(netoAPagar("0.30", "0.10")).toBe("0.20");
+    expect(netoAPagar("100.01", "0.01")).toBe("100.00");
+  });
+  it("sin nada para pagar (lo acreditan todo, o de más) o con un texto que no es importe: null", () => {
+    expect(netoAPagar("2420.00", "2420.00")).toBeNull();
+    expect(netoAPagar("2420.00", "2420.01")).toBeNull();
+    expect(netoAPagar("abc", "0.00")).toBeNull();
+    expect(netoAPagar("2420.00", "1e3")).toBeNull();
+  });
+});
+
+describe("elPagoCubreSinLaNota", () => {
+  it("un pago que ya descontó la nota no la deja anular; uno por el total (la nota llegó después) sí", () => {
+    // factura 2420, nota 420 (la única acreditada): pagó el neto (2000) o el total (2420).
+    expect(elPagoCubreSinLaNota("2000.00", "2420.00", "420.00", "420.00")).toBe(false);
+    expect(elPagoCubreSinLaNota("2420.00", "2420.00", "420.00", "420.00")).toBe(true);
+  });
+  it("con varias notas mira lo que quedaría sin esa nota", () => {
+    // acreditado 600 (420 + 180); pagó el neto 1820. Anular la de 180 deja un neto de 2000 > 1820: no cubre.
+    expect(elPagoCubreSinLaNota("1820.00", "2420.00", "600.00", "180.00")).toBe(false);
+    // pagó 2000 cuando solo estaba la de 420; la de 180 llegó después: anularla deja el neto en 2000: cubre.
+    expect(elPagoCubreSinLaNota("2000.00", "2420.00", "600.00", "180.00")).toBe(true);
+  });
+  it("un texto que no es importe no cubre (falla cerrada)", () => {
+    expect(elPagoCubreSinLaNota("x", "2420.00", "420.00", "420.00")).toBe(false);
   });
 });

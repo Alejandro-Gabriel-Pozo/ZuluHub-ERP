@@ -8,3 +8,21 @@
 export const ROLES_DE_EMPRESA = ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const;
 
 export type RolDeEmpresa = (typeof ROLES_DE_EMPRESA)[number];
+
+/**
+ * El rol de una MEMBRESÍA: los tres base o `PROPIO` (un rol de la empresa, T4 de H4b). Una invitación solo trae los tres base (`RolDeEmpresa`); `PROPIO` aparece cuando el gerente
+ * asigna un rol propio. El guard decide por el conjunto de acciones, no por este nombre: un `PROPIO` no está en la matriz de roles y, sin conjunto, no pasa (falla cerrado).
+ */
+export type RolDeLaMembresia = RolDeEmpresa | "PROPIO";
+
+/** Los valores de `RolDeLaMembresia` (lo que admite `membresia_rol_ck` de la base); una prueba de integración lo compara con el CHECK. */
+export const ROLES_DE_LA_MEMBRESIA = [...ROLES_DE_EMPRESA, "PROPIO"] as const;
+
+/**
+ * El rol BASE que las pantallas traducen con el vocabulario (`rol.<x>.nombre`); un rol propio (`PROPIO`) no tiene texto de marca (su nombre lo escribe el gerente): devuelve `null` y cada pantalla
+ * decide qué mostrar (la lista de usuarios, el nombre; la elección de empresa y la cuenta, nada). Previene: que una persona con rol propio aparezca como «Empleado» o «Administrador» en una lista
+ * (el antiguo `rolParaMostrar` fallaba en voz alta hasta que T6 definió cómo se muestra). Chequeo: `roles.test.ts`.
+ */
+export function rolBaseParaMostrar(rol: RolDeLaMembresia): RolDeEmpresa | null {
+  return rol === "PROPIO" ? null : rol;
+}

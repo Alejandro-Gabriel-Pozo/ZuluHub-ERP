@@ -10,6 +10,14 @@ const FICHA_DEL_NOMBRE = "src/modulos/comandas/dominio/envio.ts";
 const FICHA_DEL_USO_Y_DEL_PAPEL = "src/modulos/comandas/dominio/impresion.ts";
 const REQUIERE_COMANDAS = { modulo: "comandas", estadoDeEmpresa: ["ACTIVE"] } as const;
 const PONER_IMPRESORAS = ["impresoras.crear", "impresoras.editar"] as const;
+const FICHA_DE_LA_NOTA = "src/primitivas/texto/nota-de-cocina.ts";
+const HOJA_DE_PRODUCTO = "apps/web/ui/plantillas/venta/HojaDeProducto.cliente.tsx";
+const PLATO_DE_LA_MESA = "apps/web/ui/plantillas/salon/PlatoDeLaMesa.cliente.tsx";
+const DE_LA_NOTA = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/briefs/salon/SAL-G-notas-libres.md §1, §4 y §6 (nota libre del plato, rótulo «Nota para la cocina», sin ayuda del largo) y la maqueta de notas libres aprobada por el dueño el 25/11/2026; el largo máximo es un SUPUESTO (DEC-SAL-006)",
+});
 
 const DE_LA_IMPRESORA = (para: string): Proposito => ({
   para,
@@ -36,6 +44,17 @@ export const DATOS_DE_COMANDAS = {
     ],
     consumidores: [FORMULARIO_DE_IMPRESORA],
     ponerPor: PONER_IMPRESORAS,
+    requiere: REQUIERE_COMANDAS,
+  },
+  "nota-para-la-cocina": {
+    ficha: FICHA_DE_LA_NOTA,
+    propositos: [
+      DE_LA_NOTA(
+        "Texto libre corto, opcional, de un plato de la mesa («sin cebolla»): al agregarlo en la hoja de producto y mientras no se envió, desde la ficha de la mesa. Sale en el papel de cocina bajo el plato; no cambia precio, stock ni ticket.",
+      ),
+    ],
+    consumidores: [HOJA_DE_PRODUCTO, PLATO_DE_LA_MESA],
+    ponerPor: ["comandas.enviar", "cuentas.agregar_linea"],
     requiere: REQUIERE_COMANDAS,
   },
   "papel-de-impresora": {

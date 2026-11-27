@@ -13,7 +13,7 @@ import {
   CLASES_DE_COMPROBANTE_DE_PROVEEDOR,
   NIVELES_DE_COMPRA,
 } from "../../src/modulos/compras/dominio/niveles";
-import { MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
+import { MEDIOS_DE_LA_CABECERA, MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -24,11 +24,12 @@ import type { BaseDePruebas } from "./global";
  */
 
 const base = inject("baseDePruebas");
-/** Los tres que el caso de uso devuelve con el id de la ganadora (objeto), no como código simple. */
+/** Los que el caso de uso devuelve con el id de la ganadora (objeto), no como código simple. */
 const CON_ID = new Set([
   "REMITO_YA_REGISTRADO",
   "COMPROBANTE_YA_REGISTRADO",
   "COMPROBANTE_YA_PAGADO",
+  "FACTURA_YA_REEMPLAZADA",
 ]);
 const TABLAS = [
   "configuracion_de_compras",
@@ -58,6 +59,7 @@ const TABLAS = [
   "diferencia_de_compra",
   "devolucion_a_proveedor",
   "linea_de_devolucion",
+  "correccion_de_lo_recibido",
 ];
 
 describe.skipIf(base === null)("compras: la persistencia contra el esquema real", () => {
@@ -95,15 +97,30 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0085_compras_notas_de_credito.sql"),
       "utf8",
     );
+    const notasDeDebito = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0111_compras_notas_de_debito.sql"),
+      "utf8",
+    );
+    const reemplazo = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0112_compras_reemplazo_de_factura.sql"),
+      "utf8",
+    );
     const devoluciones = await readFile(
       join(import.meta.dirname, "../../migraciones", "0084_compras_devoluciones.sql"),
       "utf8",
     );
+    const correccionDeLoRecibido = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0098_correccion_de_lo_recibido.sql"),
+      "utf8",
+    );
     const fijas = [
+      ...correccionDeLoRecibido.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...notas.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...notasDeDebito.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...reemplazo.matchAll(/CONSTRAINT = '(\w+)'/g),
       // De 0084 solo cuenta lo de compras: la función de stock que vuelve a definir (`renglon_de_movimiento_validar`) tiene sus restricciones en stock.
       ...(devoluciones
         .split("CREATE OR REPLACE FUNCTION renglon_de_movimiento_validar")[0]
@@ -232,8 +249,11 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
     expect(await valores("linea_de_comprobante", "linea_de_comprobante_alicuota_ck")).toEqual(
       [...ALICUOTAS_DE_COMPRA].sort(),
     );
-    expect(await valores("pago_de_comprobante", "pago_medio_ck")).toEqual(
+    expect(await valores("medio_de_un_pago", "medio_de_un_pago_medio_ck")).toEqual(
       [...MEDIOS_DE_PAGO].sort(),
+    );
+    expect(await valores("pago_de_comprobante", "pago_medio_ck")).toEqual(
+      [...MEDIOS_DE_LA_CABECERA].sort(),
     );
     expect(await valores("tributo_de_comprobante", "tributo_tipo_ck")).toEqual(
       [...TIPOS_DE_TRIBUTO].sort(),

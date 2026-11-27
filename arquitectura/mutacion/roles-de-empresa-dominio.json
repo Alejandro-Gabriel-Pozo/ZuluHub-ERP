@@ -1,0 +1,7 @@
+{
+  "grupo": "roles de empresa dominio",
+  "archivos": "src/capacidades/roles/**/*.ts",
+  "minutos": 2,
+  "pruebas": "src/capacidades/roles",
+  "nivel": "CRITICO"
+}

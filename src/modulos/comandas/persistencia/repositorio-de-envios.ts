@@ -2,13 +2,9 @@ import { sql, type Kysely } from "kysely";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import type { VentasDb } from "../../ventas/publico";
 import type { ComandasDb } from "./esquema";
-import type {
-  Aviso,
-  FilaDeComanda,
-  RepositorioDeEnvios,
-  ResumenDeComandas,
-} from "./contrato-de-envios";
+import type { Aviso, FilaDeComanda, RepositorioDeEnvios } from "./contrato-de-envios";
 import { aEnvio, aRenglon } from "./mapeos-de-envios";
+import { crearResumenYNotas } from "./repositorio-de-resumen-y-notas";
 
 export type {
   AltaDeEnvio,
@@ -46,12 +42,13 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
       .leftJoin("envio_de_comanda as e", (j) =>
         j.onRef("e.id", "=", "d.envio_id").onRef("e.empresa_id", "=", "d.empresa_id"),
       )
-      .select(["d.linea_id", "d.salida", "d.envio_id", "e.numero as numero_de_envio"]);
+      .select(["d.linea_id", "d.salida", "d.envio_id", "d.nota", "e.numero as numero_de_envio"]);
   type FilaSel = Awaited<ReturnType<ReturnType<typeof seleccionarFila>["execute"]>>[number];
   const aFila = (f: FilaSel): FilaDeComanda => ({
     lineaId: f.linea_id,
     salida: f.salida,
     envioId: f.envio_id,
+    nota: f.nota,
     numeroDeEnvio: f.numero_de_envio,
   });
 
@@ -177,6 +174,7 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
             rol: r.rol,
             nombre_de_cocina: r.nombreDeCocina,
             detalle_de_cocina: [...r.detalleDeCocina],
+            nota: r.nota,
           })),
         )
         .execute();
@@ -185,7 +183,15 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
     async renglonesDeEnvio(empresa, envioId) {
       const filas = await db
         .selectFrom("renglon_de_envio")
-        .select(["orden", "linea_id", "cantidad", "rol", "nombre_de_cocina", "detalle_de_cocina"])
+        .select([
+          "orden",
+          "linea_id",
+          "cantidad",
+          "rol",
+          "nombre_de_cocina",
+          "detalle_de_cocina",
+          "nota",
+        ])
         .where("empresa_id", "=", empresa)
         .where("envio_id", "=", envioId)
         .orderBy("orden")
@@ -206,6 +212,7 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
           "r.rol",
           "r.nombre_de_cocina",
           "r.detalle_de_cocina",
+          "r.nota",
           "e.id as e_id",
           "e.sucursal_id",
           "e.cuenta_id",
@@ -308,47 +315,13 @@ export function crearRepositorioDeEnvios(db: Db): RepositorioDeEnvios {
           cuenta_id: fila.cuentaId,
           salida: fila.salida,
           envio_id: fila.envioId,
+          nota: fila.nota,
         })
         .onConflict((oc) => oc.doNothing())
         .execute();
     },
 
-    async resumenPorCuentas(empresa, cuentaIds) {
-      const resumen = new Map<string, ResumenDeComandas>();
-      if (cuentaIds.length === 0) return resumen;
-      // Una línea vigente sin fila cuenta como para enviar (fail closed): se parte de `linea_cuenta` y se une la comanda.
-      const filas = await sql<{
-        cuenta_id: string;
-        para_enviar: string;
-        en_espera: string;
-        envios: string;
-      }>`
-        select c.id as cuenta_id,
-               (select count(*) from linea_cuenta l left join linea_de_comanda d on d.empresa_id = l.empresa_id and d.linea_id = l.id
-                 where l.empresa_id = c.empresa_id and l.cuenta_id = c.id and l.estado = 'VIGENTE'
-                   and d.envio_id is null and coalesce(d.salida, 'AHORA') = 'AHORA') as para_enviar,
-               (select count(*) from linea_cuenta l join linea_de_comanda d on d.empresa_id = l.empresa_id and d.linea_id = l.id
-                 where l.empresa_id = c.empresa_id and l.cuenta_id = c.id and l.estado = 'VIGENTE'
-                   and d.envio_id is null and d.salida = 'DESPUES') as en_espera,
-               -- Los envíos de la cuenta, o los de los que vienen sus ítems ya enviados (una cuenta hija de una división o el destino de una unión no tuvo
-               -- envíos propios, pero lo que heredó ya salió a cocina).
-               greatest(
-                 (select count(*) from envio_de_comanda e where e.empresa_id = c.empresa_id and e.cuenta_id = c.id),
-                 (select count(distinct d.envio_id) from linea_cuenta l join linea_de_comanda d on d.empresa_id = l.empresa_id and d.linea_id = l.id
-                   where l.empresa_id = c.empresa_id and l.cuenta_id = c.id and l.estado = 'VIGENTE' and d.envio_id is not null)) as envios
-          from cuenta_consumo c
-         where c.empresa_id = ${empresa} and c.id in (${sql.join(cuentaIds.map((id) => sql`${id}::uuid`))})`.execute(
-        db,
-      );
-      for (const f of filas.rows) {
-        resumen.set(f.cuenta_id, {
-          paraEnviar: Number(f.para_enviar),
-          enEspera: Number(f.en_espera),
-          envios: Number(f.envios),
-        });
-      }
-      return resumen;
-    },
+    ...crearResumenYNotas(db),
 
     async insertarAviso(empresa, aviso) {
       const fila = await db

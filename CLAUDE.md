@@ -5,19 +5,49 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 
 ## Antes de entregar
 
-- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run arquitectura` y las
-  pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
-  completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
+- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run analizar:muerto` (knip),
+  `npm run arquitectura` (y sus controles contra la rama base y las pruebas de `test/arquitectura`, que ese comando no corre), las pruebas de composición
+  (`src/composicion`) y las pruebas de lo que tocaste, incluidas las de integración de los módulos que
+  consumen un contrato que cambiaste (campo obligatorio, error nuevo, firma). Todo eso lo corre en orden, cortando en la primera falla, **`npm run previo`**
+  (con `npm run previo -- <módulo>` si no puede inferir el módulo del diff); antes de empujar, traé la integración con merge y corrélo de nuevo. El gate completo
+  (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate completo local tarda unos 20 minutos y repite lo que ya corre el CI
+  (dueño, 17/11/2026, «4.-si»). `previo` (dueño, 26/11/2026, «Sí a las dos, a tu recomendación») previene las 26 ejecuciones rojas del CI en dos días por olvido local
+  (knip, arquitectura o composición no corridas: #612 en 4 rondas, #621, #603) y los choques entre PR en paralelo (#619 contra una prueba nueva de #617). Chequeo:
+  `test/arquitectura/previo.test.ts` (falla si falta el script o alguno de esos pasos, con una violación inyectada por cada uno).
+  **Excepción de tiempo (dueño, 26/11/2026, «Si»):** si el último paso de `previo` (`vitest related`, las pruebas del diff) pasa de 20 minutos, se puede empujar con todos los pasos
+  anteriores en verde y dejar que el CI corra esas pruebas, avisándolo en la descripción del PR con lo que sí se corrió. Se reintegra la integración solo si hay conflicto o si lo que entró
+  toca los archivos propios (el CI corre sobre el resultado del merge). Previene: las vueltas largas de `previo` y las reintegraciones reiniciaban 20 minutos o más por PR. Chequeo: `previo.test.ts`
+  afirma que los pasos fijos van siempre antes de las pruebas del diff, así que la excepción solo puede alcanzar a ese último tramo; que se avise en el PR es proceso, no un test.
+  **Sin repetir `previo` después de reintegrar (dueño, 26/11/2026):** si un PR ya corrió `previo` completo, no se repite después de traer la integración; se empuja directo, el CI hace el resto y solo se corren las pruebas puntuales de los archivos con conflicto. Previene: las reintegraciones reiniciaban 20 minutos o más por PR. Chequeo: proceso (se avisa en el PR); `previo.test.ts` solo afirma que `CLAUDE.md` lleva la regla.
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
+- La mutación exige 100 % en el cálculo puro de dinero, 95 % en lo crítico, 80 % en servidor y dominio y 60 % en las pantallas (ver «Mutación por nivel»); un grupo nuevo declara su `nivel`.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
   sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
-- **Parar la línea (dueño, 17/11/2026).** Si la nocturna (mutación completa, incluido el guardián) está roja, no se mergea producto hasta que
-  esté verde o explicada; el orquestador la mira cada mañana. Previene: un fallo del guardián que los PR ya no corren (solo la nocturna lo ve)
-  quede escondido bajo merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la
-  mire es proceso, no un test.
+- **CI liviano en los pull requests hacia `integracion/modulos-v2` (dueño, 25/11/2026).** Un PR hacia la rama de integración corre solo tipos, lint, formato, arquitectura,
+  guardián de contratos, código muerto, seguridad (gitleaks, zizmor, dependencias) y las pruebas completas con Postgres; la compilación de la web, los componentes y el
+  recorrido, solo si el cambio toca la web (el plan lo decide por el grafo y, ante lo que no sabe clasificar, corren). NO corren mutación, Estabilidad ni CodeQL. La corrida
+  NOCTURNA sobre la rama de integración (`nocturna-de-integracion.yml`) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes, recorrido y CodeQL) y el PR final de
+  integración hacia `main` corre el gate completo. Previene: unos 60 chequeos y 30 a 60 minutos por PR con muchas sesiones en paralelo. Chequeo:
+  `test/arquitectura/evaluar-gate.test.ts` y `planificar-ci-liviano.test.ts` (el salto solo vale hacia la rama de integración; cualquier otro caso queda en rojo).
+- **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026).** Si la nocturna (mutación completa, incluido el guardián; la de `main` y la de la rama de integración) está
+  roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana. Si aparecen dos fallas de la nocturna en una semana se restaura el gate
+  completo por PR (condición del registro de relajaciones). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
+  merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la mire es proceso, no un test.
+- **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
+  podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, umbrales de mutación
+  menores que 100 %, sin pruebas de carga ni volumen, concurrencia con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición
+  para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR.
+  Previene: recortes del CI que nadie recuerda ni revisa cuando cambia la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
+- **Mutación por nivel (dueño, 25/11/2026).** Todo grupo de `arquitectura/mutacion/*.json` declara su `nivel` y el umbral de mutación sale de `arquitectura/niveles-de-mutacion.json`:
+  DINERO_EXACTO 100 % (solo el cálculo puro de dinero: importes, redondeo, prorrateo y moneda; rutas `dinero_exacto` de `arquitectura/rutas-sensibles-de-mutacion.json`), CRITICO 95 % (permisos y
+  autorización, aislamiento entre empresas, rol público, base de datos y migraciones, fiscal, secretos, costos, el resto del dinero y el guardián; lo que muta `rutas` del mismo archivo TIENE que
+  serlo, y el código de `apps/web` que arma pedidos con dinero o cantidades hacia el servidor también), SERVIDOR 80 % (el resto de servidor y dominio) y PANTALLA 60 % (solo grupos con todos sus
+  archivos en `apps/web/ui`: el servidor ya decide permisos, validación y dinero). Falta de nivel, DINERO_EXACTO con umbral menor que 100, un grupo de dinero puro que no es DINERO_EXACTO o una
+  pantalla con archivos fuera de `apps/web/ui` fallan; en el registro de relajaciones figura cada nivel con umbral menor que 100 (y el 100 % no lleva entrada). Un grupo nuevo sin nivel falla.
+  Previene: matar el último mutante de una pantalla con la misma exigencia que el cálculo de un importe. Chequeo: `test/arquitectura/grupos-de-mutacion.test.ts` y `relajaciones-de-pruebas.test.ts`.
 
 ## Reglas que no se negocian
 
@@ -31,8 +61,8 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
 - **Ninguna sesión escribe en la base `production` (dueño, 2026-11-16, «respaldos A»).** Ningún agente, sesión, herramienta (incluido el MCP
-  de Neon) ni workflow distinto de `migrar.yml` ejecuta SQL de escritura contra la rama `production` de Neon ni crea, borra, resetea o
-  restaura ramas o snapshots de ese proyecto. Borrar o resetear una rama de Neon y restaurar (a un instante o desde un snapshot) lo hace solo
+  de Neon) ni workflow distinto de `migrar.yml` ejecuta SQL de escritura contra la rama `production` de un proyecto de producción de Neon (Pedernal `frosty-pond-14815728` y Hoteles del Neuquen
+  `withered-mode-13099736`) ni crea, borra, resetea o restaura ramas o snapshots de esos proyectos. Borrar o resetear una rama de Neon y restaurar (a un instante o desde un snapshot) lo hace solo
   el dueño, en la consola. Las migraciones llegan a producción solo por `migrar.yml`, con su aprobación y con un **snapshot previo
   obligatorio** (si no se puede crear, no se migra). Las sesiones usan Neon en solo lectura o contra `preview`. Previene: el MCP de Neon
   estaba conectado en modo escritura (borrar proyecto, resetear, restaurar y SQL; medido el 16/11/2026) y la única cerradura era esta frase; y
@@ -60,6 +90,12 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   solo baja (`arquitectura/deuda/campos-sin-dato.json`), no una excepción silenciosa. Previene: la primitiva del CUIT existía y el campo de documento de
   «Emitir» no la usaba (el CUIT quedó escrito como nombre). Chequeo: `test/arquitectura/campos-con-dato.test.ts`, con una violación
   inyectada por cada caso.
+- **Decisiones por familia (dueño, 25/11/2026).** Toda decisión NUEVA del registro (`arquitectura/decisiones/registro/`) lleva el código de su familia: `DEC-<FAM>-<NNN>` (p. ej. `DEC-SAL-001`),
+  con el contador POR FAMILIA: la sesión dueña de la familia toma el siguiente número de SU familia, así dos PR de familias distintas nunca eligen el mismo id. Las familias son una lista
+  cerrada en `arquitectura/decisiones/familias.json` (ANO, CAT, CCL, CI, COM, DOM, FIS, IDE, PRO, SAL, STK, VEN; una familia nueva se agrega ahí, en un PR); las `DEC-NNNN` anteriores al `corte`
+  (26/11/2026) siguen válidas sin renumerar y desde el corte una decisión nueva con el formato viejo falla. Toda cita (`SUPUESTO … (DEC-SAL-001)`, `fuente: { decision }`, ids de la cuota)
+  admite los dos formatos. Previene: los choques de numeración entre sesiones en paralelo (medidos el 25/11/2026: 0962/0963 y 1066/1074–1077). Chequeo: `test/arquitectura/decisiones-familias.test.ts`
+  (familia inexistente, id repetido, formato roto, formato viejo después del corte) y `npm run decisiones:verificar`.
 - **Cuota de decisiones por PR (dueño, 2026-11-11).** Un PR agrega como máximo 5 decisiones de negocio (`DINERO`, `PERMISOS`, `COMERCIAL`) y 10
   técnicas pendientes de OK, desde la fecha de `arquitectura/decisiones/cuota.json` (`vigente_desde`); `npm run decisiones:verificar --base` falla si se pasa.
   Si se pasa: preguntar al dueño antes de construir, reusar una decisión existente o pedir su excepción (id, fecha y fuente en `excepciones`). Previene:
@@ -82,6 +118,7 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
 - **Se pregunta lo que cambia** qué se construye, cómo se comporta, los datos, el dinero, los permisos, los textos que ve el cliente o la
   prioridad. Lo puramente interno (nombre de una función privada, en qué archivo va) sigue la convención que ya existe; si no hay
   convención y la elección tiene consecuencias, se pregunta.
+- **Negocio vs aplicación (dueño, 2026-11-25).** Antes de preguntar al dueño, clasificá: ¿es del NEGOCIO (política de operación que se ve en el momento: cómo se salda un saldo a favor, qué impresora usa, cuándo cambia el emisor fiscal, cuántos mozos) o de la APLICACIÓN (qué se construye, modelo de datos, dinero que la app impone, permisos, textos al cliente)? Solo se pregunta lo segundo; lo primero se DISEÑA FLEXIBLE (soporta las variantes razonables, manual con registro o configurable) y se documenta. Previene: frenar al dueño con preguntas de negocio y construir políticas rígidas que el negocio no pidió. Sin chequeo mecánico: es regla de proceso (caso real: 25/11/2026, nota de crédito después del pago y emisor fiscal).
 - **Alcance cerrado.** Se hace solo lo pedido. Lo que no está en la lista no se hace: si ves algo más (mejora, riesgo, deuda), anotalo
   en «Hallazgos aparte» sin tocarlo. Entre quedarse corto y agrandar, quedarse corto.
 - **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,
@@ -139,4 +176,6 @@ obedece igual, se acumula y compite con otras.
   (`test/arquitectura/vercel-json.test.ts`) falla si se enciende sin cambiar a propósito su constante. La compilación
   nunca migra: las migraciones las aplica el workflow manual `migrar.yml`, con la aprobación del dueño. La guía de
   puesta en marcha es `apps/web/PRIMER-DESPLIEGUE.md`.
-- Neon: proyecto `flat-flower-36030007`, rama `production`, región `aws-sa-east-1`, Postgres 18.
+- Neon: **producción** = proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (hoy NO protegida: la protección exige un plan pago de Neon; el dueño la activará al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es el workflow `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`; al pasar a un plan pago: proteger la rama `production`), región `aws-sa-east-1`, Postgres 18.
+  **Preview y desarrollo** = proyecto `flat-flower-36030007`, rama `preview` (su rama `production` vieja tiene datos de prueba y no es la de los clientes).
+- Neon, base del hotel: proyecto «Hoteles del Neuquen» `withered-mode-13099736`, rama `production` (el mismo Environment `cliente-hdn` de `migrar.yml`). Mismas reglas que la producción de Pedernal: snapshot previo obligatorio antes de migrar y ninguna sesión escribe en su rama `production` (ver «Reglas que no se negocian»).

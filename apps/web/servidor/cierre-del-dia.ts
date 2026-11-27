@@ -30,6 +30,7 @@ const dependencias: DependenciasDeCierreWeb = {
   casosDeCaja: web.casosDeUsoDeCaja,
   consultasDeCaja: web.consultasDeCaja,
   consultasDeVentas: web.consultasDeVentas,
+  consultasDeSalon: web.consultasDeSalon,
   consultasDeIdentidad: web.consultasDeIdentidad,
   respuesta: dependenciasDeSesion.respuesta,
 };

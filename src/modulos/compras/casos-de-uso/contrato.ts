@@ -32,6 +32,105 @@ export type CodigoDeEgresoDeCaja =
   | "CLAVE_REUTILIZADA"
   | "SIN_PERMISO";
 
+export type CodigoDelLibroDeProveedores =
+  | "LIBRO_DE_SALDOS_RECHAZADO"
+  | "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO"
+  | "ASIENTO_DEL_PAGO_NO_ENCONTRADO"
+  | "ASIENTO_DE_LA_NOTA_NO_ENCONTRADO"
+  | "CLAVE_REUTILIZADA"
+  | "SIN_PERMISO";
+
+/**
+ * El puerto del libro de saldos que declara compras y IMPLEMENTA la composición con `saldos_de_partes` (L1: compras no importa el libro). Corre en la transacción de la factura y NO autoriza
+ * (el permiso es el de la acción de compras). `registrarCargo` deja el asiento de la factura (el proveedor es la parte; `total` y los importes del reparto son texto decimal en pesos y el reparto suma el
+ * total); repetido con el mismo comprobante devuelve el asiento hecho. `anularCargo` lo espeja: sin asiento falla cerrado (`ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO`).
+ */
+export type LibroDeProveedores = Readonly<{
+  registrarCargo(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{
+      comprobanteId: string;
+      proveedorId: string;
+      total: string;
+      venceEl: string | null;
+      reparto: readonly Readonly<{ sucursalId: string | null; importe: string }>[];
+      hechoEn: Date;
+    }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  anularCargo(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ comprobanteId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * El pago de la factura (L2): un asiento de pago por `importe` (texto decimal en pesos: el que se guardó en el pago, nunca recalculado) con la parte y la distribución por centro de costo del cargo de la factura,
+   * imputado contra ese cargo. Sin cargo (una factura anterior al libro) o con un importe que no es el del cargo, falla cerrado. Repetido con el mismo pago devuelve lo hecho.
+   */
+  registrarPago(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ pagoId: string; comprobanteId: string; importe: string; hechoEn: Date }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * La nota de crédito (L3a): un asiento de nota (resta) por `importe` a nombre del proveedor de la factura, repartido por centro de costo contra lo PENDIENTE del cargo, imputado contra el cargo hasta lo que quede
+   * pendiente (lo que sobre queda como saldo a favor de la empresa). Sin cargo (factura anterior al libro) falla cerrado. Repetido con la misma nota devuelve lo hecho.
+   */
+  registrarNotaDeCredito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string; facturaId: string; importe: string; hechoEn: Date }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /** El espejo de la nota de crédito (deshace su imputación): sin asiento (una nota anterior al libro) falla cerrado (`ASIENTO_DE_LA_NOTA_NO_ENCONTRADO`). */
+  anularNotaDeCredito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * La nota de débito (L3a, la usa NOTAS-1): un cargo SUELTO del proveedor (suma, sin imputar: se paga aparte), con la distribución por sucursal de la factura vinculada si hay y tiene cargo, o «sin centro de costo».
+   * Repetido con la misma nota devuelve lo hecho.
+   */
+  registrarNotaDeDebito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{
+      notaId: string;
+      proveedorId: string;
+      facturaId: string | null;
+      importe: string;
+      hechoEn: Date;
+    }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  anularNotaDeDebito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /** El espejo del asiento del pago (deshace su imputación): sin asiento (un pago anterior al libro) falla cerrado (`ASIENTO_DEL_PAGO_NO_ENCONTRADO`). */
+  anularPago(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ pagoId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+}>;
+
 /**
  * El puerto de egreso de efectivo que declara compras y IMPLEMENTA la composición con caja (E9 T10b, D-E9-7: compras no importa caja). Corre en la transacción del
  * pago y NO autoriza (el permiso es el de la acción de compras que paga o anula el pago). `registrar` saca el importe de la caja abierta indicada; `anular` devuelve
@@ -81,11 +180,13 @@ export type DependenciasDeCompras = Readonly<{
     | "articulosDeVenta"
     | "entradaPorOrigen"
     | "salidaPorOrigen"
+    | "correccionDeRecepcion"
     | "existenciaParaMostrar"
     | "ajusteDeCostoPorOrigen"
   >;
   /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
   egresoDeCaja: EgresoDeCaja;
+  libroDeProveedores: LibroDeProveedores;
   /** La condición de la empresa frente al IVA (la composición la lee de los datos fiscales). */
   ivaDeLaEmpresa: IvaDeLaEmpresa;
 }>;

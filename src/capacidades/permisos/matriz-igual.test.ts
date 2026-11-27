@@ -91,6 +91,7 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["vidrieras.renovar_enlace", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.retirar_de_linea", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.administrar_portal", ["GERENTE", "ADMINISTRADOR"]],
+  ["vidrieras.administrar_cuentas_de_imagen", ["GERENTE", "ADMINISTRADOR"]],
   ["stock.verificar_saldos", ["GERENTE"]],
   ["costos.ver", ["GERENTE", "ADMINISTRADOR"]],
   ["variantes.editar", ["GERENTE", "ADMINISTRADOR"]],
@@ -141,6 +142,7 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["mesas.editar", ["GERENTE", "ADMINISTRADOR"]],
   ["mesas.reactivar", ["GERENTE", "ADMINISTRADOR"]],
   ["mesas.desactivar", ["GERENTE", "ADMINISTRADOR"]],
+  ["salidas_de_dinero.registrar", ["GERENTE", "ADMINISTRADOR"]],
   ["salon.cambiar_mesa", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["salon.unir", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["salon.dividir", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
@@ -160,6 +162,7 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["partes.desvincular_contacto", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["partes.desactivar", ["GERENTE", "ADMINISTRADOR"]],
   ["partes.reactivar", ["GERENTE", "ADMINISTRADOR"]],
+  ["partes.anonimizar", ["GERENTE"]],
   ["proveedores.editar_ficha", ["GERENTE", "ADMINISTRADOR"]],
   ["proveedores.pedir_ficha", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["recepciones.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
@@ -174,6 +177,7 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["comprobantes_de_proveedor.registrar", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["comprobantes_de_proveedor.pagar", ["GERENTE", "ADMINISTRADOR"]],
   ["comprobantes_de_proveedor.anular_pago", ["GERENTE", "ADMINISTRADOR"]],
+  ["comprobantes_de_proveedor.reemplazar", ["GERENTE", "ADMINISTRADOR"]],
   ["ordenes_de_compra.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["ordenes_de_compra.crear", ["GERENTE", "ADMINISTRADOR"]],
   ["ordenes_de_compra.pedir", ["GERENTE", "ADMINISTRADOR"]],
@@ -183,17 +187,31 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["devoluciones_a_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
   ["devoluciones_a_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
   ["notas_de_credito_de_proveedor.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
+  ["notas_de_debito_de_proveedor.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["notas_de_credito_de_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
+  ["notas_de_debito_de_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
   ["notas_de_credito_de_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
+  ["notas_de_debito_de_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
   ["diferencias_de_compra.ver", ["GERENTE", "ADMINISTRADOR"]],
   ["diferencias_de_compra.resolver", ["GERENTE", "ADMINISTRADOR"]],
   ["compras.configurar", ["GERENTE"]],
   ["compras.corregir", ["GERENTE", "ADMINISTRADOR"]],
+  ["compras.exportar", ["GERENTE", "ADMINISTRADOR"]],
+  ["roles.ver", ["GERENTE"]],
+  ["roles.crear", ["GERENTE"]],
+  ["roles.editar", ["GERENTE"]],
+  ["roles.archivar", ["GERENTE"]],
+  ["usuarios.asignar_rol", ["GERENTE"]],
+  ["cuenta_corriente.ver", ["GERENTE", "ADMINISTRADOR"]],
+  ["cuenta_corriente.administrar", ["GERENTE", "ADMINISTRADOR"]],
+  ["cuenta_corriente.cargar_a_cuenta", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
+  ["cuenta_corriente.aprobar_exceso", ["GERENTE", "ADMINISTRADOR"]],
+  ["cuenta_corriente.consultar_al_vender", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
 ];
 
 /** Cifras del congelado: filas, y cuántas acciones puede cada rol. */
-const FILAS = 171;
-const PUEDEN = { GERENTE: 171, ADMINISTRADOR: 152, OPERADOR: 65 } as const satisfies Record<
+const FILAS = 189;
+const PUEDEN = { GERENTE: 189, ADMINISTRADOR: 164, OPERADOR: 68 } as const satisfies Record<
   RolDeEmpresa,
   number
 >;
@@ -243,7 +261,7 @@ describe("la matriz de permisos de la empresa es idéntica a la congelada", () =
       }
     }
     expect(comparadas).toBe(FILAS * ROLES_DE_EMPRESA.length);
-    expect(comparadas).toBe(513);
+    expect(comparadas).toBe(567);
   });
 
   it("la tabla leída por rol es la misma", () => {
@@ -259,6 +277,7 @@ describe("el guard con las reglas reales decide como con la matriz congelada", (
     ...CATALOGO_DE_MODULOS,
     vidriera: { ...CATALOGO_DE_MODULOS.vidriera, estado: "disponible" },
     produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "disponible" },
+    cuenta_corriente: { ...CATALOGO_DE_MODULOS.cuenta_corriente, estado: "disponible" },
   };
   const roles: readonly (RolDeEmpresa | null)[] = [...ROLES_DE_EMPRESA, null];
 

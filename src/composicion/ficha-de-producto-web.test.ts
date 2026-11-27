@@ -97,7 +97,9 @@ describe("verLaFichaDeProducto", () => {
         claseDeUso: "VENDIBLE",
         unidadBaseId: "UNIDAD",
         seVende: true,
+        seCompra: false,
         admiteControlDeStock: false,
+        admiteStockPropio: true,
         nombreDeCocina: "MILA",
         codigo: "MIL-1",
         codigoDeBarras: null,
@@ -173,6 +175,54 @@ describe("verLaFichaDeProducto", () => {
     for (const claseDeUso of ["MATERIA_PRIMA", "INSUMO", "REVENTA"]) {
       expect(await caso({ claseDeUso })).toBe(true);
       expect(await caso({ claseDeUso, activo: false })).toBe(false);
+    }
+    for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
+      expect(await caso({ claseDeUso })).toBe(false);
+    }
+  });
+
+  it("admiteStockPropio: solo el elaborado y el vendible activos (la pantalla además exige la perilla `produccion`); las demás clases y el desactivado, no", async () => {
+    const caso = async (cambios: Record<string, unknown>) => {
+      const { d } = montar({
+        ver: () =>
+          ok({
+            producto: { ...PRODUCTO, alicuota: null, ...cambios },
+            seccion: null,
+            grupos: [],
+            preciosVigentes: [],
+            historial: [],
+          }),
+      });
+      const r = await verLaFichaDeProducto(d, contexto, ID);
+      return r.ok && r.dato.admiteStockPropio;
+    };
+    for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
+      expect(await caso({ claseDeUso })).toBe(true);
+      expect(await caso({ claseDeUso, activo: false })).toBe(false);
+    }
+    for (const claseDeUso of ["MATERIA_PRIMA", "INSUMO", "REVENTA"]) {
+      expect(await caso({ claseDeUso })).toBe(false);
+    }
+  });
+
+  it("la ficha dice que se compra solo para materia prima, insumo y reventa, también si el producto está desactivado (una sola regla: esClaseComprable)", async () => {
+    const caso = async (cambios: Record<string, unknown>) => {
+      const { d } = montar({
+        ver: () =>
+          ok({
+            producto: { ...PRODUCTO, alicuota: null, ...cambios },
+            seccion: null,
+            grupos: [],
+            preciosVigentes: [],
+            historial: [],
+          }),
+      });
+      const r = await verLaFichaDeProducto(d, contexto, ID);
+      return r.ok && r.dato.seCompra;
+    };
+    for (const claseDeUso of ["MATERIA_PRIMA", "INSUMO", "REVENTA"]) {
+      expect(await caso({ claseDeUso })).toBe(true);
+      expect(await caso({ claseDeUso, activo: false })).toBe(true);
     }
     for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
       expect(await caso({ claseDeUso })).toBe(false);

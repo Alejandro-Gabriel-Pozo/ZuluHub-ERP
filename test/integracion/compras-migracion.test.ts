@@ -421,6 +421,40 @@ describe.skipIf(base === null)("0037 compras: la migración contra una base real
     expect(suma?.s).toBe("10.0000");
   });
 
+  it("C3: una asignación nunca supera lo facturado aunque lo recibido alcance: una línea de factura repartida entre dos recepciones (violación inyectada)", async () => {
+    const { m, proveedor, producto } = await escenario();
+    const primera = await recepcionDeBase(dueno, m, proveedor, producto, { cantidad: "10" });
+    const segunda = await recepcionDeBase(dueno, m, proveedor, producto, { cantidad: "10" });
+    const factura = await comprobanteDeBase(dueno, m, proveedor);
+    // La línea de la factura trae 10: 6 de una recepción y 4 de la otra caben; 5 más de cualquiera, no.
+    const asignar = async (s: SesionDePrueba, recepcion: string, cantidad: string) => {
+      const conc = randomUUID();
+      acepta(
+        await s.intentar(
+          "insert into conciliacion (id, empresa_id, acto, anula_a, comprobante_id, nivel, clave_idempotencia, registrado_por) values ($1,$2,'CONCILIACION',null,$3,'CON_COMPROBANTE',$4,$5)",
+          [conc, m.empresa, factura, claveDeCompra(), m.persona],
+        ),
+      );
+      return s.intentar(
+        "insert into asignacion_de_conciliacion (empresa_id, conciliacion_id, acto, numero, comprobante_id, linea_de_comprobante, recepcion_id, linea_de_recepcion, cantidad) values ($1,$2,'CONCILIACION',1,$3,1,$4,1,$5)",
+        [m.empresa, conc, factura, recepcion, cantidad],
+      );
+    };
+    await enApp(m, async (s) => {
+      acepta(await asignar(s, primera, "6"));
+      acepta(await asignar(s, segunda, "4"));
+      check(await asignar(s, segunda, "0.0001"), "asignacion_excede_lo_facturado");
+      acepta(await s.confirmar());
+    });
+    const saldo = (
+      await dueno.query<{ f: string; a: string }>(
+        "select cantidad_facturada::text as f, cantidad_asignada::text as a from saldo_de_linea_de_comprobante where comprobante_id = $1",
+        [factura],
+      )
+    ).rows[0];
+    expect(saldo).toEqual({ f: "10.0000", a: "10.0000" });
+  });
+
   it("C3: dos asignaciones a la vez sobre la misma línea: solo entra la que cabe y el saldo nunca supera lo recibido", async () => {
     const { m, proveedor, producto } = await escenario();
     const recepcion = await recepcionDeBase(dueno, m, proveedor, producto, { cantidad: "10" });
@@ -519,6 +553,9 @@ describe.skipIf(base === null)("0037 compras: la migración contra una base real
     }
     // Las migraciones posteriores que dependen de compras (N3: 0063) se revierten antes: sus tablas apuntan a las de 0037.
     const POSTERIORES = [
+      join(CARPETA_DE_MIGRACIONES, "reversiones", "0109_revertir_pago_compuesto_exigir_medios.sql"),
+      join(CARPETA_DE_MIGRACIONES, "reversiones", "0103_revertir_pago_compuesto.sql"),
+      join(CARPETA_DE_MIGRACIONES, "reversiones", "0098_revertir_correccion_de_lo_recibido.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0085_revertir_compras_notas_de_credito.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0084_revertir_compras_devoluciones.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0067_revertir_compras_diferencias.sql"),

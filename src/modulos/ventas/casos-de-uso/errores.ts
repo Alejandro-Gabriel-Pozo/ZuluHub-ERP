@@ -13,6 +13,7 @@ import type {
   ErrorDeConfirmacion,
 } from "../dominio/decisiones";
 import type { ErrorDelFacturador } from "./puertos-de-facturacion";
+import type { ErrorDelCargoACuenta } from "./puertos-de-cuenta-corriente";
 import type { ErrorDelStock } from "./puertos-de-stock";
 import type { ErrorDeDepartamento } from "../dominio/departamento";
 import type { ErrorDeMotivo } from "../dominio/motivo";
@@ -73,11 +74,18 @@ export type ErrorDeVentas =
   | "ANCLA_INVALIDA"
   | "ANCLA_OCUPADA"
   | "ETIQUETA_INVALIDA"
-  /** A2c: el departamento con el que se abre la cuenta no existe, está desactivado o hay que elegir uno (`departamentoDeLaCuenta`); unir cuentas de departamentos distintos. */
+  /** El departamento que se nombró al abrir la cuenta no existe o está desactivado (`departamentoDeLaCuenta`). */
   | ErrorDeDepartamento
-  | "DEPARTAMENTO_DISTINTO"
   | "CUENTA_ID_EN_USO"
   | "CUENTA_NO_ENCONTRADA"
+  /** R2 mínimo: el cliente que se carga al cerrar no existe en la empresa, no está activo o no es cliente (un solo motivo: no distingue lo que hay en otra empresa). */
+  | "CLIENTE_NO_VALIDO"
+  /** CC-2: la cuenta corriente no deja cargar (cliente sin ficha habilitada, suspendido, por encima del límite sin aprobación…): ver `ErrorDelCargoACuenta`. */
+  | ErrorDelCargoACuenta
+  /** CC-2: sin el puerto de la cuenta corriente, cerrar a nombre de un cliente se rechaza (nace cerrado). */
+  | "CUENTA_CORRIENTE_NO_DISPONIBLE"
+  /** CC-5: una venta a cuenta de total 0 no existe (un cargo de cero no entra al libro): `venderACuenta` la rechaza antes de abrir nada, con o sin la confirmación de cortesía. */
+  | "VENTA_A_CERO_A_CUENTA"
   | "CUENTA_NO_ABIERTA"
   | "CUENTA_CERRADA"
   | "LINEA_ID_EN_USO"

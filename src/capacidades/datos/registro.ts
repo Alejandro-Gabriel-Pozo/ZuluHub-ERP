@@ -9,11 +9,17 @@ import { DATOS_DE_COMPRAS_FACTURA_Y_PAGO } from "./registro-de-compras-factura-y
 import { DATOS_DE_CONSUMO_DE_OPCION } from "./registro-de-consumo";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_FISCAL } from "./registro-de-fiscal";
+import { DATOS_DE_PRESENTACIONES } from "./registro-de-presentaciones";
 import { DATOS_DE_PRODUCCION } from "./registro-de-produccion";
 import { DATOS_DE_PLATAFORMA } from "./registro-de-plataforma";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
+import { DATOS_DE_RECETAS } from "./registro-de-recetas";
 import { DATOS_DE_SALON } from "./registro-de-salon";
+import { DATOS_DE_STOCK_CONTEO } from "./registro-de-stock-conteo";
+import { DATOS_DE_STOCK_LOTES } from "./registro-de-stock-lotes";
+import { DATOS_DE_CUENTA_CORRIENTE } from "./registro-de-cuenta-corriente";
 import { DATOS_DE_STOCK_DEPOSITOS } from "./registro-de-stock-depositos";
+import { DATOS_DE_STOCK_MOVIMIENTOS } from "./registro-de-stock-movimientos";
 import { DATOS_DE_VENTAS } from "./registro-de-ventas";
 import type { DefinicionDeDato } from "./tipos-de-datos";
 
@@ -54,13 +60,19 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   compras: DATOS_DE_COMPRAS,
   "compras-factura-y-pago": DATOS_DE_COMPRAS_FACTURA_Y_PAGO,
   consumo: DATOS_DE_CONSUMO_DE_OPCION,
+  "cuenta-corriente": DATOS_DE_CUENTA_CORRIENTE,
   facturacion: DATOS_DE_FACTURACION,
   fiscal: DATOS_DE_FISCAL,
   produccion: DATOS_DE_PRODUCCION,
   plataforma: DATOS_DE_PLATAFORMA,
+  presentaciones: DATOS_DE_PRESENTACIONES,
   productos: DATOS_DE_PRODUCTOS,
+  recetas: DATOS_DE_RECETAS,
   salon: DATOS_DE_SALON,
+  "stock-conteo": DATOS_DE_STOCK_CONTEO,
+  "stock-lotes": DATOS_DE_STOCK_LOTES,
   "stock-depositos": DATOS_DE_STOCK_DEPOSITOS,
+  "stock-movimientos": DATOS_DE_STOCK_MOVIMIENTOS,
   ventas: DATOS_DE_VENTAS,
 } as const;
 
@@ -74,13 +86,19 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_COMPRAS,
   ...DATOS_DE_COMPRAS_FACTURA_Y_PAGO,
   ...DATOS_DE_CONSUMO_DE_OPCION,
+  ...DATOS_DE_CUENTA_CORRIENTE,
   ...DATOS_DE_FACTURACION,
   ...DATOS_DE_FISCAL,
   ...DATOS_DE_PRODUCCION,
   ...DATOS_DE_PLATAFORMA,
+  ...DATOS_DE_PRESENTACIONES,
   ...DATOS_DE_PRODUCTOS,
+  ...DATOS_DE_RECETAS,
   ...DATOS_DE_SALON,
+  ...DATOS_DE_STOCK_CONTEO,
+  ...DATOS_DE_STOCK_LOTES,
   ...DATOS_DE_STOCK_DEPOSITOS,
+  ...DATOS_DE_STOCK_MOVIMIENTOS,
   ...DATOS_DE_VENTAS,
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 

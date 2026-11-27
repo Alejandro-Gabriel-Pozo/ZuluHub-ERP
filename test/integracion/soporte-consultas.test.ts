@@ -625,6 +625,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         "clientes",
         "comandas",
         "compras",
+        "cuenta_corriente",
         "facturacion",
         "produccion",
         "salon",
@@ -634,7 +635,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
       // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); stock desde E5; el resto sigue en desarrollo.
-      expect(modulos[7]).toMatchObject({
+      expect(modulos[8]).toMatchObject({
         clave: "facturacion",
         estado: "disponible",
         obligatorio: false,
@@ -661,8 +662,17 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       });
       // `catalogo`, `caja` y `ventas` son disponibles desde el 15/11/2026 (DEC-0463; no obligatorios: cada empresa los activa).
       // `comandas` y `salon`, desde S-0r (17/11/2026, DEC-0714).
-      // `vidriera`, desde V0 (20/11/2026, DEC-0826).
-      for (const clave of ["catalogo", "caja", "ventas", "comandas", "salon", "vidriera"]) {
+      // `vidriera`, desde V0 (20/11/2026, DEC-0826); `produccion`, desde el 25/11/2026 (DEC-1050); `cuenta_corriente`, desde el 26/11/2026 (CC-5).
+      for (const clave of [
+        "catalogo",
+        "caja",
+        "ventas",
+        "comandas",
+        "salon",
+        "vidriera",
+        "produccion",
+        "cuenta_corriente",
+      ]) {
         expect(modulos.find((m) => m.clave === clave)).toMatchObject({
           estado: "disponible",
           obligatorio: false,
@@ -683,6 +693,8 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
             "comandas",
             "salon",
             "vidriera",
+            "produccion",
+            "cuenta_corriente",
           ].includes(m.clave),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });

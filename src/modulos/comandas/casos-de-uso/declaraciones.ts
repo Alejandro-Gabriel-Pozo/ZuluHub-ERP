@@ -2,11 +2,12 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 
 const ENVIOS = "test/integracion/comandas-envios.test.ts";
 const IMPRESION = "test/integracion/comandas-impresion.test.ts";
+const NOTAS = "test/integracion/comandas-notas.test.ts";
 
 /**
  * Los casos de uso de comandas (E7 §3.5) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
  * prueba que lo fija. `accion` es la del módulo (X1) y `tambien` las de ventas que usa por dentro (decisión 155: los tres roles): `anularItemEnviado` anula la línea Y agrega el
- * resto, así que exige las dos, como su puerta del salón; `quitarSinEnviar`, `cuentas.anular_linea`; `cambiarSalida`, `cuentas.agregar_linea`. El caso las lee de acá
+ * resto, así que exige las dos, como su puerta del salón; `quitarSinEnviar`, `cuentas.anular_linea`; `cambiarSalida` y `cambiarNota`, `cuentas.agregar_linea`. El caso las lee de acá
  * (`accionesDeCaso`): declaración y guard son la misma lista (`guard-primero-de-salon-y-comandas.test.ts`).
  */
 export const DECLARACIONES = {
@@ -60,6 +61,17 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ENVIOS,
         it: "cambiar «sale después» solo vale sin enviar; repetir la misma salida no cambia nada",
+      },
+    },
+  },
+  cambiarNota: {
+    accion: "comandas.enviar",
+    tambien: ["cuentas.agregar_linea"],
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: NOTAS,
+        it: "cambiar la nota solo vale sin enviar; repetir la misma nota no cambia nada y la nota nueva viaja con el envío",
       },
     },
   },

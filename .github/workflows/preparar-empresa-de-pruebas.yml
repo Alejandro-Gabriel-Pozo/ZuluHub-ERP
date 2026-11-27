@@ -36,6 +36,13 @@ name: Preparar la empresa de pruebas (preview)
 #      CRON_SECRET                      el MISMO secreto del cron que tiene Vercel Preview (24 o más caracteres).
 #      PEDERNAL_PREPARAR_PREVIEW        los datos de la preparación (JSON en una línea).
 #    Los dos del medio los FIJA el dueño con valores conocidos, en Vercel Preview y acá, y después hace un Redeploy de preview.
+#    VARIABLE (no secreta) del Environment `preview` (Settings → Environments → Variables; el valor lo carga el dueño, nunca el repositorio):
+#      PEDERNAL_HOSTS_PROTEGIDOS        los hosts de los proyectos de la plataforma (consola, aplicación, landing), separados por comas y sin
+#                                       `https://`: los MISMOS que tienen la consola y la web en Vercel Preview. Desde que los dominios de
+#                                       empresa existen (#516), `agregarDominio` falla cerrado sin esta lista (ningún host propio de la plataforma
+#                                       se registra como dominio de un cliente), y este flujo agrega el dominio de la empresa de pruebas. Solo la ven
+#                                       el chequeo previo y el paso «Preparar»; no es un secreto (son hosts públicos), por eso va como `vars.` y no
+#                                       entra en la lista de secretos.
 #
 # Ningún paso imprime una cadena, una clave ni un dato del paquete.
 
@@ -98,8 +105,9 @@ jobs:
           [ -n "${PEDERNAL_SECRETO_INVITACIONES:-}" ] || faltan="$faltan PEDERNAL_SECRETO_INVITACIONES"
           [ -n "${CRON_SECRET:-}" ] || faltan="$faltan CRON_SECRET"
           [ -n "${PEDERNAL_PREPARAR_PREVIEW:-}" ] || faltan="$faltan PEDERNAL_PREPARAR_PREVIEW"
+          [ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan="$faltan PEDERNAL_HOSTS_PROTEGIDOS"
           if [ -n "$faltan" ]; then
-            echo "::error::Faltan estos secretos en el Environment preview (Settings → Environments → Secrets):$faltan"
+            echo "::error::Faltan estos secretos o variables en el Environment preview (Settings → Environments → Secrets y Variables):$faltan"
             exit 1
           fi
         env:
@@ -107,6 +115,7 @@ jobs:
           PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -153,6 +162,7 @@ jobs:
           PEDERNAL_SECRETO_INVITACIONES: ${{ secrets.PEDERNAL_SECRETO_INVITACIONES }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}
+          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
 
       - name: Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)
         # Corre aunque un paso anterior haya fallado o la corrida se cancele. Solo se saltea si «Abrir» nunca llegó a correr.

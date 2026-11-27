@@ -135,6 +135,17 @@ describe("armarLaLista", () => {
     expect(armarLaLista(lista, "ABIERTA").filtros.map((f) => f.actual)).toEqual([false, true]);
   });
 
+  it("«Nueva orden» sale solo si el servidor ofrece abrir (cualquier otra cosa, no)", () => {
+    expect(armarLaLista(lista, "", {}, { abrir: true }).nueva).toEqual({
+      href: "/catalogo/produccion/nueva",
+      texto: "Nueva orden",
+    });
+    expect(armarLaLista(lista, "").nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, {}).nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, { abrir: false }).nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, { abrir: undefined }).nueva).toBeNull();
+  });
+
   it("sin órdenes, «Sin resultados»", () => {
     expect(armarLaLista({ ordenes: [] }, "ABIERTA")).toMatchObject({
       filas: [],
@@ -176,6 +187,19 @@ describe("armarLaOrden", () => {
   };
   const nadie = { cancelar: false, anular: false };
   const todo = { cancelar: true, anular: true };
+
+  it("«Cerrar con lo real» solo en una orden abierta y si el servidor lo ofrece; lleva a su pantalla de cierre", () => {
+    expect(armarLaOrden(abierta, { ...nadie, cerrar: true }).cierre).toEqual({
+      href: `/catalogo/produccion/${ID}/cerrar`,
+      texto: "Cerrar con lo real",
+    });
+    expect(armarLaOrden(abierta, nadie).cierre).toBeNull();
+    expect(armarLaOrden(abierta, { ...nadie, cerrar: false }).cierre).toBeNull();
+    expect(armarLaOrden(abierta, { ...nadie, cerrar: undefined }).cierre).toBeNull();
+    for (const estado of ["CERRADA", "CANCELADA", "ANULADA"]) {
+      expect(armarLaOrden({ ...abierta, estado }, { ...todo, cerrar: true }).cierre).toBeNull();
+    }
+  });
 
   it("una orden abierta: «Orden N», su estado, el producto con lo esperado y «Consume» con lo esperado; sin lote, vencimiento ni costo", () => {
     const o = armarLaOrden(abierta, nadie);

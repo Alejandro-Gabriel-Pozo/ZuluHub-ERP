@@ -27,3 +27,16 @@ export const puedeUnirMesas = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeLaAccion(contexto, "salon.unir");
 export const puedeDividirCuentas = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeLaAccion(contexto, "salon.dividir");
+
+/**
+ * ¿La persona puede cobrar la mesa? El caso de uso exige LAS TRES acciones del cobro (`cuentas.cerrar`, `tickets.cobrar` y `cuentas.anular`, esta última para liberar la mesa): el botón «Cobrar» solo se ofrece con todas. Es la
+ * oferta de cada acción que el servidor calcula con `ofertaDe`; si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: cobrar vuelve a pasar por el guard. Chequeo: `test/web/salon-acceso.test.ts`.
+ */
+export async function puedeCobrarLaMesa(contexto: ContextoOperativo): Promise<boolean> {
+  const todas = await Promise.all([
+    puedeLaAccion(contexto, "cuentas.cerrar"),
+    puedeLaAccion(contexto, "tickets.cobrar"),
+    puedeLaAccion(contexto, "cuentas.anular"),
+  ]);
+  return todas.every(Boolean);
+}

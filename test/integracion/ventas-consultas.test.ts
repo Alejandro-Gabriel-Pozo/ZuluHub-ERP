@@ -229,6 +229,13 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
         ejemplarBaseId: ticket.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo,
+        sucursalDeTrabajo:
+          (
+            await m.filas<{ sucursal_id: string }>(
+              "select sucursal_id from ticket where id::text = $1",
+              [ticket.ticketId],
+            )
+          )[0]?.sucursal_id ?? "",
       }),
     );
 
@@ -1341,7 +1348,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
       entrada: Parameters<MundoDeVentas["consultas"]["ticketsPendientesDeFacturar"]>[1] = {},
     ) => valorDe(await m.consultas.ticketsPendientesDeFacturar(ctx, entrada));
 
-    it("solo los COBRADOS, ordenados por fecha de negocio, número y sucursal, con total, rótulo y cuándo se cobró", async () => {
+    it("con la perilla `facturar_antes_de_cobrar` apagada (de base) solo los COBRADOS, ordenados por fecha de negocio, número y sucursal, con total, rótulo y cuándo se cobró", async () => {
       const r = await lista(e3.gerente);
       const orden = [...esperados].sort(enOrden);
       expect(r.tickets.map((t) => t.ticketId)).toEqual(orden.map((t) => t.ticketId));
@@ -1603,7 +1610,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
       ]);
     });
 
-    it("solo se factura lo COBRADO: emitido, cortesía y anulado (aunque se cobró) son TICKET_NO_FACTURABLE", async () => {
+    it("con la perilla `facturar_antes_de_cobrar` apagada (de base) solo se factura lo COBRADO: emitido, cortesía y anulado (aunque se cobró) son TICKET_NO_FACTURABLE", async () => {
       for (const [que, t] of [
         ["emitido", dia.t1],
         ["cortesía", dia.t3],
@@ -1678,7 +1685,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
       return s;
     };
 
-    it("los seis controles de ventas, con su severidad: cuentas abiertas BLOQUEA; por cobrar y cortesías RECONOCIBLE; el resto INFORMA", async () => {
+    it("los siete controles de ventas, con su severidad: cuentas abiertas BLOQUEA; por cobrar y cortesías RECONOCIBLE; el resto INFORMA", async () => {
       const s = await conJornada();
       const r = await controles(s);
       expect(r.estado).toBe("ABIERTA");
@@ -1690,6 +1697,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
           "ventas.cortesias",
           "ventas.cuentas_abiertas",
           "ventas.pendientes_de_facturar",
+          "ventas.tickets_a_cuenta_corriente",
           "ventas.tickets_por_cobrar",
         ].sort(),
       );
@@ -1700,6 +1708,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
         "ventas.anulaciones",
         "ventas.correcciones",
         "ventas.pendientes_de_facturar",
+        "ventas.tickets_a_cuenta_corriente",
       ]) {
         expect(porClave.get(k)?.severidad, k).toBe("INFORMA");
       }

@@ -256,6 +256,10 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
     ["un destino en mayúscula", ["--vercel", "PRODUCTION", "--confirmo", "PRODUCTION"]],
     ["--vercel repetido", ["--vercel", "preview", "--vercel", "preview"]],
     ["--confirmo sin valor", ["--vercel", "production", "--confirmo"]],
+    [
+      "un cliente que no está en la lista cerrada (hoy vacía)",
+      ["--vercel", "cliente-ejemplo", "--confirmo", "cliente-ejemplo"],
+    ],
   ])(
     "banderas mal combinadas (%s): uso incorrecto, sin tocar la base ni Vercel",
     async (_n, args) => {

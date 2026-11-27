@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0630",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "Una lista de acciones de plantilla o de rol propio admite como máximo 1000 claves distintas con la forma recurso.accion.",
+  "que_cambia": "Un tope de forma, no de negocio: hoy el catálogo tiene 172 acciones; si algún día supera 1000 hay que subirlo con una migración.",
+  "donde": "migraciones/0094_permisos_configurables.sql (claves_de_accion_validas); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
+  "motivo": "Es un tope técnico de forma, copiado del que ya usa la lista de módulos de un plan (100); no cambia ningún permiso ni texto."
+}

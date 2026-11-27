@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0925",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "CONFIRMADA",
+  "decision": "La exportación lee con un repositorio propio, de a tandas de 500 compras, con conteo previo y tope de 20.000 filas.",
+  "que_cambia": "Evita pedidos sin tope. Revertir: cambiar las constantes de limites.ts.",
+  "donde": "plan-exportacion-de-compras-2026-11-25.md §3.2; repositorio-de-exportacion-de-compras.ts, limites.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)"
+}

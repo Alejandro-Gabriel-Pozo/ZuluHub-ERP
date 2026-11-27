@@ -17,7 +17,7 @@ type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;
 
 // `/compras/[id]/pago`: «Declarar pago» de la factura de una compra (maqueta `compra-pago.html`, estado «Declarar pago»; Compras PR 8). El id es lo único que viene de la dirección: la empresa, la persona y el alcance de
 // sucursal los decide el servidor. Una compra que no existe, de otra empresa o de otra sucursal, sin factura, anulada o con un pago vigente sale igual (el genérico). Nace cerrada: sin `comprobantes_de_proveedor.pagar` no
-// hay formulario (y el servidor lo vuelve a verificar al pagar). El importe es el total de la factura y NO es un campo: lo copia el servidor. Las cajas abiertas se leen solo con permiso. La clave de este intento la fija la
+// hay formulario (y el servidor lo vuelve a verificar al pagar). El importe es el neto de la factura (total menos notas de crédito) y NO es un campo: lo calcula el servidor. Las cajas abiertas se leen solo con permiso. La clave de este intento la fija la
 // página al abrirse; la factura y la compra se ligan con `.bind`: no viajan en un campo del formulario.
 export default async function PaginaDeDeclararElPago({ params }: PropsDePagina) {
   const { id } = await params;
@@ -48,7 +48,7 @@ export default async function PaginaDeDeclararElPago({ params }: PropsDePagina) 
           factura.comprobanteId,
           nuevaClaveDePago(),
         )}
-        importe={formatearImporte(factura.totalSegunLaFactura.monto)}
+        importe={formatearImporte(factura.netoAPagar.monto)}
         hoy={hoy}
         cajas={cajas.dato.cajas}
         textos={{
@@ -59,6 +59,8 @@ export default async function PaginaDeDeclararElPago({ params }: PropsDePagina) 
           motivo: textos.motivo,
           sinElegir: textos.sinElegir,
           declararPago: textos.declararPago,
+          agregarMedio: textos.agregarMedio,
+          quitar: textos.quitar,
           medios: {
             EFECTIVO: textos.medioDePago("EFECTIVO"),
             TARJETA_DEBITO: textos.medioDePago("TARJETA_DEBITO"),

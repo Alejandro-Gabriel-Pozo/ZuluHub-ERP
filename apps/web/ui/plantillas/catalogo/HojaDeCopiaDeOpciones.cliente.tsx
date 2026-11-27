@@ -14,6 +14,7 @@ import { Pila } from "../../primitivas/Pila";
 import { Texto } from "../../primitivas/Texto";
 import { rutaDeLaCopia, type CopiaArmada } from "./modelo-de-opciones";
 import estilos from "./HojaDeCopiaDeOpciones.module.css";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeHojaDeCopiaDeOpciones = Readonly<{
   copia: CopiaArmada;
@@ -53,7 +54,7 @@ export function HojaDeCopiaDeOpciones({ copia, accion }: PropsDeHojaDeCopiaDeOpc
       etiquetaDeCerrar={copia.cerrar}
       alCerrar={alCerrar}
     >
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <Selector

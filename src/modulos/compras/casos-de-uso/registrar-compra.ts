@@ -8,19 +8,20 @@ import {
   exigirFacturaNueva,
   leerHechoEn,
   leerCondicionDeIva,
+  guardarElPagoDeLaCompra,
   guardarFactura,
+  registrarLaOferta,
   prepararFactura,
   salidaDeLoYaHecho,
 } from "./registrar-compra-apoyo";
 import type { EntradaDeRegistrarCompra, SalidaDeRegistrarCompra } from "./registrar-compra-tipos";
 import { camposDeHuellaDeFactura, leerFactura, type FacturaPedida } from "../dominio/factura";
-import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
-import { camposDeHuellaDePago, leerPago, type PagoPedido } from "../dominio/pago";
+import { decidirPorHuella } from "../dominio/huella";
+import { leerPago, type PagoPedido } from "../dominio/pago";
 import { esUuid } from "../dominio/identificadores";
 import { PERILLA_DEL_NIVEL } from "../dominio/niveles";
 import {
   claveDeLaEntradaDeStock,
-  claveDelPagoDeLaCompra,
   elegirDepositoDeLaCompra,
   huellaDeLaCompra,
   leerRemito,
@@ -29,6 +30,7 @@ import {
   type Remito,
 } from "../dominio/registrar-compra";
 import type { LineaDeRecepcion } from "../persistencia/repositorio-de-recepciones";
+import { asentarElCargoDeLaFactura, asentarElPagoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -311,42 +313,18 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
           let pagoId: string | null = null;
           if (pago !== null && comprobanteId !== null && preparada !== null && preparada.ok) {
             const importe = preparada.valor.calculado.totalSegunFactura;
-            const nuevo = await tx.pagosDeProveedor.insertar(empresaId, {
+            pagoId = await guardarElPagoDeLaCompra(tx, {
+              empresaId,
+              persona,
+              recepcionId,
               comprobanteId,
-              fechaDePago: pago.fechaDePago,
-              medio: pago.medio,
+              pago,
               importe,
-              clave: claveDelPagoDeLaCompra(recepcionId),
-              huella: huellaDeComando(
-                "declarar_pago",
-                [comprobanteId, ...camposDeHuellaDePago(pago, importe)],
-                [],
-              ),
-              registradoPor: persona,
             });
-            if (nuevo === undefined) {
-              throw new Error(
-                "el pago chocó con una restricción única que no es su clave ni el pago vigente",
-              );
-            }
-            pagoId = nuevo;
           }
 
-          // 6. Lo que cobró el proveedor: la compra más nueva gana.
-          for (const l of lineas) {
-            if (l.renglon.precio === null || l.costoPorUnidadDeStock === null) continue;
-            await tx.ofertasDeProveedor.registrar(empresaId, {
-              proveedorId: proveedor.valor.id,
-              productoId: l.producto.id,
-              presentacionId: l.renglon.presentacionId,
-              precioPorTipo: l.renglon.precioPor,
-              unidadDePrecioId: l.renglon.unidadDePrecioId,
-              ultimoPrecio: l.renglon.precio,
-              ultimoCostoPorUnidadDeStock: l.costoPorUnidadDeStock,
-              ultimaCompraId: recepcionId,
-              ultimaCompraEn: hechoEn,
-            });
-          }
+          // 6. Lo que cobró el proveedor y, al final, el cargo de la factura en el libro (ver `asentarElCargoDeLaFactura`).
+          await registrarLaOferta(tx, empresaId, proveedor.valor.id, recepcionId, hechoEn, lineas);
 
           await tx.auditoria.registrar({
             empresaId,
@@ -364,6 +342,27 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
               movimientos,
             },
           });
+          if (comprobanteId !== null && factura !== null && preparada?.ok === true) {
+            const datos = {
+              comprobanteId,
+              proveedorId: proveedor.valor.id,
+              total: preparada.valor.calculado.totalSegunFactura,
+              venceEl: factura.vencimientoDePago,
+              sucursalId: entrada.sucursalId,
+            };
+            const cargo = await asentarElCargoDeLaFactura(tx, contexto, dependencias, datos);
+            if (!cargo.ok) return cargo;
+            if (pagoId !== null) {
+              const pagoAsentado = { pagoId, comprobanteId, importe: datos.total };
+              const enElLibro = await asentarElPagoDeLaFactura(
+                tx,
+                contexto,
+                dependencias,
+                pagoAsentado,
+              );
+              if (!enElLibro.ok) return enElLibro;
+            }
+          }
           return ok({
             recepcionId,
             comprobanteId,

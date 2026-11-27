@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-011",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Acción nueva «reemplazar facturas» del proveedor para gerente y administrador, sin piso de solo gerente; además se exige el permiso de cada paso que el reemplazo ejecuta (anular y registrar factura).",
+  "que_cambia": "Quién puede reemplazar una factura. Revertir: cambiar los roles en permisos-de-compras.ts y regenerar la declaración de plantillas; las plantillas por empresa son configurables.",
+  "donde": "permisos-de-compras.ts, catalogo-compras.ts, 0094 (semilla), plantillas-declaradas.json; RP-7 del dueño (25/11/2026); confirmada por el dueño el 26/11/2026 (Excel de decisiones, fila 17; «Sí, solo gerente y administrador»), vía el orquestador"
+}

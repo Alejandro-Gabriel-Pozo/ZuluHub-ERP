@@ -9,9 +9,10 @@ import type { ErrorDeFactura } from "../dominio/factura";
 import type { ErrorDeFacturaSeparada } from "../dominio/conciliacion-separada";
 import type { ErrorDeControl } from "../dominio/control-de-recepcion";
 import type { ErrorDeCorreccion } from "../dominio/correccion";
+import type { ErrorDeCorreccionDeLoRecibido } from "../dominio/correccion-de-lo-recibido";
 import type { ErrorDeVinculo } from "../dominio/orden-de-compra";
 import type { ErrorDeResolucion, ErrorDeTolerancia } from "../dominio/diferencias";
-import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
+import type { ErrorDeLosMedios, ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
 /**
@@ -55,6 +56,15 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "COMPROBANTE_ANULADO",
   "COMPROBANTE_NO_PAGABLE",
   "MEDIO_INVALIDO",
+  "LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL",
+  "NADA_PARA_PAGAR",
+  "REEMPLAZO_DE_FACTURA_NO_ANULADA",
+  "REEMPLAZO_DE_OTRO_PROVEEDOR",
+  "NOTA_DE_CREDITO_CON_PAGO",
+  "NOTA_DE_DEBITO_DE_FACTURA_ANULADA",
+  "NOTA_DE_DEBITO_DE_OTRO_PROVEEDOR",
+  "NOTA_DE_DEBITO_SIN_FACTURA",
+  "NOTA_DE_DEBITO_NO_ENCONTRADA",
   "SALIDA_DE_CAJA_INVALIDA",
   "SALIDA_DE_CAJA_SOLO_EN_EFECTIVO",
   "CAJA_NO_ENCONTRADA",
@@ -107,6 +117,17 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "LINEA_DE_ORDEN_RETIRADA",
   "RECEPCION_EXCEDE_LA_ORDEN",
   "RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR",
+  "RECEPCION_NO_CONFIRMADA",
+  "CORRECCION_BAJO_LO_CONCILIADO",
+  "CORRECCION_NO_SOPORTADA_PARA_LA_LINEA",
+  "COSTO_YA_TOMADO",
+  "LIBRO_DE_SALDOS_RECHAZADO",
+  "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO",
+  "ASIENTO_DEL_PAGO_NO_ENCONTRADO",
+  "ASIENTO_DE_LA_NOTA_NO_ENCONTRADO",
+  "LINEA_NO_CONCILIADA_ENTERA",
+  "COSTO_SIN_FACTURA_UNICA",
+  "EXPORTACION_DEMASIADO_GRANDE",
 ] as const;
 export type CodigoDeErrorDeCompras = (typeof CODIGOS_DE_ERROR_DE_COMPRAS)[number];
 
@@ -120,8 +141,10 @@ export type ErrorDeCompras =
   | ErrorDeComprobante
   | ErrorDeFactura
   | ErrorDePago
+  | ErrorDeLosMedios
   | ErrorDeSalidaDeCaja
   | ErrorDeCorreccion
+  | ErrorDeCorreccionDeLoRecibido
   | ErrorDeControl
   | ErrorDeVinculo
   | ErrorDeResolucion
@@ -133,4 +156,6 @@ export type ErrorDeCompras =
   | Readonly<{ error: "REMITO_YA_REGISTRADO"; recepcionId: string | null }>
   | Readonly<{ error: "COMPROBANTE_YA_REGISTRADO"; comprobanteId: string | null }>
   | Readonly<{ error: "COMPROBANTE_YA_PAGADO"; pagoId: string | null }>
+  /** La factura ya fue reemplazada: `reemplazoId` es la nueva vigente (`null` solo si lo dijo la base, que no sabe con quién choca). */
+  | Readonly<{ error: "FACTURA_YA_REEMPLAZADA"; reemplazoId: string | null }>
   | Readonly<{ error: "FUNCION_NO_INCLUIDA"; perilla: string }>;

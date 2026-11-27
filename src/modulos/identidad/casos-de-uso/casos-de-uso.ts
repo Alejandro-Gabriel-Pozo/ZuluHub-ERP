@@ -1,10 +1,14 @@
 import { crearAceptarInvitacion } from "./aceptar-invitacion";
 import { crearAceptarTraspaso } from "./aceptar-traspaso";
 import { crearApagarMembresia } from "./apagar-membresia";
+import { crearArchivarRol } from "./archivar-rol";
+import { crearAsignarRol } from "./asignar-rol";
 import { crearAsignarSucursales } from "./asignar-sucursales";
 import { crearCancelarTraspaso } from "./cancelar-traspaso";
 import type { DependenciasDeIdentidad } from "./contrato";
+import { crearCrearRol } from "./crear-rol";
 import type { DECLARACIONES } from "./declaraciones";
+import { crearEditarRol } from "./editar-rol";
 import { crearInvitarUsuario } from "./invitar-usuario";
 import { crearProponerTraspaso } from "./proponer-traspaso";
 import { crearRechazarTraspaso } from "./rechazar-traspaso";
@@ -29,6 +33,11 @@ export function crearCasosDeUsoDeIdentidad(dependencias: DependenciasDeIdentidad
     cancelarTraspaso: crearCancelarTraspaso(dependencias),
     aceptarTraspaso: crearAceptarTraspaso(dependencias),
     rechazarTraspaso: crearRechazarTraspaso(dependencias),
+    // H4b T4: los roles propios de la empresa (solo el gerente).
+    crearRol: crearCrearRol(dependencias),
+    editarRol: crearEditarRol(dependencias),
+    archivarRol: crearArchivarRol(dependencias),
+    asignarRol: crearAsignarRol(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

@@ -63,7 +63,7 @@
       ],
       "parteDedicada": "src/composicion/web-de-<módulo>.ts",
       "soloJunta": false,
-      "lineas": 91,
+      "lineas": 93,
       "excepciones": ["empresas", "fiscal", "identidad"]
     },
     {
@@ -103,7 +103,7 @@
       ],
       "parteDedicada": "src/capacidades/vocabulario/catalogo-<módulo>.ts",
       "soloJunta": true,
-      "lineas": 90,
+      "lineas": 93,
       "excepciones": [
         "nucleo",
         "carta-publica",
@@ -113,6 +113,7 @@
         "fiscal-emitir",
         "fiscal-imprimir",
         "fiscal-pantallas",
+        "compras-costo",
         "lotes",
         "usuarios",
         "cierre.test",
@@ -137,7 +138,7 @@
       "importaDe": ["src/capacidades/modulos/catalogo-*"],
       "parteDedicada": "src/capacidades/modulos/catalogo-<módulo>.ts",
       "soloJunta": true,
-      "lineas": 98,
+      "lineas": 100,
       "excepciones": ["lotes-y-produccion", "salon-y-comandas"]
     },
     {
@@ -152,7 +153,7 @@
       ],
       "parteDedicada": "src/capacidades/permisos/permisos-de-<módulo>.ts",
       "soloJunta": false,
-      "lineas": 80
+      "lineas": 82
     }
   ]
 }

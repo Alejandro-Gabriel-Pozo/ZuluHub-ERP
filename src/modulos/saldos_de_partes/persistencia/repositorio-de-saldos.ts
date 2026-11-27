@@ -7,6 +7,18 @@ import type { Sentido } from "../dominio/clases";
 import type { Reparto } from "../dominio/distribucion";
 import { estaVencida } from "../dominio/vencida";
 import type { SaldosDb } from "./esquema";
+import {
+  aPartida,
+  crearLecturasDeVariasPartes,
+  partidasAbiertas,
+  type CargoPendiente,
+  type CargoPendienteDeParte,
+  type LadoDePartida,
+  type LecturasDeVariasPartes,
+  type MovimientoDelLibro,
+  type PartidaAbierta,
+  type SaldoDeParte,
+} from "./lecturas-de-varias-partes";
 
 export type EstadoDeAsiento = Readonly<{
   /** El importe del asiento, en positivo. */
@@ -29,38 +41,28 @@ export type LineaDeCuenta = Readonly<{
   referenciaId: string | null;
   detalle: string | null;
   anulaA: string | null;
+  /** De qué hecho sale el asiento (CC-5: el ticket o la cobranza que lo originó); el espejo de una anulación lleva el MISMO origen que el asiento que anula. */
+  origenTipo: string;
+  origenId: string;
 }>;
 
-/** Un asiento con algo pendiente: un cargo (suma) por saldar, o un saldo a favor (resta) por aplicar. `pendiente` = `tope` − `imputado`, siempre > 0. */
-export type PartidaAbierta = Readonly<{
-  asientoId: string;
-  clase: string;
-  venceEl: FechaCivil | null;
-  registradoEn: Date;
-  referenciaTipo: string | null;
-  referenciaId: string | null;
-  tope: Importe;
-  imputado: Importe;
-  pendiente: Importe;
-}>;
-
-/**
- * Un cargo con algo por saldar. `vencida` se MARCA y no bloquea nada: `venceEl` anterior a la fecha de hoy (sin vencimiento, nunca). La regla es `estaVencida`
- * del dominio (una sola); se aplica acá porque las consultas no importan el dominio (ADR-005).
- */
-export type CargoPendiente = PartidaAbierta & Readonly<{ vencida: boolean }>;
+export type {
+  CargoPendiente,
+  CargoPendienteDeParte,
+  LadoDePartida,
+  MovimientoDelLibro,
+  PartidaAbierta,
+  SaldoDeParte,
+};
 
 /** Los tipos con que preguntan las consultas, que no importan el dominio (ADR-005): los reexporta la persistencia. */
 export type { Reparto, Sentido };
-
-/** De qué lado se piden las partidas abiertas: los cargos (importe > 0) o los saldos a favor (importe < 0). */
-export type LadoDePartida = "CARGOS" | "CREDITOS";
 
 /**
  * Lectura de los saldos derivados (los escribe solo un disparador de la base). Todo filtra por la empresa; una parte o un asiento de otra empresa
  * no existe (`null`, o saldo cero: sin oráculo de existencia).
  */
-export interface RepositorioDeSaldos {
+export interface RepositorioDeSaldos extends LecturasDeVariasPartes {
   /** El saldo de la parte en ese sentido: positivo = se debe; negativo = saldo a favor. Cero si nunca tuvo asientos. */
   saldoDeParte(empresa: EmpresaId, parteId: string, sentido: Sentido): Promise<Importe>;
   /** El desglose por centro de costo (sucursal ascendente, «sin centro» al final): su suma es `saldoDeParte`. */
@@ -96,6 +98,7 @@ export interface RepositorioDeSaldos {
 
 export function crearRepositorioDeSaldos(db: Kysely<SaldosDb>): RepositorioDeSaldos {
   return {
+    ...crearLecturasDeVariasPartes(db),
     async saldoDeParte(empresa, parteId, sentido) {
       if (!esUuidCanonico(parteId)) return importeDesdeTexto(ARS, "0.00");
       const fila = await db
@@ -165,6 +168,8 @@ export function crearRepositorioDeSaldos(db: Kysely<SaldosDb>): RepositorioDeSal
           "a.referencia_id as referencia_id",
           "a.detalle as detalle",
           "a.anula_a as anula_a",
+          "a.origen_tipo as origen_tipo",
+          sql<string>`a.origen_id::text`.as("origen_id"),
         ])
         .where("a.empresa_id", "=", empresa)
         .where("a.parte_id", "=", parteId)
@@ -189,66 +194,19 @@ export function crearRepositorioDeSaldos(db: Kysely<SaldosDb>): RepositorioDeSal
         referenciaId: f.referencia_id,
         detalle: f.detalle,
         anulaA: f.anula_a,
+        origenTipo: f.origen_tipo,
+        origenId: f.origen_id,
       }));
     },
 
     async cargosAbiertos(empresa, parteId, sentido, hoy) {
-      const partidas = await partidasAbiertas(db, empresa, parteId, sentido, "CARGOS");
-      return partidas.map((p) => ({ ...p, vencida: estaVencida(p.venceEl, hoy) }));
+      const partidas = await partidasAbiertas(db, empresa, [parteId], sentido, "CARGOS");
+      return partidas.map((p) => ({ ...aPartida(p), vencida: estaVencida(p.venceEl, hoy) }));
     },
 
-    creditosAbiertos(empresa, parteId, sentido) {
-      return partidasAbiertas(db, empresa, parteId, sentido, "CREDITOS");
+    async creditosAbiertos(empresa, parteId, sentido) {
+      const partidas = await partidasAbiertas(db, empresa, [parteId], sentido, "CREDITOS");
+      return partidas.map(aPartida);
     },
   };
-}
-
-/** Los cargos o los saldos a favor de la parte con algo pendiente (los anulados y los espejos no cuentan), por vencimiento (sin vencimiento al final) y antigüedad. */
-async function partidasAbiertas(
-  db: Kysely<SaldosDb>,
-  empresa: EmpresaId,
-  parteId: string,
-  sentido: Sentido,
-  lado: LadoDePartida,
-): Promise<PartidaAbierta[]> {
-  if (!esUuidCanonico(parteId)) return [];
-  const filas = await db
-    .selectFrom("asiento_de_saldo as a")
-    .innerJoin("saldo_de_asiento as s", (j) =>
-      j.onRef("s.empresa_id", "=", "a.empresa_id").onRef("s.asiento_id", "=", "a.id"),
-    )
-    .select([
-      "a.id as id",
-      "a.clase as clase",
-      sql<string | null>`a.vence_el::text`.as("vence_el"),
-      "a.registrado_en as registrado_en",
-      "a.referencia_tipo as referencia_tipo",
-      "a.referencia_id as referencia_id",
-      sql<string>`s.tope::text`.as("tope"),
-      sql<string>`s.importe_imputado::text`.as("imputado"),
-      sql<string>`(s.tope - s.importe_imputado)::text`.as("pendiente"),
-    ])
-    .where("a.empresa_id", "=", empresa)
-    .where("a.parte_id", "=", parteId)
-    .where("a.sentido", "=", sentido)
-    .where("a.moneda", "=", ARS)
-    .where("a.naturaleza", "=", "ORIGINAL")
-    .where("s.anulado", "=", false)
-    .where(sql<boolean>`s.tope > s.importe_imputado`)
-    .where(lado === "CARGOS" ? sql<boolean>`a.importe > 0` : sql<boolean>`a.importe < 0`)
-    .orderBy(sql`a.vence_el nulls last`)
-    .orderBy("a.registrado_en")
-    .orderBy("a.id")
-    .execute();
-  return filas.map((f) => ({
-    asientoId: f.id,
-    clase: f.clase,
-    venceEl: f.vence_el === null ? null : (f.vence_el as FechaCivil),
-    registradoEn: f.registrado_en,
-    referenciaTipo: f.referencia_tipo,
-    referenciaId: f.referencia_id,
-    tope: importeDesdeTexto(ARS, f.tope),
-    imputado: importeDesdeTexto(ARS, f.imputado),
-    pendiente: importeDesdeTexto(ARS, f.pendiente),
-  }));
 }

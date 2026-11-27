@@ -20,19 +20,19 @@ ahí no publica nada. Encender producción es otra decisión del dueño y el ÚL
 
 ## A. Qué hay listo en el repositorio
 
-| Pieza                                                        | Dónde                                                                            | Qué hace                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Configuración de Vercel                                      | `apps/web/vercel.json`                                                           | Región `gru1`, despliegue automático encendido solo para la rama `preview` (`main` y el resto apagadas), un cron cada 5 minutos (`*/5`). Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                                                                                            |
-| Cron de trabajos                                             | `app/api/trabajos/cron`                                                          | Cada 5 minutos (`*/5`; exige plan Pro de Vercel para el primer cliente, no para el primer despliegue ni las pruebas; los previews no ejecutan crons): encola la reconciliación fiscal, despacha la cola (mails, reintentos) y barre las sesiones. Solo responde con `CRON_SECRET`; sin él, 401 sin cuerpo.                                                         |
-| Despacho inmediato                                           | `servidor/despacho-inmediato.ts`                                                 | `despacharDespuesDeConfirmar(ids)` y `despacharPorClavesDespuesDeConfirmar` (con `after()` de Next): las acciones que encolan los usan para que salga en segundos; el cron es el respaldo. Hoy solo lo llama emitir un comprobante.                                                                                                                                |
-| Salud                                                        | `app/api/salud`                                                                  | `{"ok":true}` (200) o `{"ok":false}` (503), sin ningún detalle. Hace un `SELECT 1` con el rol limitado de la aplicación.                                                                                                                                                                                                                                           |
-| Guarda de migración                                          | `src/composicion/guarda-de-migracion.ts`                                         | Si la base no tiene la migración que el código necesita (`MIGRACION_REQUERIDA`), toda la app responde «En mantenimiento» (503 con una referencia `PD-…`) en vez de fallar a mitad de una factura. Vuelve sola, a los pocos segundos, apenas se migra.                                                                                                              |
-| Migrar la base                                               | `.github/workflows/migrar.yml`                                                   | Workflow manual. `produccion` y `preview` piden tu aprobación; antes de aplicar en producción crea la rama de respaldo `antes-de-<NNNN>` en Neon (si cargaste `NEON_API_KEY` y `NEON_PROJECT_ID`) y después instala la clave de contexto (si cargaste `PEDERNAL_CLAVE_CONTEXTO`).                                                                                  |
-| Cargar el entorno de Vercel (lo que se genera solo)          | `.github/workflows/cargar-entorno.yml`, `npm run cargar-entorno`                 | Workflow manual. Genera y carga en Vercel, como sensibles y sin sobrescribir nada, los secretos que no dependen de vos (sección B.4 bis). `produccion` y `preview` piden tu aprobación.                                                                                                                                                                            |
-| Cargar el entorno de la consola de plataforma (solo preview) | `.github/workflows/cargar-entorno-consola.yml`, `npm run consola:cargar-entorno` | Workflow manual, solo `preview`, con tu aprobación. Genera y carga en `pedernal-plataforma` sus claves y cadenas sin mostrar valores, y **reemplaza el secreto de invitaciones también en esta web** (queda igual en las dos). Pasos en `apps/plataforma/PRIMER-DESPLIEGUE.md`, 3.1. Tras correrlo: redesplegar y reenviar las invitaciones pendientes de preview. |
-| Instalar la clave de contexto                                | `npm run instalar-clave`                                                         | Instala en la base la clave con la que se firma el contexto. Idempotente. Lo usa el workflow y también sirve en tu terminal.                                                                                                                                                                                                                                       |
-| Migrar / dar LOGIN a los roles / cargar Vercel               | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]`          | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                                                                                                                        |
-| Un freno contra encender el despliegue de paso               | `test/arquitectura/vercel-json.test.ts`                                          | Falla si `deploymentEnabled` enciende `main` o cualquier rama que no sea `preview` sin cambiar a propósito la constante `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                                                                            |
+| Pieza                                                        | Dónde                                                                            | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Configuración de Vercel                                      | `apps/web/vercel.json`                                                           | Región `gru1`, despliegue automático encendido solo para la rama `preview` (`main` y el resto apagadas), un cron cada 5 minutos (`*/5`). Vercel la lee desde la carpeta raíz del proyecto (`apps/web`).                                                                                                                                                                                                                                                            |
+| Cron de trabajos                                             | `app/api/trabajos/cron`                                                          | Dos entradas en UTC (Argentina es UTC-3): `*/15 10-16 * * *` (cada 15 minutos de 07:00 a 13:45 de Argentina) y `0 0,2,4,6,8,17,19,21,23 * * *` (cada 2 horas el resto del día; exige plan Pro de Vercel para el primer cliente, no para el primer despliegue ni las pruebas; los previews no ejecutan crons): encola la reconciliación fiscal, despacha la cola (mails, reintentos) y barre las sesiones. Solo responde con `CRON_SECRET`; sin él, 401 sin cuerpo. |
+| Despacho inmediato                                           | `servidor/despacho-inmediato.ts`                                                 | `despacharDespuesDeConfirmar(ids)` y `despacharPorClavesDespuesDeConfirmar` (con `after()` de Next): las acciones que encolan los usan para que salga en segundos; el cron es el respaldo. Hoy solo lo llama emitir un comprobante.                                                                                                                                                                                                                                |
+| Salud                                                        | `app/api/salud`                                                                  | `{"ok":true}` (200) o `{"ok":false}` (503), sin ningún detalle. Hace un `SELECT 1` con el rol limitado de la aplicación.                                                                                                                                                                                                                                                                                                                                           |
+| Guarda de migración                                          | `src/composicion/guarda-de-migracion.ts`                                         | Si la base no tiene la migración que el código necesita (`MIGRACION_REQUERIDA`), toda la app responde «En mantenimiento» (503 con una referencia `PD-…`) en vez de fallar a mitad de una factura. Vuelve sola, a los pocos segundos, apenas se migra.                                                                                                                                                                                                              |
+| Migrar la base                                               | `.github/workflows/migrar.yml`                                                   | Workflow manual. `produccion` y `preview` piden tu aprobación; antes de aplicar en producción crea la rama de respaldo `antes-de-<NNNN>` en Neon (obligatoria: sin `NEON_API_KEY` y `NEON_PROJECT_ID` o si no se puede crear, **no se migra producción**) y después instala la clave de contexto (si cargaste `PEDERNAL_CLAVE_CONTEXTO`).                                                                                                                          |
+| Cargar el entorno de Vercel (lo que se genera solo)          | `.github/workflows/cargar-entorno.yml`, `npm run cargar-entorno`                 | Workflow manual. Genera y carga en Vercel, como sensibles y sin sobrescribir nada, los secretos que no dependen de vos (sección B.4 bis). `produccion` y `preview` piden tu aprobación.                                                                                                                                                                                                                                                                            |
+| Cargar el entorno de la consola de plataforma (solo preview) | `.github/workflows/cargar-entorno-consola.yml`, `npm run consola:cargar-entorno` | Workflow manual, solo `preview`, con tu aprobación. Genera y carga en `pedernal-plataforma` sus claves y cadenas sin mostrar valores, y **reemplaza el secreto de invitaciones también en esta web** (queda igual en las dos). Pasos en `apps/plataforma/PRIMER-DESPLIEGUE.md`, 3.1. Tras correrlo: redesplegar y reenviar las invitaciones pendientes de preview.                                                                                                 |
+| Instalar la clave de contexto                                | `npm run instalar-clave`                                                         | Instala en la base la clave con la que se firma el contexto. Idempotente. Lo usa el workflow y también sirve en tu terminal.                                                                                                                                                                                                                                                                                                                                       |
+| Migrar / dar LOGIN a los roles / cargar Vercel               | `npm run migrar -- --ver \| --aplicar \| --preparar-roles [--vercel …]`          | Ya existía (tanda 4/5). Ver la sección B.4.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Un freno contra encender el despliegue de paso               | `test/arquitectura/vercel-json.test.ts`                                          | Falla si `deploymentEnabled` enciende `main` o cualquier rama que no sea `preview` sin cambiar a propósito la constante `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` del mismo archivo.                                                                                                                                                                                                                                                                            |
 
 **Ya está** (verificado contra `main`, 2026-10-22; la facturación, al 2026-11-04): los scripts `npm run plataforma:primer-admin` y
 `npm run plataforma:caso` (más `plataforma:baja-admin` y `plataforma:resetear-segundo-factor`), los casos de uso de
@@ -59,17 +59,18 @@ homologación»); **no nace activo para nadie**: la plataforma lo activa empresa
 
 Settings → Environments → New environment. Dos, con estos nombres exactos:
 
-| Environment  | Revisores obligatorios | Ramas permitidas | Secretos (Environment secrets)                                                                                                  |
-| ------------ | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `produccion` | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio); `PEDERNAL_CLAVE_CONTEXTO`, `NEON_API_KEY`, `NEON_PROJECT_ID` (opcionales, ver abajo) |
-| `preview`    | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)    |
+| Environment  | Revisores obligatorios | Ramas permitidas | Secretos (Environment secrets)                                                                                                 |
+| ------------ | ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `produccion` | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA`, `NEON_API_KEY`, `NEON_PROJECT_ID` (obligatorios); `PEDERNAL_CLAVE_CONTEXTO` (opcional, ver abajo) |
+| `preview`    | **Vos** (obligatorio)  | solo `main`      | `PEDERNAL_DB_DUENO_DIRECTA` (obligatorio, de la rama `preview` de Neon); `PEDERNAL_CLAVE_CONTEXTO` (opcional, la de Preview)   |
 
 - `PEDERNAL_DB_DUENO_DIRECTA`: la cadena de conexión del **dueño** de esa base, **directa** (en Neon: Connect, y apagar
   «Connection pooling» antes de copiarla). Con el host del pooler (`-pooler`) el workflow se niega a migrar.
 - `PEDERNAL_CLAVE_CONTEXTO`: la clave de firma de esa rama, **la misma** que cargás en Vercel para el mismo entorno (B.4).
   Si el Environment no la tiene, el workflow no instala ninguna clave.
-- `NEON_API_KEY` y `NEON_PROJECT_ID` (solo `produccion`): para la rama de respaldo `antes-de-<NNNN>` antes de migrar. Sin
-  ellos se migra **sin respaldo** y el workflow lo avisa. Si los cargaste y el respaldo falla, **no se migra**.
+- `NEON_API_KEY` y `NEON_PROJECT_ID` (solo `produccion`, **obligatorios**): para la rama de respaldo `antes-de-<NNNN>` antes de migrar.
+  Sin ellos, o si el respaldo no se puede crear, **no se migra producción** (decisión del dueño, 25/11/2026: sin respaldo no se migra).
+  **Ojo con la rama:** esa exigencia está en el `migrar.yml` de la rama de integración (`integracion/modulos-v2`). El `migrar.yml` que hoy está en `main` es el anterior: con `NEON_API_KEY` y `NEON_PROJECT_ID` crea el respaldo, pero sin ellos **migra igual, sin respaldo** (solo avisa). El respaldo obligatorio llega a `main` con el PR final de la rama de integración; hasta entonces, no corras `produccion` desde `main` sin esos dos secretos cargados.
 - Revisá que «Required reviewers» de `produccion` **y de `preview`** sea solo vos (decisión del dueño, 2026-11-04) y que
   «Deployment branches» sea solo `main` en los dos: eso es lo que protege el secreto de verdad.
 - El workflow `migrar-base.yml` se retiró (decisión del orquestador por delegación del dueño, 2026-11-06): `migrar.yml`
@@ -78,8 +79,11 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 
 ### B.2 Neon: las ramas
 
-Proyecto `flat-flower-36030007`, región `aws-sa-east-1`. Dos ramas persistentes: `production` (la de los clientes) y
-`preview` (sin datos de clientes, para las pruebas). **Nunca** ramifiques `preview` desde `production` con datos reales.
+**Producción:** proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (la de los clientes; hoy NO protegida: la protección exige un plan pago de Neon y se activa al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`), región `aws-sa-east-1`, Postgres 18.
+**Al pasar a un plan pago: proteger la rama `production`.**
+
+**Preview y desarrollo:** proyecto `flat-flower-36030007`, rama `preview` (sin datos de clientes, para las pruebas). La rama `production` vieja de ese proyecto tiene datos de
+prueba, no es la de los clientes y no se usa como producción. El `NEON_PROJECT_ID` del Environment `produccion` tiene que ser el del proyecto de producción.
 
 ### B.3 Aplicar las migraciones (con el workflow, nunca desde Vercel)
 
@@ -93,10 +97,18 @@ Actions → **Migrar (preview y producción)** → Run workflow (siempre desde `
 **Permiso de la guarda:** la guarda de migración lee de la tabla `migracion` solo la columna `nombre`, con el rol
 `pedernal_app`. Ese permiso lo da la migración **0013** (permisos mínimos, `GRANT SELECT (nombre) ON migracion`): hasta que se
 aplique en una base, esa base muestra «En mantenimiento» aunque todo esté bien. Por eso aplicá **todas las migraciones
-pendientes, hasta la `0019`**, en `preview` y en `produccion` **antes** de encender el despliegue. `MIGRACION_REQUERIDA`
-del código vale `"0019"` (`src/composicion/guarda-de-migracion.ts`, línea 19) y una prueba la mantiene igual a la última
-de `migraciones/` (`0019_contacto_de_la_sucursal.sql`): si esta guía dice otra cosa, manda el código. «Ver» del workflow
+pendientes** en `preview` y en `produccion` **antes** de encender el despliegue. `MIGRACION_REQUERIDA` vale lo que diga el código
+(`src/composicion/guarda-de-migracion.ts`) y una prueba la mantiene igual a la última de `migraciones/`: esta guía no copia el
+número, porque se desactualiza con cada migración nueva; si esta guía dice otra cosa, manda el código. «Ver» del workflow
 te dice qué falta.
+
+**Sellos y plantillas de permisos (H4b).** Cada migración que ya corrió en una base se «sella» en `migraciones/selladas.json` (su checksum);
+una prueba falla si el archivo de una migración sellada cambia. **El mismo día del primer `aplicar` de la `0094` en cualquier base
+(`preview` incluida), el PR que la sella se mergea ANTES de aplicar**: `npm run sellar:migraciones -- 0094_permisos_configurables.sql`. Sin
+ese PR la semilla de la `0094` sigue editable y una acción nueva podría entrar por el camino equivocado. Una acción nueva de cualquier
+módulo llega a las plantillas por la sincronización que corre el propio `aplicar` (después de las migraciones; solo suma, nunca quita ni
+repone): para eso, quien agrega la acción corre `npm run semilla:plantillas -- --declaracion` y sube `migraciones/plantillas-declaradas.json`
+(una prueba falla si no coincide con el código).
 
 ### B.4 Roles de la base y variables de Vercel
 
@@ -338,6 +350,29 @@ mostrarlo** (por ejemplo `read -rs CRON_SECRET; export CRON_SECRET`) y no lo cop
 | 14  | **La IP de confianza llega y no se deja falsificar** (`x-vercel-forwarded-for`, NO VERIFICADO) | Pedí el inicio de sesión de dos maneras y mirá el registro de la función (Vercel → Logs): (a) normal, `curl -si -X POST -H 'content-type: application/json' -d '{"provider":"google","callbackURL":"/"}' <URL>/api/auth/sign-in/social`; (b) igual pero con `-H 'x-vercel-forwarded-for: 1.1.1.1, 2.2.2.2'` | En (a) y en (b) **no** aparece el aviso «falling back to a single shared per-path bucket». Si aparece en (a), el encabezado no llega; si aparece en (b), Vercel **no** lo pisa y un cliente lo falsifica. En cualquiera de los dos casos NO se enciende: se pasa a `x-real-ip` o `x-forwarded-for` (Vercel documenta que los pisa) cambiando `ENCABEZADO_DE_IP`. Nunca se registra ni se copia el valor de la IP; solo se anota si el encabezado llegó y con un único valor |
 | 15  | **Ingreso con Google sin JavaScript** (`form-action 'self'`, NO VERIFICADO)                    | En Chrome con JavaScript desactivado (Configuración → Privacidad y seguridad → Configuración de sitios → JavaScript → No permitir), tocá «Ingresar con Google» en el despliegue de prueba                                                                                                                   | Te lleva a `accounts.google.com`. Si Chrome lo bloquea por la política `form-action 'self'` (consola: «Refused to send form data»), se anota y se ajusta la política en un cambio aparte; con JavaScript el ingreso anda igual                                                                                                                                                                                                                                              |
 
+### Las pruebas de humo, en un solo comando (`npm run humo`)
+
+Repite solo de lectura (solo pedidos GET; nada se escribe, nada se despliega) las comprobaciones 3, 4, 6, 7, 8, 9 y 13 de arriba, más lo que se pueda
+ver sin sesión de «no se mezclan las empresas» (los encabezados `x-pd-*` forjados no cambian nada, una ruta interna `/s/…` pedida desde afuera es la
+neutra, sin sesión no se entra a lo privado), «solo se sirve lo activo» (una carta activa sí, un host retirado cae a la neutra) y «nunca En
+mantenimiento». Cada chequeo sale `PASA`, `FALLA` u `OMITIDO` (con el motivo); **un chequeo que no se pudo hacer nunca sale como pasa**.
+Código de salida: 0 sin fallas, 1 si algo falla, 2 si falta la variable obligatoria.
+
+Las direcciones y la cadena se cargan en la terminal, **sin escribirlas en ningún archivo del repositorio** (los valores no se imprimen):
+
+| Variable                                                    | Para qué                                                                                                                |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `PEDERNAL_HUMO_URL_TECNICA`                                 | **Obligatoria.** La dirección `*.vercel.app` del despliegue (https; `http://localhost` solo para pruebas locales)       |
+| `PEDERNAL_HUMO_URL_APP`                                     | La dirección de la aplicación (host de la superficie APP). Sin ella se omiten H0-04, H1-02 y H1-03                      |
+| `PEDERNAL_HUMO_URL_CARTA` y `PEDERNAL_HUMO_CODIGO_DE_CARTA` | Una carta ACTIVA conocida y su código. Sin ellas se omiten H12-01 y H12-02                                              |
+| `PEDERNAL_HUMO_URL_RETIRADA`                                | Un host retirado o sin registrar. Sin ella se omite H12-03                                                              |
+| `PEDERNAL_HUMO_DB_LECTURA`                                  | Cadena de **solo lectura** de la base compartida, con el rol público. Sin ella, el aislamiento del hotel es paso manual |
+
+**Aislamiento del hotel (HDN-01).** Los dominios que terminan en `hotelesdelneuquen.com.ar` no tienen que figurar en la base compartida. Con la
+cadena de lectura el comando los cuenta (una transacción `READ ONLY`, siempre con `ROLLBACK`) y tiene que dar 0. **Límite:** con el rol público solo se
+ven los dominios **ACTIVOS** (los que la web serviría); los pendientes, verificados o retirados no. Para verlos todos, el paso manual, como dueño, en
+el SQL Editor de Neon sobre la base compartida: `SELECT count(*) FROM dominio WHERE host LIKE '%hotelesdelneuquen.com.ar';` (tiene que dar 0).
+
 ---
 
 ## D. Plan B si Vercel no entiende el workspace
@@ -372,7 +407,7 @@ _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño
 
 **Secretos del Environment `preview`** para ese workflow: `PEDERNAL_DB_DUENO_DIRECTA`, `PEDERNAL_SECRETO_INVITACIONES` (hexadecimal, 64 o más dígitos) y
 `CRON_SECRET` (24 o más caracteres) —los dos últimos con el MISMO valor que en Vercel Preview, fijados por el dueño, y después un Redeploy de
-preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
+preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Además, **una variable** (no un secreto) del mismo Environment: `PEDERNAL_HOSTS_PROTEGIDOS`, los hosts de la consola, la aplicación y la landing de Preview separados por comas y sin `https://` (los mismos que tienen esos proyectos); sin ella el chequeo previo del workflow se corta y nada se prepara, porque agregar el dominio de la empresa falla cerrado. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
 DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante FUTURO de 5 a 8 minutos desde la
 corrida —la confirmación de la marca no admite una fecha pasada y el alta exige la marca ya vigente, así que el flujo espera a que llegue— y
 `verificadoEn`, uno pasado; si el Environment tarda en aprobarse y `vigenteDesde` queda en el pasado, el flujo cierra bien el login y rechaza: se edita el JSON y se repite):
@@ -431,7 +466,7 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
    `installCommand` cargado a mano en el panel; falta confirmar el mismo resultado leyéndolo desde `vercel.json` (plan B en la sección D).
 2. Que el despliegue de prueba de B.9 se pueda crear con la CLI sin depender del automático (que solo cubre la rama `preview`).
 3. La versión de Node por defecto, y que `regions` en `vercel.json` valga en el plan Hobby (chequeo 2).
-4. Que Vercel mande `Authorization: Bearer <CRON_SECRET>` a la ruta del cron (chequeo 10) y que el plan elegido acepte el cron cada 5 minutos (`*/5` exige plan Pro de Vercel para el primer cliente; los previews no ejecutan crons).
+4. **Verificación obligatoria del primer despliegue (no es un supuesto):** que Vercel acepte las **dos entradas de `crons` con el mismo path** (la búsqueda sobre su documentación «Managing Cron Jobs» dice que sí, pero la página no se pudo abrir al decidirlo, 25/11/2026): mirá en el panel (Settings → Cron Jobs) que figuren las dos y que el despliegue no falle por eso; si no las acepta, no se inventa otra variante: se vuelve al dueño con las opciones (por ejemplo, una ruta hermana o un parámetro que el handler tolere). Además: que Vercel mande `Authorization: Bearer <CRON_SECRET>` a la ruta del cron (chequeo 10) y que el plan elegido acepte los dos crons (`*/15 10-16 * * *` y `0 0,2,4,6,8,17,19,21,23 * * *`, el mismo path dos veces; exigen plan Pro de Vercel para el primer cliente; los previews no ejecutan crons).
 5. Que `maxDuration = 60` de la ruta del cron entre en el límite del plan (si Vercel lo rechaza, se baja).
 6. Que Vercel no deje falsificar `host` ni `X-Forwarded-Host` (chequeos 3 y 4).
 7. Que los Environments de GitHub con revisores obligatorios funcionen en este repositorio (B.1) y que la API de Neon cree la
@@ -448,3 +483,84 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 12. Que el Root Directory `apps/web` y «Include source files outside of the Root Directory» alcancen para `src/` y `migraciones/`
     (ya en G.1): la compilación sin secretos en un clon limpio sí se verificó (`npm ci` y `npm run build:web`, 2026-11-04);
     lo de Vercel no.
+
+---
+
+## H. Instalación dedicada de un cliente (base propia)
+
+Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de plan** («Extra de plan sobre bd»); los clientes lo piden para «tener sus datos en su propia BD». La base compartida sigue siendo el estándar. Diseño y alternativas: `base-por-cliente-opciones.md` (repositorio de documentos). Esta sección es el camino **mínimo y manual**: una instalación aparte, operada por vos. No hay alta automática.
+
+**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes (`cliente-hdn`, Hoteles del Neuquén: proyecto de Neon «Hoteles del Neuquen», proyecto de Vercel `pedernal-hdn` sin conectar a Git) es la misma en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`; una prueba falla si difieren. No es el proyecto viejo `stockhneuquen`, que hoy sirve `app.hotelesdelneuquen.com.ar` y `carta.hotelesdelneuquen.com.ar` (verificado en Vercel, lectura, 25/11/2026).
+
+### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
+
+1. Los proyectos de clientes se crean **en la organización `Pedernal`** (la de la producción nueva), **por vos en la consola, nunca por una sesión**. No hace falta una organización aparte: lo que separa a un cliente de otro, y de la producción, es la **clave limitada a un proyecto**.
+2. Un proyecto por cliente, en la misma región de hoy (`aws-sa-east-1`, São Paulo) y Postgres 18.
+3. Dejá la rama predeterminada con el nombre `production` y protegela: `migrar.yml` busca la rama de respaldo por ese nombre (`select(.name == "production")`) y no cambia.
+4. Creá, como administrador de la organización, **una clave de API limitada a ESE proyecto** («project-scoped»; solo un administrador de la organización las crea). Una por proyecto: la de producción no alcanza a los clientes y la de un cliente no alcanza a producción ni a otro cliente. Anotá el identificador del proyecto.
+   - **Qué puede la clave de un proyecto** (documentación pública de Neon, leída el 25/11/2026 por buscador; confirmalo en la consola): acceso de editor sobre ese proyecto, es decir leer y modificar lo que hay adentro (ramas, bases, roles).
+   - **Qué no puede:** borrar el proyecto, crear otros proyectos, crear otras claves ni ver otros proyectos.
+   - **Lo que sí puede y conviene tener presente:** como editor, una clave de proyecto **sí puede borrar o resetear una rama de ese proyecto**. Lo que impide que `migrar.yml` lo haga no es la clave sino el workflow (solo lista y crea ramas) y la prueba `workflows-y-neon.test.ts`.
+5. Copiá la cadena **DIRECTA** del dueño de la base (apagá «Connection pooling»).
+6. **Costo:** la organización `Pedernal` está hoy en el plan gratuito; un cliente con base propia probablemente exija un plan pago (precio del extra: pregunta ya registrada, ver `base-por-cliente-opciones.md`, pregunta 2).
+
+### H.2 GitHub: un Environment por cliente
+
+`Settings → Environments → New environment`: `cliente-<codigo>` (minúsculas, números y guiones, 3 a 30 caracteres). Revisor obligatorio: vos. «Deployment branches»: solo `main`. Secretos:
+
+- `PEDERNAL_DB_DUENO_DIRECTA` (la cadena directa del cliente), `NEON_API_KEY` y `NEON_PROJECT_ID` (**obligatorios**: sin respaldo no se migra) y `PEDERNAL_VERCEL_TOKEN` (para cargar las variables en SU proyecto de Vercel).
+- `PEDERNAL_CLAVE_CONTEXTO`: una **propia del cliente**, distinta de la de producción y de preview (así un contexto firmado para un cliente lo rechaza la base de otro). La generás vos con el comando de B.4 (`<kid>:<64 hexadecimales>`), la cargás en este Environment (la instala `migrar.yml` al aplicar) y en Vercel, y la dejás en tu terminal para H.4, paso 3: `cargar-entorno` la carga como sensible y después no se puede volver a leer.
+
+Un Environment que no existe en GitHub **no es seguro de nombrar**: GitHub lo crea vacío y sin revisor al primer uso. Por eso el ambiente solo se puede elegir si está en la lista de `migrar.yml`, y se suma **después** de crear el Environment con su revisor.
+
+### H.3 Sumar al cliente a la lista (un PR chico)
+
+Se suman cuatro cosas, y nada más: en `.github/workflows/migrar.yml` la opción `- cliente-<codigo>` y el caso `cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;`; en `.github/workflows/cargar-entorno.yml` la opción y el caso `cliente-<codigo>) esperado="CARGAR CLIENTE-<CODIGO>"; destino="cliente-<codigo>" ;;`; y en `src/adaptadores/vercel/plan-de-variables.ts` la línea `"cliente-<codigo>": "prj_…"` de `PROYECTOS_DE_VERCEL_DE_CLIENTES` (el id del proyecto de Vercel del cliente; no es un secreto). Las pruebas se actualizan a propósito y fallan si una de las tres listas no coincide con las otras, si falta un caso o su frase, si el respaldo no es obligatorio, o si el id es el de `pedernal-erp`, el de la consola o el de otro cliente.
+
+### H.4 Migrar, roles y primer administrador
+
+1. `Actions → Migrar` con el ambiente del cliente: `ver`, y después `aplicar` con la frase. Se crea primero la rama de respaldo `antes-de-<NNNN>`; si no se puede, no se migra.
+2. Roles de la base y variables: `Actions → Cargar entorno` con el ambiente del cliente (frase `CARGAR CLIENTE-<CODIGO>`). Las variables van al proyecto de Vercel **del cliente**, siempre en su destino `production`, y **nunca** a `pedernal-erp`: el proyecto sale de la lista de H.3 y un código que no está en ella falla antes de tocar nada.
+3. Primer administrador y alta de la primera empresa: sección E, desde tu terminal con la cadena del cliente (no hay consola de plataforma del cliente). `plataforma:primer-admin` usa la cadena directa del dueño; `plataforma:caso` necesita además `PEDERNAL_DB_PLATAFORMA` y la clave de contexto del cliente (H.2). **El rol `pedernal_plataforma` nace sin login y nadie se lo da por vos** (`--preparar-roles` no lo toca nunca); lo abrís a mano, una sola vez y por poco tiempo:
+   1. En la consola de Neon, proyecto «Hoteles del Neuquen», rama `production`, **SQL Editor** (entra como dueño): `ALTER ROLE pedernal_plataforma WITH LOGIN PASSWORD '<clave al azar de 32 caracteres, la generás vos>' VALID UNTIL '<ahora + 60 minutos, en formato AAAA-MM-DD HH:MM:SS+00>';`. No hay que otorgar nada más: la migración 0004 ya le dio solo lo que necesita (leer y escribir tenants, empresas, invitaciones y auditoría de plataforma; no lee tablas operativas ni borra) y el rol nace sin `SUPERUSER` ni `BYPASSRLS`.
+   2. `PEDERNAL_DB_PLATAFORMA` en tu terminal (nunca en un archivo ni en un chat): la cadena **directa** del proyecto con el usuario `pedernal_plataforma` y esa clave.
+   3. Corré los casos de la sección E (`plataforma:caso`).
+   4. **Cerralo apenas termines**: `ALTER ROLE pedernal_plataforma WITH NOLOGIN PASSWORD NULL VALID UNTIL 'infinity';`. El vencimiento hace que, si te olvidás, la clave deje de servir a los 60 minutos, pero el cierre es tuyo.
+   5. Verificación (mismo editor): `SELECT rolcanlogin FROM pg_roles WHERE rolname = 'pedernal_plataforma';` tiene que dar `false`. Que la clave quedó en `NULL` no se puede mirar desde Neon (`pg_authid` es de superusuario): con `NOLOGIN` alcanza.
+      `npm run plataforma:login-temporal` **no sirve** para esto: solo actúa dentro de GitHub Actions (fuera de ahí no hace nada) y además instala una clave de contexto extra y desconocida en la base. Es lo de `preparar-empresa-de-pruebas.yml`, solo preview.
+4. Cliente de Google y DNS: B.8 y B.7, a mano, con los hosts del cliente.
+
+### H.5 Despliegue de su instalación (SUPUESTO del orquestador, 25/11/2026)
+
+El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos por línea de comandos, **después del primer despliegue general aprobado** (B.10): ninguna instalación dedicada sale antes. Motivo: `apps/web/vercel.json` lo leen todos los proyectos con esa carpeta raíz y enciende el despliegue automático de la rama `preview`; un proyecto de cliente conectado desplegaría esa rama. **Cuesta revertir poco:** conectarlo a Git es un cambio en Vercel más una rama agregada a `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` de `test/arquitectura/vercel-json.test.ts`.
+
+### H.6 Lo que este camino NO resuelve
+
+- Cada versión nueva se migra y se despliega **dos veces**, a mano: una por instalación.
+- El respaldo diario externo no existe todavía (ni para producción): lo único es la rama de respaldo antes de migrar.
+- El cron de trabajos corre en cada proyecto con su propio calendario y, mientras corre, mantiene despierta la base del cliente: eso se paga por hora de cómputo (el costo de la base sube cuanto más seguido corra; ver `base-por-cliente-opciones.md`, §4, con cifras de la documentación pública a confirmar). La frecuencia vigente de la web está en `apps/web/vercel.json`.
+- Planes, marcas y empresas se cargan a mano en la base del cliente.
+- Límite conocido: el token de Vercel de un Environment de cliente lo emitís vos con el alcance que Vercel permita (**NO VERIFICADO**: si es del equipo entero, también podría escribir en `pedernal-erp`). Lo que lo impide es el código: el comando solo escribe en el proyecto de la lista. Si Vercel permite un token limitado a un proyecto, usá ese.
+- Salida del cliente: se le entrega un volcado **verificado**, se le dan 30 días de gracia con sus datos ya entregados, y el borrado del proyecto de Neon lo hacés **solo vos**, en la consola.
+
+### H.7 Variables que cargás a mano en `pedernal-hdn` (nombres, nunca valores)
+
+`cargar-entorno` genera `PEDERNAL_SECRETO_INVITACIONES`, `PEDERNAL_AUTH_SECRETO_EMPRESA`, `CRON_SECRET` y `PEDERNAL_CLAVE_CERTIFICADOS`, y `--preparar-roles` las cadenas de los roles. El resto lo ponés vos, en el proyecto de Vercel `pedernal-hdn`, como sensibles:
+
+| Nombre                      | Para qué                                                                                                                                               | Quién la pone |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `PEDERNAL_CLAVE_CONTEXTO`   | Firmar el contexto (la misma que instala `migrar.yml`; H.2)                                                                                            | Vos           |
+| `GOOGLE_CLIENT_ID`          | Ingreso con Google. **Un cliente de Google propio de hdn**, con la dirección de retorno de `app.hotelesdelneuquen.com.ar` (Google no acepta comodines) | Vos           |
+| `GOOGLE_CLIENT_SECRET`      | Ídem                                                                                                                                                   | Vos           |
+| `PEDERNAL_RESEND_API_KEY`   | Mandar mails (Resend)                                                                                                                                  | Vos           |
+| `PEDERNAL_CORREO_REMITENTE` | Remitente de los mails                                                                                                                                 | Vos           |
+| `PEDERNAL_URL_BASE`         | Origen de los enlaces del mail (el host de la app de hdn)                                                                                              | Vos           |
+| `PEDERNAL_NOMBRE_DE_MARCA`  | Nombre que firma el mail                                                                                                                               | Vos           |
+
+### H.8 Los hosts de hdn viven SOLO en su base
+
+`app.hotelesdelneuquen.com.ar` y `carta.hotelesdelneuquen.com.ar` se registran (casos de plataforma `agregarDominio`, con la marca y el plan de hdn) **únicamente en la base de hdn**. En la base compartida no se registran nunca: si figuraran ahí, el resolutor de la web compartida los serviría con la marca equivocada. Verificación, con el SQL Editor de Neon en la base compartida (rama `production` del proyecto `Pedernal`): `SELECT count(*) FROM dominio WHERE host LIKE '%hotelesdelneuquen.com.ar';` tiene que dar `0`. **No hay una prueba automática de esto** (los dominios son datos, no código): una guarda en `agregarDominio` con una lista cerrada de hosts reservados sería un cambio de producto aparte.
+
+### H.9 DNS y el proyecto viejo `stockhneuquen`
+
+Los dos hosts hoy los sirve el proyecto viejo `stockhneuquen` (verificado en Vercel, lectura, 25/11/2026); `pedernal-hdn` (`prj_7FCPV72lnTupGoEB6gDka1ZQIfOg`, sin Git) es el proyecto nuevo de Pedernal para el hotel. Pasarlos a `pedernal-hdn` es un paso **manual tuyo, después del primer despliegue general** y de verificar la instalación de hdn por su dirección de Vercel: se agregan en `pedernal-hdn` (nunca en `pedernal-erp`), se cambia el DNS, y recién después se quitan del proyecto viejo. No se toca el proyecto `stockhneuquen` desde este repositorio.

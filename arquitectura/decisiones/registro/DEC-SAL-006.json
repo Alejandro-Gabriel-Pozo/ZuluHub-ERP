@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-006",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Cada plato del pedido puede llevar una nota libre de hasta 120 caracteres que sale en el papel de cocina; no cambia precio, stock ni ticket y se guarda también en la foto del envío.",
+  "que_cambia": "Se agrega una columna nota a la línea de comanda y al renglón del envío. Subir el largo es una migración chica; bajarlo con notas cargadas obliga a recortarlas.",
+  "donde": "migraciones/0104_nota_libre_en_la_linea_de_comanda.sql; Pedernal-docs briefs/salon/SAL-G-notas-libres.md secciones 3 y 7 (DEC-1043 y DEC-1044 de ese brief); confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)"
+}

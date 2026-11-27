@@ -123,6 +123,10 @@ export type {
   TxDeConsultasDeIdentidad,
 } from "./consultas/contrato";
 export type { ErrorAlListarMiembros, MiembroDeLista } from "./consultas/listar-miembros";
+export type { RolParaLaLista } from "./consultas/listar-roles";
+export type { RolesAsignables } from "./consultas/roles-asignables";
+export type { AccionParaElegir, ModuloParaElegir } from "./consultas/acciones-para-elegir";
+export type { OrigenDeUnRol } from "./casos-de-uso/crear-rol";
 export {
   MAXIMO_DE_PERSONAS_POR_CONSULTA,
   type EntradaDePersonasParaMostrar,
@@ -200,8 +204,15 @@ export {
   crearRepositorioDeInvitaciones,
   crearRepositorioDeMembresias,
   crearRepositorioDePersonas,
+  crearRepositorioDeRoles,
   crearRepositorioDeTraspasos,
+  PLANTILLAS_DE_ORIGEN,
+  type AltaDeRol,
   type Asignacion,
+  type PlantillaDeOrigen,
+  type RepositorioDeRoles,
+  type RolPropio,
+  type RolPropioDeLista,
   type InvitacionPendienteDeLista,
   type MiembroConEmail,
   type RepositorioDeAsignaciones,

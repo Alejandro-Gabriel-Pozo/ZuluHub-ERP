@@ -21,6 +21,8 @@ const mundo = vi.hoisted(
     visibilidad: unknown;
     control: unknown;
     pedidosDeControl: string[];
+    existencia: unknown;
+    pedidosDeExistencia: string[];
   } => ({
     permisos: null,
     llamadas: [],
@@ -30,6 +32,8 @@ const mundo = vi.hoisted(
     visibilidad: null,
     control: null,
     pedidosDeControl: [],
+    existencia: null,
+    pedidosDeExistencia: [],
   }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
@@ -62,6 +66,10 @@ vi.mock("../../apps/web/servidor/control-de-stock", () => ({
   cargarElControlDeStock: (_contexto: unknown, id: string) => {
     mundo.pedidosDeControl.push(id);
     return Promise.resolve(mundo.control);
+  },
+  cargarLaExistenciaPropia: (_contexto: unknown, entrada: { productoId: string }) => {
+    mundo.pedidosDeExistencia.push(entrada.productoId);
+    return Promise.resolve(mundo.existencia);
   },
 }));
 vi.mock("../../apps/web/servidor/ocultar", () => ({
@@ -104,7 +112,9 @@ const FICHA = {
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  seCompra: false,
   admiteControlDeStock: false,
+  admiteStockPropio: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -429,6 +439,25 @@ describe("la página de la ficha de datos de un producto", () => {
     expect(await html()).not.toContain("/opciones");
   });
 
+  it("un producto que se compra ofrece la solapa «Cómo se compra» (un enlace a sus presentaciones); uno que no se compra, no", async () => {
+    expect(await html()).not.toContain("/compra");
+    responde({
+      ok: true,
+      dato: {
+        ...FICHA,
+        claseDeUso: "MATERIA_PRIMA",
+        seVende: false,
+        seCompra: true,
+        nombreDeCocina: null,
+        alicuota: null,
+        seccion: null,
+      },
+    });
+    expect(await html()).toMatch(
+      new RegExp(`<a [^>]*href="/catalogo/productos/${ID}/compra"[^>]*>Cómo se compra</a>`),
+    );
+  });
+
   it("una alícuota guardada que el producto no ofrece se ve y su desplegable sale apagado", async () => {
     responde({ ok: true, dato: { ...FICHA, alicuota: "EXENTO" } });
     const marcado = await html();
@@ -514,5 +543,84 @@ describe("el tilde «Se controla el stock» en la página de la ficha (PR-3)", (
     responde({ ok: true, dato: { ...INSUMO, admiteControlDeStock: false } });
     expect(casilla(await html())).toBeUndefined();
     expect(mundo.pedidosDeControl).toEqual([]);
+  });
+});
+
+describe("«Se produce en tanda» y la franja de stock propio en la página de la ficha (PRO-A)", () => {
+  const ELABORADO = {
+    ...FICHA,
+    claseDeUso: "ELABORADO",
+    seVende: false,
+    admiteControlDeStock: false,
+    admiteStockPropio: true,
+  };
+  const conPlan = (
+    perillas: string[],
+    acciones = ["productos.ver", "productos.editar", "stock.ver", "articulos.controlar"],
+  ) => {
+    mundo.permisos = {
+      ok: true,
+      valor: {
+        acciones,
+        modulos: { activos: ["catalogo", "stock"], enSoloLectura: [] },
+        funcionesEncendidas: perillas,
+      },
+    };
+  };
+  const casilla = (marcado: string) =>
+    /<input[^>]*name="seControlaElStock"[^>]*>/.exec(marcado)?.[0];
+
+  beforeEach(() => {
+    mundo.visibilidad = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+    mundo.control = { ok: true, dato: { controlado: false } };
+    mundo.pedidosDeControl = [];
+    mundo.existencia = { ok: true, dato: { existencia: "12.5000", unidadId: "KG" } };
+    mundo.pedidosDeExistencia = [];
+    responde({ ok: true, dato: ELABORADO });
+  });
+
+  it("con la función «Producción» encendida: la casilla se llama «Se produce en tanda» y, apagada, la franja dice que descuenta sus ingredientes", async () => {
+    conPlan(["produccion"]);
+    const marcado = await html();
+    expect(casilla(marcado)).toBeDefined();
+    const t = await texto();
+    expect(t).toContain("Se produce en tanda");
+    expect(t).not.toContain("Se controla el stock");
+    expect(t).toContain("No tiene stock propio: descuenta sus ingredientes.");
+    expect(mundo.pedidosDeExistencia).toEqual([]);
+  });
+
+  it("encendido: la franja muestra la existencia propia", async () => {
+    conPlan(["produccion"]);
+    mundo.control = { ok: true, dato: { controlado: true } };
+    expect(await texto()).toContain("Tiene stock propio: 12,5 KG");
+    expect(mundo.pedidosDeExistencia).toEqual([ID]);
+    expect(casilla(await html())).toMatch(/checked/);
+  });
+
+  it("encendido y sin poder leer la existencia: no hay franja ni número inventado", async () => {
+    conPlan(["produccion"]);
+    mundo.control = { ok: true, dato: { controlado: true } };
+    mundo.existencia = { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") };
+    const t = await texto();
+    expect(t).not.toContain("Tiene stock propio");
+    expect(t).not.toContain("No tiene stock propio");
+  });
+
+  it("sin la función «Producción» (o sin poder leer el plan): no se ofrece, ni se consulta el control ni la existencia; la ficha queda como estaba", async () => {
+    conPlan([]);
+    expect(casilla(await html())).toBeUndefined();
+    mundo.permisos = { ok: false, error: errorDeCodigo("SIN_PERMISO") };
+    expect(casilla(await html())).toBeUndefined();
+    expect(mundo.pedidosDeControl).toEqual([]);
+    expect(mundo.pedidosDeExistencia).toEqual([]);
+  });
+
+  it("si no se pudo leer el control (módulo `stock` sin activar): no se dibuja la casilla ni la franja", async () => {
+    conPlan(["produccion"]);
+    mundo.control = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+    const t = await texto();
+    expect(t).not.toContain("Se produce en tanda");
+    expect(t).not.toContain("stock propio");
   });
 });

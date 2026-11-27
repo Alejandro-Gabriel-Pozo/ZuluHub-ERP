@@ -9,6 +9,7 @@ import {
   FICHA_DE_PROVEEDOR_INICIAL,
   type ResultadoDeFichaDeProveedor,
 } from "./resultado-de-proveedor";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeBotonDeResolverPedido = Readonly<{
   /** `resolverPedidoAccion` con el pedido y la decisión ya ligados (`.bind`): no viajan en el formulario. */
@@ -39,7 +40,7 @@ export function BotonDeResolverPedido({
     if (hecho) window.location.assign(rutaDeLaFicha);
   }, [hecho, rutaDeLaFicha]);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <BotonDeEnvio {...(variante === undefined ? {} : { variante })}>{texto}</BotonDeEnvio>

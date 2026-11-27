@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene catorce módulos (el de cuenta_corriente nació en_desarrollo, CC-1, y es disponible desde el 26/11/2026, CC-5; produccion es disponible desde el 25/11/2026, DEC-1050): administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -32,6 +32,11 @@ describe("el catálogo comercial de módulos", () => {
           "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
           "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
           "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "roles.ver": { capacidad: null, efecto: "LECTURA" },
+          "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "usuarios.asignar_rol": { capacidad: null, efecto: "CREA_AMPLIA" },
           "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
           "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -109,6 +114,7 @@ describe("el catálogo comercial de módulos", () => {
           "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "vidrieras.administrar_cuentas_de_imagen": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       stock: {
@@ -177,6 +183,7 @@ describe("el catálogo comercial de módulos", () => {
           "movimientos_caja.anular_de_otros": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "cobros.corregir_medio": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "declaraciones_de_total.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "salidas_de_dinero.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       cierre: {
@@ -262,6 +269,7 @@ describe("el catálogo comercial de módulos", () => {
           "partes.vincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.desvincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "partes.anonimizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "partes.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
@@ -287,6 +295,7 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "comprobantes_de_proveedor.reemplazar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "ordenes_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
           "ordenes_de_compra.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "ordenes_de_compra.pedir": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -296,16 +305,35 @@ describe("el catálogo comercial de módulos", () => {
           "devoluciones_a_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "devoluciones_a_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "notas_de_credito_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
+          "notas_de_debito_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
           "notas_de_credito_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "notas_de_debito_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "notas_de_credito_de_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "notas_de_debito_de_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "diferencias_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
           "diferencias_de_compra.resolver": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "compras.exportar": { capacidad: null, efecto: "LECTURA" },
+        },
+      },
+      cuenta_corriente: {
+        estado: "disponible",
+        obligatorio: false,
+        requiere: ["clientes"],
+        usaSiExiste: [],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/cuenta_corriente"],
+        acciones: {
+          "cuenta_corriente.ver": { capacidad: null, efecto: "LECTURA" },
+          "cuenta_corriente.administrar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "cuenta_corriente.cargar_a_cuenta": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "cuenta_corriente.aprobar_exceso": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "cuenta_corriente.consultar_al_vender": { capacidad: null, efecto: "LECTURA" },
         },
       },
       produccion: {
-        estado: "en_desarrollo",
+        estado: "disponible",
         obligatorio: false,
         requiere: ["stock"],
         usaSiExiste: ["catalogo"],
@@ -329,19 +357,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 44 acciones de catálogo, carta y stock (8 + 11 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 36 de caja, cierre y ventas (24 + 4 + 8) y 43 de clientes y compras (9 + 34), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 11, 25]);
-    expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 29]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 12, 25]);
+    expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([24, 4, 8]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 34]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
+    // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 37 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4 y N4-5), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 177 en total.
-    expect(todas).toHaveLength(25 + 9 + 44 + 35 + 37 + 16 + 5);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 42 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5, la exportación del 25/11/2026 y las 3 de notas de débito de NOTAS-1), 16 de salón y comandas (E7), 6 de lotes de E6-T7, 5 de producción de E6-T8 y 5 de cuenta corriente (CC-1, CC-2 y CC-5): 187 en total.
+    expect(todas).toHaveLength(30 + 9 + 45 + 36 + 43 + 16 + 5 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -478,10 +506,13 @@ const EFECTOS_DE_EMPRESA = {
   LECTURA: [
     "cajas.ver",
     "comandas.ver",
+    "compras.exportar",
     "comprobantes.ver",
     "comprobantes_de_proveedor.ver",
     "conciliaciones.ver",
     "costos.ver",
+    "cuenta_corriente.consultar_al_vender",
+    "cuenta_corriente.ver",
     "devoluciones_a_proveedor.ver",
     "diferencias_de_compra.ver",
     "gerencia.ver_traspaso",
@@ -491,11 +522,13 @@ const EFECTOS_DE_EMPRESA = {
     "mesas.ver",
     "modulos.ver",
     "notas_de_credito_de_proveedor.ver",
+    "notas_de_debito_de_proveedor.ver",
     "ordenes_de_compra.ver",
     "partes.ver",
     "permisos.ver_propios",
     "productos.ver",
     "recepciones.ver",
+    "roles.ver",
     "stock.ver",
     "stock.verificar_saldos",
     "sucursales.ver",
@@ -518,6 +551,9 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes_de_proveedor.pagar",
     "comprobantes_de_proveedor.registrar",
     "conteos.abrir",
+    "cuenta_corriente.administrar",
+    "cuenta_corriente.aprobar_exceso",
+    "cuenta_corriente.cargar_a_cuenta",
     "cuentas.abrir",
     "cuentas.agregar_linea",
     "cuentas_de_cobro.crear",
@@ -546,6 +582,7 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.ajustar",
     "movimientos_caja.registrar_manual",
     "notas_de_credito_de_proveedor.registrar",
+    "notas_de_debito_de_proveedor.registrar",
     "opciones.editar",
     "ordenes_de_compra.crear",
     "ordenes_de_compra.pedir",
@@ -566,6 +603,9 @@ const EFECTOS_DE_EMPRESA = {
     "puntos_de_venta.crear",
     "puntos_de_venta.editar",
     "recepciones.registrar",
+    "roles.crear",
+    "roles.editar",
+    "salidas_de_dinero.registrar",
     "sesiones_caja.abrir",
     "stock.ajustar",
     "stock.registrar_entrada",
@@ -575,9 +615,11 @@ const EFECTOS_DE_EMPRESA = {
     "sucursales.editar",
     "sucursales.reactivar",
     "transformaciones.abrir",
+    "usuarios.asignar_rol",
     "usuarios.asignar_sucursales",
     "usuarios.invitar",
     "variantes.editar",
+    "vidrieras.administrar_cuentas_de_imagen",
     "vidrieras.administrar_portal",
     "vidrieras.crear",
     "vidrieras.editar",
@@ -596,6 +638,7 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes.reintentar",
     "comprobantes_de_proveedor.anular",
     "comprobantes_de_proveedor.anular_pago",
+    "comprobantes_de_proveedor.reemplazar",
     "conciliaciones.anular",
     "conciliaciones.conciliar",
     "conteos.aplicar",
@@ -625,13 +668,16 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.anular_de_otros",
     "notas_de_credito.emitir",
     "notas_de_credito_de_proveedor.anular",
+    "notas_de_debito_de_proveedor.anular",
     "ordenes_de_compra.anular",
     "ordenes_de_compra.cerrar",
+    "partes.anonimizar",
     "partes.desactivar",
     "productos.desactivar",
     "puntos_de_venta.desactivar",
     "recepciones.anular",
     "recepciones.confirmar",
+    "roles.archivar",
     "salon.cambiar_mesa",
     "salon.dividir",
     "salon.unir",

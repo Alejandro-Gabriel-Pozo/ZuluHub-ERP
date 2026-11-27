@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-004",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Anular el cobro de una mesa usa anularTicket: no toca caja ni fiscal, devuelve el stock una vez y la mesa no se reabre. Si hay que devolver plata, el gerente registra una salida de dinero aparte.",
+  "que_cambia": "El efectivo cobrado sigue en el cajón y el cierre del día muestra la diferencia; la mesa queda libre y el ticket pasa a Anulado con su motivo.",
+  "donde": "apps/web/ui/plantillas/cobrar/ResultadoDelCobro.cliente.tsx; Pedernal-docs briefs/salon/SAL-C2-anular-cobro-de-mesa.md seccion 8 (DEC-1040 de ese brief, aprobada el 25/11); confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)"
+}

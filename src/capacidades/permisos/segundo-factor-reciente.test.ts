@@ -53,6 +53,7 @@ const NO_EXIGEN = [
   "altas.reenviar_invitacion", // reenviar la invitación del alta
   "altas.revocar_invitacion", // revocar la invitación del alta
   "configuracion.ver",
+  "dominios.ver", // ver la lista de dominios (solo lectura)
   "empresas.ver",
   "invitaciones.ver",
   "listas.ver",
@@ -72,7 +73,7 @@ const TODAS = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones) as ClaveAc
 
 describe("el catálogo declara el indicador en TODAS las acciones", () => {
   it("cada acción del catálogo tiene `segundoFactorReciente` declarado (true o false), ninguna sin declarar", () => {
-    expect(TODAS.length).toBe(39);
+    expect(TODAS.length).toBe(40);
     for (const accion of TODAS) {
       const definicion = CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion] as Record<
         string,
@@ -93,8 +94,8 @@ describe("el catálogo declara el indicador en TODAS las acciones", () => {
     expect(accionesConSegundoFactorReciente()).toEqual([...EXIGEN].sort());
   });
 
-  it("las que NO lo exigen son las 17 restantes", () => {
-    expect(NO_EXIGEN).toHaveLength(17);
+  it("las que NO lo exigen son las 18 restantes", () => {
+    expect(NO_EXIGEN).toHaveLength(18);
     expect(TODAS.filter((a) => !exigeSegundoFactorReciente(a)).sort()).toEqual(
       [...NO_EXIGEN].sort(),
     );

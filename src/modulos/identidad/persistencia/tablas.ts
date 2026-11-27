@@ -24,6 +24,7 @@ export type IdentidadDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    rol_propio_id: string | null;
   };
   asignacion_sucursal: {
     empresa_id: string;
@@ -52,6 +53,25 @@ export type IdentidadDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+  };
+  rol_de_empresa: {
+    id: string;
+    empresa_id: string;
+    nombre: string;
+    nombre_clave: string;
+    plantilla_origen: string | null;
+    activo: Generated<boolean>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
+  version_de_rol: {
+    empresa_id: string;
+    rol_id: string;
+    numero: number;
+    acciones: string[];
+    creado_por: string;
+    creado_en: Date;
   };
   invitacion_empresa: {
     invitacion_id: string;

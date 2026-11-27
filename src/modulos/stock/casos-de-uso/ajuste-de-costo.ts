@@ -4,6 +4,7 @@ import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { cantidadDeUnidades } from "../dominio/movimiento";
 import { corregirPromedio, ESTADO_DE_COSTO_INICIAL, type EstadoDeCosto } from "../dominio/costo";
 import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
 import type { TxDeStock } from "./contrato";
@@ -102,15 +103,20 @@ export async function ajustarCostoPorOrigen(
     existenciaActual: existencia,
   });
   if (!despues.ok) return err("COSTO_INVALIDO");
+  // Cinturón (invariante: valorizada ≤ existencia): `corregirPromedio` ya suma solo las unidades sin costo, así que esto no debería actuar. Se deja por si un estado guardado
+  // viejo ya traía más valorizado que lo que hay (hallazgo de Stock, 25/11/2026): ahí lo acota en vez de propagar el estado inválido.
+  const tope = existencia.unidades > 0n ? existencia.unidades : 0n;
+  const acotado: EstadoDeCosto =
+    despues.valor.cantidadValorizada.unidades > tope
+      ? { promedio: despues.valor.promedio, cantidadValorizada: cantidadDeUnidades(tope) }
+      : despues.valor;
   const cantidadQueQueda =
     cantidadQueEntro.unidades < existencia.unidades ? cantidadQueEntro : existencia;
-  if (despues.valor !== antes) {
+  if (acotado !== antes) {
     const nuevo = {
       // Un estado cambiado siempre tiene promedio: la corrección no lo borra y una entrada con costo lo crea.
-      costoUnitario: precioUnitarioATexto(
-        despues.valor.promedio as NonNullable<typeof despues.valor.promedio>,
-      ),
-      cantidadValorizada: cantidadATexto(despues.valor.cantidadValorizada),
+      costoUnitario: precioUnitarioATexto(acotado.promedio as NonNullable<typeof acotado.promedio>),
+      cantidadValorizada: cantidadATexto(acotado.cantidadValorizada),
     };
     if (guardado === undefined) await tx.costosDeStock.crearEstado(contexto.empresaId, par, nuevo);
     else await tx.costosDeStock.cambiarEstado(contexto.empresaId, par, nuevo);
@@ -119,7 +125,7 @@ export async function ajustarCostoPorOrigen(
     e.promedio === null ? null : precioUnitarioATexto(e.promedio);
   const salida = {
     costoAntes: texto(antes),
-    costoDespues: texto(despues.valor),
+    costoDespues: texto(acotado),
     cantidadQueQueda: cantidadATexto(cantidadQueQueda),
   };
   await tx.auditoria.registrar({

@@ -3,7 +3,11 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearTokensHmac } from "../../src/adaptadores/tokens/tokens-hmac";
 import type { ClaveAccion } from "../../src/capacidades/modulos/catalogo";
-import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  tablaDePermisos,
+} from "../../src/capacidades/permisos/empresa";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -81,7 +85,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
     await propia.destruir();
   });
 
-  const SIN_ROL = { rol: null, modulosActivados: [], modulosHabilitados: [] };
+  const SIN_ROL = { rol: null, acciones: [], modulosActivados: [], modulosHabilitados: [] };
 
   /** Una empresa activa de la marca A con un miembro de ese rol. */
   const empresaDeA = async (rol: RolDePrueba = "GERENTE") => {
@@ -114,7 +118,12 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         const e = await empresaDeA(rol);
         const por = (marca: MarcaComercialId | null) =>
           delActor(comoEmpresa(e.empresa, e.persona, marca));
-        expect(await por(A)).toEqual({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await por(A)).toEqual({
+          rol,
+          acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA)[rol]],
+          modulosActivados: [],
+          modulosHabilitados: [],
+        });
         expect(await por(B)).toEqual(SIN_ROL);
         expect(await por(marcaComercialId(randomUUID()))).toEqual(SIN_ROL);
         // Una marca de entrada nula con una persona no autoriza (falla cerrado): el `null` es del sistema.
@@ -344,6 +353,19 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         ops.identidad.aceptarTraspaso(ctx, { traspasoId: randomUUID() }),
       rechazarTraspaso: (_e, ctx) =>
         ops.identidad.rechazarTraspaso(ctx, { traspasoId: randomUUID() }),
+      crearRol: (_e, ctx) =>
+        ops.identidad.crearRol(ctx, {
+          rolId: randomUUID(),
+          nombre: `Rol ${sufijoUnico()}`,
+          origen: { tipo: "VACIO" },
+        }),
+      editarRol: (_e, ctx) => ops.identidad.editarRol(ctx, { rolId: randomUUID(), nombre: "Otro" }),
+      archivarRol: (_e, ctx) => ops.identidad.archivarRol(ctx, { rolId: randomUUID() }),
+      asignarRol: (e, ctx) =>
+        ops.identidad.asignarRol(ctx, {
+          personaId: e.otra,
+          destino: { tipo: "BASE", rol: "OPERADOR" },
+        }),
     };
     const DE_CONSULTAS_DE_IDENTIDAD: Record<
       keyof typeof DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
@@ -355,6 +377,10 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
       traspasoEnCurso: (_e, ctx) => ops.consultasDeIdentidad.traspasoEnCurso(ctx),
       personasParaMostrar: (e, ctx) =>
         ops.consultasDeIdentidad.personasParaMostrar(ctx, { ids: [e.otra] }),
+      listarRoles: (_e, ctx) => ops.consultasDeIdentidad.listarRoles(ctx),
+      verRol: (_e, ctx) => ops.consultasDeIdentidad.verRol(ctx, { rolId: randomUUID() }),
+      rolesAsignables: (_e, ctx) => ops.consultasDeIdentidad.rolesAsignables(ctx),
+      accionesParaElegir: (_e, ctx) => ops.consultasDeIdentidad.accionesParaElegir(ctx),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,

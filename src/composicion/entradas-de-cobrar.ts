@@ -21,7 +21,7 @@ import {
 const importe = z.strictObject({ moneda: texto, monto: decimal });
 
 /** Los cinco datos opcionales de un cobro. Ausente es válido; el contenido lo juzga caja (`validarDatosDelCobro`). */
-const datosDelCobro = z.strictObject({
+export const datosDelCobro = z.strictObject({
   cupon: texto.optional(),
   ultimos4: texto.optional(),
   marcaDeTarjetaId: texto.optional(),
@@ -50,6 +50,16 @@ const formaDeCobrarLaVenta = z.strictObject({
   cuentaId: identificador,
   ejemplarId: identificador,
   lineas: z.array(linea),
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+  cajaId: identificador,
+  cobros: z.array(cobro),
+});
+
+const formaDeCobrarLaMesa = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
   totalEsperado: importe,
   confirmaciones: z.array(texto).optional(),
   cajaId: identificador,
@@ -135,4 +145,68 @@ export function entradaDeFichaDelTicket(
   crudo: unknown,
 ): Resultado<Readonly<{ ticketId: string }>, ErrorDeEntrada> {
   return leer(formaDeFichaDelTicket, crudo);
+}
+
+/**
+ * La frontera de «Cobrar la mesa» (SAL-D): la cuenta que ya existe (la de la mesa) y lo que se cobra; NO viajan las líneas (las lee el servidor de la cuenta) ni la sucursal (la fija el servidor). El esquema es
+ * estricto: una clave de más, por ejemplo una propina o una línea, rechaza el pedido entero (sin propina, D152).
+ */
+export type EntradaWebDeCobrarLaMesa = Readonly<
+  Omit<z.output<typeof formaDeCobrarLaMesa>, "cobros"> & {
+    cobros: EntradaWebDeCobrarLaVenta["cobros"];
+  }
+>;
+
+export function entradaDeCobrarLaMesa(
+  crudo: unknown,
+): Resultado<EntradaWebDeCobrarLaMesa, ErrorDeEntrada> {
+  return leer(formaDeCobrarLaMesa, crudo);
+}
+
+/**
+ * La frontera de «Vender a cuenta corriente» desde el mostrador (CC-5 B1b): lo mismo que cobrar la venta rápida (cuenta, ejemplar, líneas, total que vio quien vende) más el CLIENTE, y sin caja ni cobros (no entra
+ * plata a la caja). Lista de permitidos estricta: NO hay campo de aprobación del exceso (en la primera etapa ninguna pantalla aprueba: con el límite pasado el servidor rechaza), ni sucursal, ni empresa. La
+ * `claveIdempotencia` la agrega el envío de la hoja a todo pedido; se acepta y NO se usa: la identidad de la venta es su `cuentaId` con su `ejemplarId` (repetir devuelve el mismo ticket).
+ */
+const formaDeVenderACuenta = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
+  clienteId: identificador,
+  lineas: z.array(linea),
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+});
+
+const formaDeCerrarLaMesaACuenta = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
+  clienteId: identificador,
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+});
+
+export type EntradaWebDeVenderACuenta = Readonly<
+  Omit<EntradaWebDeCobrarLaVenta, "claveIdempotencia" | "cajaId" | "cobros"> & { clienteId: string }
+>;
+
+export type EntradaWebDeCerrarLaMesaACuenta = Readonly<{
+  cuentaId: string;
+  ejemplarId: string;
+  clienteId: string;
+  totalEsperado: Readonly<{ moneda: string; monto: string }>;
+  confirmaciones?: readonly string[] | undefined;
+}>;
+
+export function entradaDeVenderACuenta(
+  crudo: unknown,
+): Resultado<EntradaWebDeVenderACuenta, ErrorDeEntrada> {
+  return leer(formaDeVenderACuenta, crudo);
+}
+
+export function entradaDeCerrarLaMesaACuenta(
+  crudo: unknown,
+): Resultado<EntradaWebDeCerrarLaMesaACuenta, ErrorDeEntrada> {
+  return leer(formaDeCerrarLaMesaACuenta, crudo);
 }

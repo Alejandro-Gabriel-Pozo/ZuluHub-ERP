@@ -104,7 +104,7 @@ describe.skipIf(base === null)("composición web: el papel del ticket", () => {
     const b = await m.escenario();
     const venta = await cobrada(a, await m.cajaAbierta(a));
     const otra = await cobrada(a, await m.cajaAbierta(a));
-    const anulado = await anularElTicket(d, a.gerente, {
+    const anulado = await anularElTicket(d, a.gerente, a.sucursal, {
       claveIdempotencia: nuevaClave(),
       ticketId: otra.ticketId,
       ejemplarBaseId: otra.ejemplarId,

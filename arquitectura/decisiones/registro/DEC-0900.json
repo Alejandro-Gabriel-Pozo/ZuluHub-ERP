@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0900",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "T0 de Catálogo: el largo del nombre de una presentación (80) pasa a su primitiva nombre-de-presentacion, y el registro de campos suma tres datos y dos caminos de la pantalla.",
+  "que_cambia": "Una sola fuente para el límite: dominio, formulario y base lo comparan con la misma primitiva. Sin cambio de comportamiento. Revertir: devolver la constante al dominio y quitar los tres datos y los dos caminos.",
+  "donde": "Orden del orquestador del 25/11/2026 (hallazgo H2 del plan aceptado); fila 174 de decisiones-del-dueno-2026-11.md; nombre-de-presentacion.ts; registro-de-productos.ts; caminos-de-productos.ts"
+}

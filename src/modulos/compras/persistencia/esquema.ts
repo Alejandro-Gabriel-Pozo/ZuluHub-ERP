@@ -1,5 +1,5 @@
 import type { ColumnType, Generated } from "kysely";
-import type { EsquemaDeDevoluciones } from "./esquema-de-devoluciones";
+import type { EsquemaDePagosYDevoluciones } from "./esquema-de-pagos";
 
 /** Una columna que fija la base: se lee, no se escribe. */
 type DeLaBase<T> = ColumnType<T, never, never>;
@@ -154,6 +154,8 @@ export type ComprasDb = {
     clase: string;
     /** N4 (0085): la factura que corrige una nota de crédito (solo la clase NOTA_DE_CREDITO la lleva). */
     comprobante_asociado_id: string | null;
+    /** NOTAS-2 (0112): la factura anulada que esta factura reemplaza (solo una factura la lleva). */
+    reemplaza_a_id: string | null;
     tipo: string | null;
     punto_de_venta: number | null;
     numero: number | null;
@@ -380,4 +382,4 @@ export type ComprasDb = {
     registrado_en: DeLaBase<Date>;
     version: Generated<number>;
   };
-} & EsquemaDeDevoluciones;
+} & EsquemaDePagosYDevoluciones;

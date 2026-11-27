@@ -19,6 +19,7 @@ const U = (
   personaId: `0b0b0b0b-1111-4222-8333-44444444444${n}`,
   email,
   rol,
+  rolPropioId: null,
   activo,
 });
 const I = (
@@ -56,6 +57,23 @@ describe("armarLaListaDeUsuarios", () => {
     expect(usuarios.map((u) => u.href)).toEqual(
       datos.usuarios.map((u) => `/cuenta/usuarios/${u.personaId}`),
     );
+  });
+
+  it("una persona con rol propio muestra el nombre de su rol tal cual, en la lista y en la ficha (y se la puede desactivar)", () => {
+    const sofia = { ...U(4, "sofia@x.test", "OPERADOR"), rol: { propio: "Cajero de turno" } };
+    const lista = armarLaListaDeUsuarios({ usuarios: [sofia], invitaciones: [] });
+    expect(lista.usuarios[0]?.rol).toBe("Cajero de turno");
+    const ficha = armarLaFichaDeUsuario(
+      sofia,
+      {},
+      {
+        personaId: "otra",
+        puedeDesactivar: true,
+        puedeReactivar: false,
+      },
+    );
+    expect(ficha.renglones[0]?.valor).toBe("Cajero de turno");
+    expect(ficha.desactivar).not.toBeNull();
   });
 
   it("solo la persona desactivada lleva insignia, y dice «Desactivado» con texto", () => {

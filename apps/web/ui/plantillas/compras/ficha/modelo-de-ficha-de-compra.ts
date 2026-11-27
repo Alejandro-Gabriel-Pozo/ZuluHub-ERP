@@ -7,7 +7,14 @@ import {
   formatearFecha,
   formatearImporte,
 } from "../../../patrones/formato-fiscal";
-import { RUTA_DE_COMPRAS, rutaDeCorregirLaLinea, rutaDelPago } from "../rutas-de-compras";
+import { NETO_CERO } from "../notas/modelo-de-notas";
+import {
+  RUTA_DE_COMPRAS,
+  rutaDeCorregirLaLinea,
+  rutaDeCambiarElComprobante,
+  rutaDeLasNotas,
+  rutaDelPago,
+} from "../rutas-de-compras";
 import {
   nombreDeLaFactura,
   numeroImpreso,
@@ -63,11 +70,15 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     fecha: string | null;
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
+    /** Lo que hay que pagar de la factura (total menos las notas de crédito vigentes), tal cual lo calcula el servidor. */
+    netoAPagar: Importe;
   }> | null;
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios: la ficha dice cada uno con su importe. */
     medio: string;
+    medios: readonly Readonly<{ medio: string; importe: Importe }>[];
     importe: Importe;
     estado: "VIGENTE" | "ANULADO";
     declaradoPor: string | null;
@@ -109,12 +120,18 @@ export type AccionesDeLaCompraParaLaPantalla = Readonly<{
   pagar: boolean;
   /** Anular el pago (`comprobantes_de_proveedor.anular_pago`). */
   anularPago: boolean;
+  /** Ver las notas de la factura (las dos acciones de ver notas: la lectura las pide). */
+  verNotas: boolean;
+  /** Cambiar el comprobante de la compra: las tres acciones que pide el servidor (reemplazar, anular y registrar un comprobante). */
+  cambiarElComprobante: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
   corregir: false,
   anular: false,
   pagar: false,
   anularPago: false,
+  verNotas: false,
+  cambiarElComprobante: false,
 };
 
 /** Un pago de la factura ya armado para mostrar: «Transferencia · 24/11/2026», su importe, quién y cuándo, y, si se anuló, «Anulado» con su motivo, quién y cuándo. */
@@ -160,6 +177,12 @@ export type FichaArmada = Readonly<{
   declararPago: Readonly<{ texto: string; href: string }> | null;
   /** El pago vigente que «Anular» puede anular (con el permiso); `null` si no se ofrece. */
   anularPagoId: string | null;
+  /** «Notas de crédito»: lleva a «Notas de la factura»; solo con el permiso y una factura; `null` si no se ofrece. */
+  notas: Readonly<{ texto: string; href: string }> | null;
+  /** «Cambiar el comprobante de la compra» se ofrece (permisos, compra con factura y no anulada); lleva a «Reemplazar el comprobante». */
+  cambiarElComprobante: Readonly<{ texto: string; href: string }> | null;
+  /** «Saldada por notas»: la factura de una compra no anulada, sin pago vigente, que las notas dejaron sin nada para pagar; `null` en cualquier otro caso. */
+  saldadaPorNotas: string | null;
 }>;
 
 /** «2 Kilogramo» sin presentación; «2 Caja de 12» con ella: la cantidad de compra con el nombre de lo que se compró. */
@@ -283,7 +306,13 @@ export function armarLaFicha(
       ficha.lineas.map((l) => hrefDeCorregir(l)).find((href) => href !== null) ?? null,
     pagos: ficha.pagos.map((p) => ({
       clave: p.id,
-      titulo: `${textos.medioDePago(p.medio)} · ${formatearFecha(p.fechaDePago)}`,
+      titulo: `${
+        p.medio === "COMPUESTO" && p.medios.length > 0
+          ? p.medios
+              .map((m) => `${textos.medioDePago(m.medio)} · ${formatearImporte(m.importe.monto)}`)
+              .join(" + ")
+          : textos.medioDePago(p.medio)
+      } · ${formatearFecha(p.fechaDePago)}`,
       importe: formatearImporte(p.importe.monto),
       quien: quien(p.declaradoPor, p.declaradoEn),
       anulado:
@@ -295,13 +324,33 @@ export function armarLaFicha(
             }
           : null,
     })),
+    // Con neto cero no hay nada para pagar: el enlace no se ofrece (el servidor sigue rechazando con el genérico).
     declararPago:
       acciones.pagar &&
       ficha.factura !== null &&
       ficha.estado !== "ANULADA" &&
-      vigente === undefined
+      vigente === undefined &&
+      ficha.factura.netoAPagar.monto !== NETO_CERO
         ? { texto: textos.declararPago, href: rutaDelPago(ficha.recepcionId) }
         : null,
     anularPagoId: acciones.anularPago && vigente !== undefined ? vigente.id : null,
+    notas:
+      acciones.verNotas && ficha.factura !== null
+        ? { texto: textos.notasDeCredito, href: rutaDeLasNotas(ficha.factura.comprobanteId) }
+        : null,
+    cambiarElComprobante:
+      acciones.cambiarElComprobante && ficha.factura !== null && ficha.estado !== "ANULADA"
+        ? {
+            texto: textos.cambiarElComprobante,
+            href: rutaDeCambiarElComprobante(ficha.recepcionId),
+          }
+        : null,
+    saldadaPorNotas:
+      ficha.factura !== null &&
+      ficha.estado !== "ANULADA" &&
+      vigente === undefined &&
+      ficha.factura.netoAPagar.monto === NETO_CERO
+        ? textos.saldadaPorNotas
+        : null,
   };
 }

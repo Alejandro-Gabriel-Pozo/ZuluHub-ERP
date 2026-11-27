@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0909",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Consola Dominios (P1): el orquestador acepta la ficha de pantalla 2.1 del plan de dominio propio, sin lo de la etapa 2.",
+  "que_cambia": "La pantalla Dominios tiene su ficha declarada: ruta, acceso, campos con su dato, botones, ventanas y estados. Revertir: quitar la ficha-de-dominios-de-consola.ts y su prueba.",
+  "donde": "Delegación de la fila 174 de decisiones-del-dueno-2026-11.md; orden del orquestador del 25/11/2026; dominio-propio-textos-y-fichas.md §2.1."
+}

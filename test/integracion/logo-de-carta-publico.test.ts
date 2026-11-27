@@ -7,7 +7,7 @@ import type { ImagenesExternas } from "../../src/puertos/imagenes-externas";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { deLaEmpresa, deLaMarca } from "../utilidades/alcance-del-host";
 import { montarCatalogo, precioDeBase } from "./catalogo-apoyo";
-import { cartaDeBase, empresaDeCarta } from "./carta-publica-apoyo";
+import { cartaDeBase, cuentaDeImagenDeBase, empresaDeCarta } from "./carta-publica-apoyo";
 import {
   MARCA_DEL_HOST,
   OTRA_MARCA,
@@ -86,6 +86,8 @@ describe.skipIf(base === null)("el logo de la carta pública, contra la base rea
         [e.empresa],
       );
     }
+    // La cuenta del logo tiene que estar declarada por la empresa ANTES de guardar el logo (0102).
+    await cuentaDeImagenDeBase(c.dueno, e.empresa, e.persona, LOGO.logo_cuenta);
     await c.dueno.query(
       `update carta_publica set logo_proveedor = $2, logo_cuenta = $3, logo_id_publico = $4, logo_version = $5, logo_extension = $6 where id = $1`,
       [carta.id, ...Object.values(LOGO)],
@@ -215,5 +217,56 @@ describe.skipIf(base === null)("el logo de la carta pública, contra la base rea
     const { traerLogo, pedir: unaVez } = sistema();
     expect(await unaVez(deLaMarca(MARCA_DEL_HOST), m.carta.codigo)).toBe(BYTES);
     expect(traerLogo).toHaveBeenCalledTimes(1);
+  });
+
+  const retirarLaCuenta = (empresa: string, persona: string) =>
+    c.dueno.query(
+      "update cuenta_de_imagen_declarada set estado = 'RETIRADA', retirada_por = $2, motivo_de_retiro = 'prueba' where empresa_id = $1 and estado = 'ACTIVA'",
+      [empresa, persona],
+    );
+
+  it("D-1: el logo de una cuenta RETIRADA (o que la empresa no declaró) deja de servirse en el acto: el mismo 404, ningún pedido saliente, y la carta muestra la inicial; al volver a declararla, el logo vuelve sin tocar la carta", async () => {
+    const m = await empresaConCarta();
+    const { traerLogo, pedir } = sistema();
+    const host = deLaMarca(MARCA_DEL_HOST);
+    expect(await pedir(host, m.carta.codigo)).toBe(BYTES);
+    expect((await vidriera.porCodigo(host, m.carta.codigo))?.identidad.logo).not.toBeNull();
+    expect(traerLogo).toHaveBeenCalledTimes(1);
+
+    await retirarLaCuenta(m.empresa, m.persona);
+    const otro = sistema();
+    expect(await otro.pedir(host, m.carta.codigo)).toBeNull();
+    expect(otro.traerLogo).not.toHaveBeenCalled();
+    // La carta ya no ofrece el logo: sin logo es la inicial del nombre, y la ruta responde igual que un logo inexistente.
+    const vista = await vidriera.porCodigo(host, m.carta.codigo);
+    expect(vista?.identidad.logo).toBeNull();
+    expect(vista?.cuentasDeImagen).toEqual([]);
+    expect(await otro.pedir(host, m.carta.codigo, "1699999999.webp")).toBeNull();
+    // La carta guarda su logo (no se tocó): al declarar la cuenta de nuevo, vuelve.
+    const { rows } = await c.dueno.query<{ logo_cuenta: string | null }>(
+      "select logo_cuenta from carta_publica where id = $1",
+      [m.carta.id],
+    );
+    expect(rows[0]?.logo_cuenta).toBe(LOGO.logo_cuenta);
+    await cuentaDeImagenDeBase(c.dueno, m.empresa, m.persona, LOGO.logo_cuenta);
+    const vuelve = sistema();
+    expect(await vuelve.pedir(host, m.carta.codigo)).toBe(BYTES);
+    expect((await vidriera.porCodigo(host, m.carta.codigo))?.identidad.logo).not.toBeNull();
+  });
+
+  it("D-2 (aislamiento): la cuenta declarada por OTRA empresa no habilita el logo de esta; cada carta ve solo las cuentas de su empresa", async () => {
+    const a = await empresaConCarta();
+    const b = await empresaConCarta();
+    await retirarLaCuenta(a.empresa, a.persona);
+    // B tiene «demo» activa; A la tiene retirada: el logo de A no se sirve con la cuenta de B.
+    const { traerLogo, pedir } = sistema();
+    const host = deLaMarca(MARCA_DEL_HOST);
+    expect(await pedir(host, a.carta.codigo)).toBeNull();
+    expect(traerLogo).not.toHaveBeenCalled();
+    expect(await pedir(host, b.carta.codigo)).toBe(BYTES);
+    expect((await vidriera.porCodigo(host, a.carta.codigo))?.cuentasDeImagen).toEqual([]);
+    expect((await vidriera.porCodigo(host, b.carta.codigo))?.cuentasDeImagen).toEqual([
+      LOGO.logo_cuenta,
+    ]);
   });
 });

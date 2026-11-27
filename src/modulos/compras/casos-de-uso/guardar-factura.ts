@@ -19,10 +19,14 @@ export async function guardarFactura(
     huella: string;
     factura: FacturaPedida;
     /** Los renglones recibidos con los que se carga el detalle (N1 y N2); en N3 van los datos de cada línea en `deLaFactura`. */
-    lineas: readonly LineaCalculada[];
+    lineas: readonly Pick<LineaCalculada, "producto">[];
     /** Solo N3: el producto de cada línea de la factura (descripción, unidad base y producto). */
     deLaFactura?: readonly Readonly<{ descripcion: string; unidad: string; productoId: string }>[];
     preparada: FacturaPreparada;
+    /** La clave de la conciliación atajo; ausente es la de la recepción (la primera factura de la compra). Al cambiar el comprobante de la compra (NOTAS-2b) la de la recepción ya está usada. */
+    claveDeLaConciliacion?: string;
+    /** NOTAS-2: la factura anulada que la nueva reemplaza (solo una factura que llega sola, N3 y N4). */
+    reemplazaAId?: string | null;
   }>,
 ): Promise<string> {
   const { empresaId, factura, preparada } = datos;
@@ -30,6 +34,7 @@ export async function guardarFactura(
   const comprobanteId = await tx.comprobantesDeProveedor.insertar(empresaId, {
     proveedorId: datos.proveedorId,
     clase: claseDeComprobante(factura.tipo),
+    reemplazaAId: datos.reemplazaAId ?? null,
     tipo: factura.tipo,
     puntoDeVenta: factura.puntoDeVenta,
     numero: factura.numero,
@@ -71,8 +76,10 @@ export async function guardarFactura(
       }
       return {
         numero: i + 1,
-        descripcion: propia?.descripcion ?? (renglon as LineaCalculada).producto.nombre,
-        unidad: propia?.unidad ?? (renglon as LineaCalculada).producto.unidadBaseId,
+        descripcion:
+          propia?.descripcion ?? (renglon as Pick<LineaCalculada, "producto">).producto.nombre,
+        unidad:
+          propia?.unidad ?? (renglon as Pick<LineaCalculada, "producto">).producto.unidadBaseId,
         ...(propia === undefined ? {} : { productoId: propia.productoId }),
         cantidadFacturada: l.cantidadFacturada,
         precioNeto: l.precioNeto,
@@ -105,7 +112,7 @@ export async function guardarFactura(
     comprobanteId,
     esAtajo: true,
     nivel: datos.nivel,
-    clave: claveDeLaConciliacionDeAtajo(recepcionId),
+    clave: datos.claveDeLaConciliacion ?? claveDeLaConciliacionDeAtajo(recepcionId),
     registradoPor: datos.persona,
   });
   if (conciliacionId === undefined) {

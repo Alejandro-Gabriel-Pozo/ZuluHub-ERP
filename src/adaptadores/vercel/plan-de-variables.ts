@@ -63,6 +63,67 @@ export function leerDestino(texto: string | undefined): Destino | null {
 }
 
 /**
+ * Los proyectos de Vercel de los clientes con base propia (extra de plan; dueño, 25/11/2026): una lista CERRADA, hoy de UN cliente. Código del
+ * cliente (`cliente-<codigo>`, el MISMO de su ambiente en `migrar.yml` y `cargar-entorno.yml`) → id de su proyecto de Vercel (no es un
+ * secreto). Sumar un cliente es una línea acá, otra en cada workflow y la prueba que las compara.
+ * Previene: cargar las variables de un cliente en `pedernal-erp` (o al revés) por un texto libre o un error de tipeo: un código que no está
+ * acá no resuelve a ningún proyecto (falla cerrado) y un id repetido o igual al de la web o la consola tampoco.
+ */
+export const PROYECTOS_DE_VERCEL_DE_CLIENTES: Readonly<Record<string, string>> = {
+  // Hoteles del Neuquén (`pedernal-hdn`, sin conectar a Git). NUNCA el `hdn` viejo de Motor2.
+  "cliente-hdn": "prj_7FCPV72lnTupGoEB6gDka1ZQIfOg",
+};
+
+// Los largos del código y del id se arman con nombres propios (no son los de ninguna primitiva de datos: son de este comando).
+const LARGO_DEL_CODIGO = { desde: 3, hasta: 30 } as const;
+const LARGO_DEL_ID = { desde: 20, hasta: 40 } as const;
+export const CODIGO_DE_CLIENTE = new RegExp(
+  `^cliente-[a-z0-9-]{${LARGO_DEL_CODIGO.desde},${LARGO_DEL_CODIGO.hasta}}$`,
+);
+const ID_DE_PROYECTO_DE_VERCEL = new RegExp(
+  `^prj_[A-Za-z0-9]{${LARGO_DEL_ID.desde},${LARGO_DEL_ID.hasta}}$`,
+);
+
+/** A qué proyecto y a qué destino de Vercel se escribe un pedido `--vercel <texto>`. */
+export type PedidoDeVercel = Readonly<{
+  /** Lo que se escribió: `preview`, `production` o `cliente-<codigo>`. */
+  texto: string;
+  destino: Destino;
+  /** El id del proyecto de Vercel donde se escribe. */
+  proyecto: string;
+  /** Cómo se nombra el proyecto en los mensajes. */
+  etiqueta: string;
+}>;
+
+/**
+ * `preview` y `production` van al proyecto `pedernal-erp`; `cliente-<codigo>` va al proyecto de ESE cliente (siempre en su destino
+ * `production`: es su instalación) y solo si está en la lista cerrada. Cualquier otra cosa, `null`.
+ */
+export function leerPedidoDeVercel(
+  texto: string | undefined,
+  clientes: Readonly<Record<string, string>> = PROYECTOS_DE_VERCEL_DE_CLIENTES,
+): PedidoDeVercel | null {
+  const destino = leerDestino(texto);
+  if (destino !== null) {
+    return { texto: destino, destino, proyecto: PROYECTO_DE_VERCEL, etiqueta: "pedernal-erp" };
+  }
+  // La lista se recorre (no se indexa): solo cuenta una clave PROPIA de la lista, nunca un nombre heredado de Object.
+  const hallado = Object.entries(clientes).find(([codigo]) => codigo === texto);
+  if (hallado === undefined) return null;
+  const [codigo, proyecto] = hallado;
+  if (
+    !CODIGO_DE_CLIENTE.test(codigo) ||
+    !ID_DE_PROYECTO_DE_VERCEL.test(proyecto) ||
+    proyecto === PROYECTO_DE_VERCEL ||
+    proyecto === PROYECTO_DE_VERCEL_DE_LA_CONSOLA ||
+    Object.values(clientes).filter((id) => id === proyecto).length !== 1
+  ) {
+    return null;
+  }
+  return { texto: codigo, destino: "production", proyecto, etiqueta: codigo };
+}
+
+/**
  * Lo que la aplicación PROHÍBE que exista (`VARIABLES_PROHIBIDAS` y `PREFIJO_PROHIBIDO` de
  * `src/composicion/entorno.ts`). Se repite acá porque el script se carga con Node sin compilar y ese
  * archivo importa sin extensión; `test/arquitectura/vercel-prohibidas.test.ts` falla si las dos listas

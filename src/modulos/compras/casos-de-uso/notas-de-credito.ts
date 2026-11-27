@@ -5,12 +5,17 @@ import { calcularComprobante, discriminaIva } from "../dominio/comprobante";
 import { razonSocialDeLaParte } from "../dominio/factura";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
-import { huellaDeLaNotaDeCredito, leerNotaDeCredito } from "../dominio/nota-de-credito";
+import { huellaDeLaNota, leerNota, type ClaseDeNota } from "../dominio/nota-de-credito";
+import { elPagoCubreSinLaNota } from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
-import { autorizar, traducir } from "./comun";
+import {
+  anularLaNotaDeCredito,
+  asentarLaNotaDeCredito,
+  asentarLaNotaDeDebito,
+} from "./cargo-de-la-factura";
+import { autorizar, exigirAlcanceDelComprobante, traducir } from "./comun";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
-import { exigirTresVias } from "./nivel-tres-vias";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
 
@@ -32,6 +37,41 @@ export type SalidaDeRegistrarNotaDeCredito = Readonly<{
   yaExistia: boolean;
 }>;
 
+/** Lo que cambia entre cargar una nota de crédito y una de débito: la clase, el permiso, la auditoría y el error de cada falla del vínculo con la factura. */
+export type VarianteDeNota = Readonly<{
+  clase: ClaseDeNota;
+  permiso: "notas_de_credito_de_proveedor.registrar" | "notas_de_debito_de_proveedor.registrar";
+  accion: "NOTA_DE_CREDITO_REGISTRADA" | "NOTA_DE_DEBITO_REGISTRADA";
+  sinFactura: "NOTA_DE_CREDITO_SIN_FACTURA" | "NOTA_DE_DEBITO_SIN_FACTURA";
+  otroProveedor: "NOTA_DE_CREDITO_DE_OTRO_PROVEEDOR" | "NOTA_DE_DEBITO_DE_OTRO_PROVEEDOR";
+  facturaAnulada: "NOTA_DE_CREDITO_DE_FACTURA_ANULADA" | "NOTA_DE_DEBITO_DE_FACTURA_ANULADA";
+}>;
+const DE_CREDITO: VarianteDeNota = {
+  clase: "NOTA_DE_CREDITO",
+  permiso: "notas_de_credito_de_proveedor.registrar",
+  accion: "NOTA_DE_CREDITO_REGISTRADA",
+  sinFactura: "NOTA_DE_CREDITO_SIN_FACTURA",
+  otroProveedor: "NOTA_DE_CREDITO_DE_OTRO_PROVEEDOR",
+  facturaAnulada: "NOTA_DE_CREDITO_DE_FACTURA_ANULADA",
+};
+export const DE_DEBITO: VarianteDeNota = {
+  clase: "NOTA_DE_DEBITO",
+  permiso: "notas_de_debito_de_proveedor.registrar",
+  accion: "NOTA_DE_DEBITO_REGISTRADA",
+  sinFactura: "NOTA_DE_DEBITO_SIN_FACTURA",
+  otroProveedor: "NOTA_DE_DEBITO_DE_OTRO_PROVEEDOR",
+  facturaAnulada: "NOTA_DE_DEBITO_DE_FACTURA_ANULADA",
+};
+
+/** Lo que pide cargar una nota (de crédito o de débito): la clave del gesto, el proveedor, la factura (obligatoria en la de crédito; en la de débito puede ser `null`) y la nota como dice el papel. */
+export type EntradaDeRegistrarNota = Readonly<{
+  clave: string;
+  proveedorId: string;
+  facturaId: string | null;
+  nota: unknown;
+}>;
+export type EntradaDeRegistrarNotaDeDebito = EntradaDeRegistrarNota;
+
 /**
  * Cargar la nota de crédito que mandó el proveedor (N4, E9 §3.8): un comprobante de la clase NOTA_DE_CREDITO que corrige UNA factura del mismo proveedor, SIN saldo: no tiene líneas, no se
  * concilia, no reduce lo que se paga y no toca stock (el libro de saldos va aparte). Guard `notas_de_credito_de_proveedor.registrar` (gerente y administrador); la empresa en N4 con la perilla
@@ -41,32 +81,51 @@ export type SalidaDeRegistrarNotaDeCredito = Readonly<{
  * (`yaExistia`) sin escribir ni auditar; misma clave con otro contenido, `CLAVE_REUTILIZADA`; la misma nota (tipo, punto de venta y número del mismo proveedor) con otra clave,
  * `COMPROBANTE_YA_REGISTRADO` con la ganadora.
  */
-export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras) {
-  return async function registrarNotaDeCredito(
+export function armarRegistrarNota(dependencias: DependenciasDeCompras, variante: VarianteDeNota) {
+  return async function registrarNota(
     contexto: ContextoOperativo,
-    entrada: EntradaDeRegistrarNotaDeCredito,
+    entrada: EntradaDeRegistrarNota,
   ): Promise<R<SalidaDeRegistrarNotaDeCredito>> {
     const { empresaId } = contexto;
     if (contexto.personaId === null) return err("SIN_PERMISO");
     const persona = contexto.personaId;
-    if (!esUuid(entrada.clave) || !esUuid(entrada.proveedorId) || !esUuid(entrada.facturaId)) {
+    if (!esUuid(entrada.clave) || !esUuid(entrada.proveedorId)) {
       return err("IDENTIFICADOR_INVALIDO");
     }
-    const leida = leerNotaDeCredito(entrada.nota);
+    if (entrada.facturaId !== null && !esUuid(entrada.facturaId)) {
+      return err("IDENTIFICADOR_INVALIDO");
+    }
+    // Una nota de crédito corrige UNA factura: sin ella no hay nota. La de débito puede ir suelta.
+    if (entrada.facturaId === null && variante.clase === "NOTA_DE_CREDITO") {
+      return err(variante.sinFactura);
+    }
+    const leida = leerNota(entrada.nota, variante.clase);
     if (!leida.ok) return leida;
     const nota = leida.valor;
-    const huella = huellaDeLaNotaDeCredito(entrada.proveedorId, entrada.facturaId, nota);
+    const huella = huellaDeLaNota(variante.clase, entrada.proveedorId, entrada.facturaId, nota);
 
     return traducir(
       await dependencias.transacciones.ejecutar(
         { contexto },
         async (tx): Promise<R<SalidaDeRegistrarNotaDeCredito>> => {
-          const permiso = await autorizar(tx, contexto, dependencias.reglas, [
-            "notas_de_credito_de_proveedor.registrar",
-          ]);
+          const permiso = await autorizar(tx, contexto, dependencias.reglas, [variante.permiso]);
           if (!permiso.ok) return permiso;
-          const nivel = await exigirTresVias(tx, contexto);
-          if (!nivel.ok) return nivel;
+          // La factura de la nota (la base lo vuelve a comprobar bajo bloqueo; acá se dice con su nombre y sin escribir nada) y el alcance de sucursales sobre TODAS las de la factura (N-9). Una nota de débito suelta no
+          // tiene sucursal: la carga solo quien tiene alcance sobre todas. Antes que la repetición: quien no tiene alcance no se entera de lo ya cargado.
+          const factura =
+            entrada.facturaId === null
+              ? null
+              : await tx.comprobantesDeProveedor.obtener(empresaId, entrada.facturaId);
+          if (entrada.facturaId !== null && (factura === null || factura.clase !== "FACTURA")) {
+            return err(variante.sinFactura);
+          }
+          const alcance =
+            factura === null
+              ? (await tx.autorizacion.sucursalesDelActor(contexto)) === "TODAS"
+                ? ok(null)
+                : err("SUCURSAL_FUERA_DE_ALCANCE" as const)
+              : await exigirAlcanceDelComprobante(tx, contexto, factura.id);
+          if (!alcance.ok) return alcance;
 
           const repetida = await repeticion(tx, empresaId, entrada.clave, huella);
           if (repetida !== null) return repetida;
@@ -77,15 +136,10 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
             "PROVEEDOR",
           );
           if (!proveedor.ok) return err("PROVEEDOR_NO_ENCONTRADO");
-          // La factura que corrige (la base lo vuelve a comprobar bajo bloqueo; acá se dice con su nombre y sin escribir nada).
-          const factura = await tx.comprobantesDeProveedor.obtener(empresaId, entrada.facturaId);
-          if (factura === null || factura.clase !== "FACTURA") {
-            return err("NOTA_DE_CREDITO_SIN_FACTURA");
+          if (factura !== null && factura.proveedorId !== proveedor.valor.id) {
+            return err(variante.otroProveedor);
           }
-          if (factura.proveedorId !== proveedor.valor.id) {
-            return err("NOTA_DE_CREDITO_DE_OTRO_PROVEEDOR");
-          }
-          if (factura.estado === "ANULADO") return err("NOTA_DE_CREDITO_DE_FACTURA_ANULADA");
+          if (factura !== null && factura.estado === "ANULADO") return err(variante.facturaAnulada);
           const duplicada = await tx.comprobantesDeProveedor.porDuplicado(
             empresaId,
             proveedor.valor.id,
@@ -122,8 +176,8 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
 
           const comprobanteId = await tx.comprobantesDeProveedor.insertar(empresaId, {
             proveedorId: proveedor.valor.id,
-            clase: "NOTA_DE_CREDITO",
-            comprobanteAsociadoId: factura.id,
+            clase: variante.clase,
+            comprobanteAsociadoId: factura?.id ?? null,
             tipo: nota.tipo,
             puntoDeVenta: nota.puntoDeVenta,
             numero: nota.numero,
@@ -145,7 +199,8 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
               proveedor.valor.apellido,
             ),
             letraNoEsperada: false,
-            nivel: "TRES_VIAS",
+            // El nivel de su factura (Q-4); la nota de débito suelta, el de la empresa hoy.
+            nivel: factura?.nivel ?? (await tx.configuracionDeCompras.leer(empresaId)).nivel,
             esAtajo: false,
             clave: entrada.clave,
             huella,
@@ -166,7 +221,7 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
               return err({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: igual.id });
             }
             throw new Error(
-              "la nota de crédito chocó con una restricción única que no es la clave ni el duplicado",
+              "la nota chocó con una restricción única que no es la clave ni el duplicado",
             );
           }
           await tx.detalleDeComprobantes.insertarImportes(
@@ -177,12 +232,12 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
-            accion: "NOTA_DE_CREDITO_REGISTRADA",
+            accion: variante.accion,
             entidad: "comprobante_de_proveedor",
             entidadId: comprobanteId,
             despues: {
               proveedorId: proveedor.valor.id,
-              facturaId: factura.id,
+              facturaId: factura?.id ?? null,
               tipo: nota.tipo,
               puntoDeVenta: nota.puntoDeVenta,
               numero: nota.numero,
@@ -190,11 +245,35 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
               importes: c.importesPorAlicuota.length,
             },
           });
+          // Al final: la nota en el libro. La de crédito, contra el cargo de su factura (ver `asentarLaNotaDeCredito`); la de débito, como cargo suelto (ver `asentarLaNotaDeDebito`).
+          const enElLibro =
+            variante.clase === "NOTA_DE_DEBITO" || factura === null
+              ? await asentarLaNotaDeDebito(tx, contexto, dependencias, {
+                  notaId: comprobanteId,
+                  proveedorId: proveedor.valor.id,
+                  facturaId: factura?.id ?? null,
+                  importe: c.totalSegunFactura,
+                })
+              : await asentarLaNotaDeCredito(tx, contexto, dependencias, {
+                  notaId: comprobanteId,
+                  facturaId: factura.id,
+                  importe: c.totalSegunFactura,
+                });
+          if (!enElLibro.ok) return enElLibro;
           return ok({ comprobanteId, yaExistia: false });
         },
       ),
     );
   };
+}
+
+/** Cargar la nota de crédito: `armarRegistrarNota` con la variante de crédito (la factura es obligatoria). */
+export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras) {
+  const registrar = armarRegistrarNota(dependencias, DE_CREDITO);
+  return (
+    contexto: ContextoOperativo,
+    entrada: EntradaDeRegistrarNotaDeCredito,
+  ): Promise<R<SalidaDeRegistrarNotaDeCredito>> => registrar(contexto, entrada);
 }
 
 /** ¿Ya estaba? Por la clave: misma huella, repetida; otra, reutilizada. `null` si es nueva. */
@@ -240,17 +319,57 @@ export function armarAnularNotaDeCredito(dependencias: DependenciasDeCompras) {
             "notas_de_credito_de_proveedor.anular",
           ]);
           if (!permiso.ok) return permiso;
+          // Orden de bloqueo: la factura, después la nota (documentado en `cargo-de-la-factura.ts`).
+          const sinBloquear = await tx.comprobantesDeProveedor.obtener(
+            empresaId,
+            entrada.comprobanteId,
+          );
+          if (
+            sinBloquear?.clase !== "NOTA_DE_CREDITO" ||
+            sinBloquear.comprobanteAsociadoId === null
+          ) {
+            return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
+          }
+          const factura = await tx.comprobantesDeProveedor.bloquear(
+            empresaId,
+            sinBloquear.comprobanteAsociadoId,
+          );
           const nota = await tx.comprobantesDeProveedor.bloquear(empresaId, entrada.comprobanteId);
           if (nota === null || nota.clase !== "NOTA_DE_CREDITO") {
             return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
           }
+          // El alcance de sucursales sobre TODAS las de la factura (N-9), igual que al cargarla.
+          const alcance = await exigirAlcanceDelComprobante(
+            tx,
+            contexto,
+            sinBloquear.comprobanteAsociadoId,
+          );
+          if (!alcance.ok) return alcance;
           if (nota.estado === "ANULADO") return ok({ yaEstaba: true });
+          // Una factura ya pagada por el neto con esta nota no se queda con la deuda de la nota: primero se anula el pago. Una nota que llegó DESPUÉS del pago (el pago es el total) sí se anula. Bajo el bloqueo de la
+          // factura, que `declararPago` también toma: no hay pago ni nota a medias. Chequeo: `test/integracion/compras-pago-por-el-neto.test.ts`.
+          const vigente =
+            factura === null ? null : await tx.pagosDeProveedor.vigenteDe(empresaId, factura.id);
+          if (
+            factura !== null &&
+            vigente !== null &&
+            !elPagoCubreSinLaNota(
+              vigente.importe,
+              factura.totalSegunFactura,
+              await tx.notasDeCredito.acreditadoDe(empresaId, factura.id),
+              nota.totalSegunFactura,
+            )
+          ) {
+            return err("NOTA_DE_CREDITO_CON_PAGO");
+          }
           const hecho = await tx.comprobantesDeProveedor.anular(empresaId, nota.id, {
             por: persona,
             en: contexto.ahora,
             motivo: motivo.valor,
           });
           if (!hecho) throw new Error("la nota ya no estaba registrada bajo bloqueo");
+          const enElLibro = await anularLaNotaDeCredito(tx, contexto, dependencias, nota.id);
+          if (!enElLibro.ok) return enElLibro;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,

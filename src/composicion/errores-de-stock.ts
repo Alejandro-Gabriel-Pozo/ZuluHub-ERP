@@ -7,8 +7,9 @@ import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from 
 import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 /**
- * De un error de stock al código público que sale a la pantalla (ADR-016). Solo siete errores del dominio tienen un texto propio, los que la maqueta aprobada `stock.html` (fila
- * «Errores y avisos» de «Textos nuevos», 09/11/2026) redacta; todo lo demás que el dominio rechaza sale como el genérico «Esta acción no está permitida» (dueño, 30/10/2026,
+ * De un error de stock al código público que sale a la pantalla (ADR-016). Solo diez errores del dominio tienen un texto propio: siete que la maqueta aprobada `stock.html` (fila
+ * «Errores y avisos» de «Textos nuevos», 09/11/2026) redacta y tres de la gestión de depósitos que el dueño aprobó el 25/11/2026 (DEC-1018: tiene existencia, es el de venta, otra persona lo modificó;
+ * «tiene un conteo abierto» reutiliza el de `CONTEO_EN_CURSO`); todo lo demás que el dominio rechaza sale como el genérico «Esta acción no está permitida» (dueño, 30/10/2026,
  * interfaz sobria: genérico antes que uno por acción). El guard, la empresa que no opera y la base ya traen su propio código y pasan SIN CAMBIOS. Es exhaustiva por tipo: un error
  * nuevo de `ErrorDeStock` no compila hasta que se le dé su código. `CONTROL_REQUIERE_CONFIRMACION` sale como `STOCK_CONTROL_AVISA` (no es un fallo: la pantalla de movimientos
  * pide confirmar y reintenta con la misma clave). Previene: que un error de stock salga crudo a la pantalla o que se invente un texto por cada regla del dominio.
@@ -36,11 +37,11 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeStock>> = {
   SUCURSAL_NO_ENCONTRADA: GENERICO,
   SUCURSAL_INACTIVA: GENERICO,
   YA_HAY_DEPOSITO_DE_VENTA: GENERICO,
-  ES_EL_DE_VENTA: GENERICO,
+  ES_EL_DE_VENTA: "STOCK_ES_EL_DE_VENTA",
   DEPOSITO_NO_ENCONTRADO: GENERICO,
-  DEPOSITO_DESACTUALIZADO: GENERICO,
-  DEPOSITO_CON_EXISTENCIA: GENERICO,
-  DEPOSITO_CON_CONTEO_ABIERTO: GENERICO,
+  DEPOSITO_DESACTUALIZADO: "STOCK_DEPOSITO_DESACTUALIZADO",
+  DEPOSITO_CON_EXISTENCIA: "STOCK_DEPOSITO_CON_EXISTENCIA",
+  DEPOSITO_CON_CONTEO_ABIERTO: "STOCK_CONTEO_EN_CURSO",
   PRODUCTO_NO_ENCONTRADO: GENERICO,
   PRODUCTO_INACTIVO: GENERICO,
   CLASE_NO_CONTROLABLE: GENERICO,
@@ -85,19 +86,23 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeStock>> = {
   COMPUESTO_NO_ES_ELABORADO: GENERICO,
   PRODUCTO_NO_LLEVA_RECETA: GENERICO,
   PERDIDA_INVALIDA: GENERICO,
-  VENCIMIENTO_REQUERIDO: GENERICO,
-  VENCIMIENTO_PASADO: GENERICO,
+  VENCIMIENTO_REQUERIDO: "LOTE_VENCIMIENTO_REQUERIDO",
+  VENCIMIENTO_PASADO: "STOCK_VENCIMIENTO_PASADO",
   LOTE_NO_ENCONTRADO: GENERICO,
   LOTE_SIN_CALIDAD: GENERICO,
   LOTE_DESACTUALIZADO: GENERICO,
   LOTE_SIN_ASIGNAR: GENERICO,
-  SALDO_DE_LOTE_INSUFICIENTE: GENERICO,
+  LOTES_SIN_CONTROL: GENERICO,
+  LOTE_CON_OTRA_FECHA: "STOCK_LOTE_CON_OTRA_FECHA",
+  SALDO_DE_LOTE_INSUFICIENTE: "STOCK_SALDO_DE_LOTE_INSUFICIENTE",
   SIN_CAMBIOS: GENERICO,
 };
 
 /** Los errores con forma de objeto que son del negocio de stock: el control de existencia negativa (avisa) y la función que el plan no incluye (el genérico). */
 const CODIGO_DE_ERROR_DE_OBJETO: Readonly<Record<string, CodigoDeStock>> = {
   CONTROL_REQUIERE_CONFIRMACION: "STOCK_CONTROL_AVISA",
+  /** El aviso de la carga inicial sobre un depósito que ya tiene existencia (P-8): lo arma la composición de la carga, no el módulo. */
+  YA_HAY_EXISTENCIA: "STOCK_YA_HAY_EXISTENCIA",
   FUNCION_NO_INCLUIDA: GENERICO,
 };
 

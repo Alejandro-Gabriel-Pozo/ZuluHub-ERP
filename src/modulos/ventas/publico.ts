@@ -5,6 +5,11 @@ export { DECLARACIONES as DECLARACIONES_DE_VENTAS } from "./casos-de-uso/declara
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_VENTAS } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeVentas, type CasosDeUsoDeVentas } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeVentas, type ConsultasDeVentas } from "./consultas/consultas";
+export {
+  crearTicketACobrar,
+  type ErrorDeTicketACobrar,
+  type TicketACobrar,
+} from "./consultas/ticket-a-cobrar";
 export type { DependenciasDeVentas, TxDeVentas } from "./casos-de-uso/contrato";
 export type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./consultas/contrato";
 export type { ErrorDeVentas } from "./casos-de-uso/errores";
@@ -82,6 +87,7 @@ export {
   bloquearCuentas,
   cuentaAbiertaPorAncla,
   cuentaPorId,
+  cuentasAbiertasConElProducto,
   cuentasAbiertasPorAncla,
   lineaPorId,
   lineasDeCuenta,
@@ -99,6 +105,7 @@ export { calcularLasLineas } from "./casos-de-uso/calculo";
 export { anclaValida, type Ancla } from "./dominio/ancla";
 export { esUuid } from "./dominio/identificadores";
 export type { Cuenta, Linea, OpcionDeLinea, ModoDeCopia } from "./persistencia/modelo-de-cuentas";
+export type { EntradaDeVenderACuenta } from "./casos-de-uso/vender-a-cuenta";
 export type {
   EntradaDeVenderYCobrar,
   SalidaDeVenderYCobrar,
@@ -129,3 +136,14 @@ export {
   crearRepositoriosDeVentas,
   type RepositoriosDeVentas,
 } from "./persistencia/repositorios-de-ventas";
+export {
+  crearLecturaDeTicketsParaCuentas,
+  type LecturaDeTicketsParaCuentas,
+  type TicketParaMostrar,
+} from "./persistencia/lectura-de-tickets-para-cuentas";
+export type {
+  CargoACuenta,
+  CuentaCorrienteDeVentas,
+  EntradaDeCargoACuenta,
+  ErrorDelCargoACuenta,
+} from "./casos-de-uso/puertos-de-cuenta-corriente";

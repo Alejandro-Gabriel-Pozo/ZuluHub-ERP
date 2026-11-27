@@ -1,5 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { esClaseComprable } from "../../catalogo/publico";
@@ -22,7 +22,9 @@ import {
   type FacturaPedida,
 } from "../dominio/factura";
 import { alicuotaQueEntraAlCosto } from "../dominio/iva-en-el-costo";
-import type { RenglonDeCompra } from "../dominio/registrar-compra";
+import { huellaDeComando } from "../dominio/huella";
+import { camposDeHuellaDePago, type PagoPedido } from "../dominio/pago";
+import { claveDelPagoDeLaCompra, type RenglonDeCompra } from "../dominio/registrar-compra";
 import type { DependenciasDeCompras, TxDeCompras, TxDeConsultasDeCompras } from "./contrato";
 export { guardarFactura } from "./guardar-factura";
 import type { ErrorDeCompras } from "./errores";
@@ -94,8 +96,8 @@ export async function prepararFactura(
     version: number;
   }>,
   factura: FacturaPedida,
-  /** Las líneas recibidas con las que se concilia en el mismo acto (N2); `null` si la factura llega sola (N3: se concilia después, sin atajo). */
-  lineas: readonly LineaCalculada[] | null,
+  /** Lo recibido con lo que se concilia en el mismo acto (N2); `null` si la factura llega sola (N3: se concilia después, sin atajo). */
+  lineas: readonly Pick<LineaCalculada, "cantidadEnStock">[] | null,
   condicionDeLaEmpresa: CondicionDeIvaDeLaEmpresa | null,
 ): Promise<R<FacturaPreparada>> {
   const { empresaId } = contexto;
@@ -291,4 +293,72 @@ export async function exigirFacturaNueva(
   return repetida === null
     ? ok(null)
     : err({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: repetida.id });
+}
+
+/** Lo que cobró el proveedor en la compra: la compra más nueva gana. */
+export async function registrarLaOferta(
+  tx: TxDeCompras,
+  empresaId: EmpresaId,
+  proveedorId: string,
+  recepcionId: string,
+  hechoEn: Date,
+  lineas: readonly LineaCalculada[],
+): Promise<void> {
+  for (const l of lineas) {
+    if (l.renglon.precio === null || l.costoPorUnidadDeStock === null) continue;
+    await tx.ofertasDeProveedor.registrar(empresaId, {
+      proveedorId,
+      productoId: l.producto.id,
+      presentacionId: l.renglon.presentacionId,
+      precioPorTipo: l.renglon.precioPor,
+      unidadDePrecioId: l.renglon.unidadDePrecioId,
+      ultimoPrecio: l.renglon.precio,
+      ultimoCostoPorUnidadDeStock: l.costoPorUnidadDeStock,
+      ultimaCompraId: recepcionId,
+      ultimaCompraEn: hechoEn,
+    });
+  }
+}
+
+/**
+ * El pago que viaja con «Comprar y recibir» con factura (N2): se guarda por el total de la factura, con su única línea de medio y la clave del pago de la compra (la misma compra, el mismo pago). Devuelve el id; un choque con una
+ * restricción única que no es ni su clave ni el pago vigente es un defecto (la compra es nueva): corta la transacción.
+ */
+export async function guardarElPagoDeLaCompra(
+  tx: TxDeCompras,
+  datos: Readonly<{
+    empresaId: EmpresaId;
+    persona: PersonaId;
+    recepcionId: string;
+    comprobanteId: string;
+    pago: PagoPedido;
+    importe: string;
+  }>,
+): Promise<string> {
+  const { pago, importe, comprobanteId } = datos;
+  const nuevo = await tx.pagosDeProveedor.insertar(datos.empresaId, {
+    comprobanteId,
+    fechaDePago: pago.fechaDePago,
+    medios: [{ medio: pago.medio, importe }],
+    importe,
+    clave: claveDelPagoDeLaCompra(datos.recepcionId),
+    huella: huellaDeComando(
+      "declarar_pago",
+      [
+        comprobanteId,
+        ...camposDeHuellaDePago({
+          fechaDePago: pago.fechaDePago,
+          medios: [{ medio: pago.medio, importe: null }],
+        }),
+      ],
+      [],
+    ),
+    registradoPor: datos.persona,
+  });
+  if (nuevo === undefined) {
+    throw new Error(
+      "el pago chocó con una restricción única que no es su clave ni el pago vigente",
+    );
+  }
+  return nuevo;
 }

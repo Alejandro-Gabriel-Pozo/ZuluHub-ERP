@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0937",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de Corregir lo recibido: Corregir lo recibido, Motivo de la corrección, Error de carga, Reparto interno, Faltante del proveedor y el aviso del reparto interno. Propuestos por el ingeniero.",
+  "que_cambia": "Seis claves nuevas de compras.recepcion; Corregir, Cantidad recibida, Nota, Correcciones, Enviando y Reintentar reutilizan los existentes. Revertir: quitar las claves y volver a textos aprobados.",
+  "donde": "catalogo-compras.ts, textos-de-recepciones.ts; delegación de textos DDD fila 173, orquestador (pendiente de su aceptación) y chat del dueño del 25/11/2026"
+}

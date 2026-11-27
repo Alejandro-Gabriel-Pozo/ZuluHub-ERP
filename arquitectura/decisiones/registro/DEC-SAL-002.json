@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-002",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "«Dividir la cuenta» se ofrece cuando la mesa tiene platos y todos están enviados a cocina. Cada cuenta hija se cobra sola; al cobrar la última la mesa queda libre y se avisa «Mesa cobrada».",
+  "que_cambia": "Con platos sin enviar no aparece «Dividir la cuenta» (primero se envían). Una cuenta hija no puede recibir platos nuevos ni enviarlos: si hace falta pedir más, se pide antes de dividir.",
+  "donde": "apps/web/ui/plantillas/salon/modelo-de-la-mesa.ts campo paraDividir y la pagina de cobrar de la mesa; Pedernal-docs briefs/salon/SAL-E2-dividir-la-cuenta.md seccion 9; confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)"
+}

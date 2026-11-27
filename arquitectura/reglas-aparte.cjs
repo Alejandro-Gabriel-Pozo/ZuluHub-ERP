@@ -7,4 +7,5 @@ module.exports = [].concat(
   require("./reglas-de-pdf.cjs"),
   require("./reglas-de-modulos.cjs"),
   require("./reglas-de-red.cjs"),
+  require("./reglas-de-xlsx.cjs"),
 );

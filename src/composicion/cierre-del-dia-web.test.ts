@@ -38,6 +38,7 @@ type Cambios = Partial<{
   medios: unknown;
   cuentas: unknown;
   tickets: unknown;
+  mesas: unknown;
   personas: unknown;
 }>;
 
@@ -83,6 +84,7 @@ function armar(cambios: Cambios = {}) {
     listarMediosDePago: vi.fn(() => Promise.resolve(cambios.medios ?? ok({ medios: [] }))),
     listarCuentasDeCobro: vi.fn(() => Promise.resolve(cambios.cuentas ?? ok({ cuentas: [] }))),
     listarTickets: vi.fn(() => Promise.resolve(cambios.tickets ?? ok([]))),
+    numerosDeMesaDeCuentas: vi.fn(() => Promise.resolve(cambios.mesas ?? ok([]))),
     personasParaMostrar: vi.fn(() => Promise.resolve(cambios.personas ?? ok(new Map()))),
     iniciarAuditoria: vi.fn(() => Promise.resolve(ok({ yaEstabaEnAuditoria: false }))),
     cancelarAuditoria: vi.fn(() => Promise.resolve(ok({ yaEstabaAbierta: true }))),
@@ -100,6 +102,7 @@ function armar(cambios: Cambios = {}) {
     casosDeCaja: () => f,
     consultasDeCaja: () => f,
     consultasDeVentas: () => f,
+    consultasDeSalon: () => f,
     consultasDeIdentidad: () => f,
     respuesta: {
       registrar: (x: string) => registrados.push(x),
@@ -385,9 +388,70 @@ describe("qué se lee en cada estado de la jornada", () => {
       fechaNegocio: HOY,
     });
     expect(c.conciliacion?.cobradoContraTicket).toEqual([
-      { ticketNumero: 7, diferencia: "20.00" },
-      { ticketNumero: null, diferencia: "-2.00" },
+      { ticketNumero: 7, mesaAnulada: null, diferencia: "20.00" },
+      { ticketNumero: null, mesaAnulada: null, diferencia: "-2.00" },
     ]);
+    // Ningún ticket está anulado: salón ni se consulta.
+    expect(f.numerosDeMesaDeCuentas).not.toHaveBeenCalled();
+  });
+
+  describe("la anulación de una mesa en «Cobrado contra el ticket» (SAL-F, DEC-SAL-009)", () => {
+    const fila = (ticketId: string, diferencia: string) => ({
+      origen: { tipo: "t", id: `o-${ticketId}` },
+      ticketId,
+      cobrado: pesos(diferencia),
+      totalDelTicket: pesos("0.00"),
+      diferencia: pesos(diferencia),
+      explicacion: null,
+    });
+    const ticket = (ticketId: string, numero: number, estado: string, cuentaId: string) => ({
+      ticketId,
+      cuentaId,
+      numero,
+      estado,
+    });
+    const escenario = (mesas: unknown) =>
+      armar({
+        estado: estadoDe("EN_AUDITORIA"),
+        conciliacion: conciliacion({
+          cobradoContraTicket: [
+            fila("t-mesa", "2000.00"),
+            fila("t-mostrador", "500.00"),
+            fila("t-baja", "30.00"),
+          ],
+        }),
+        tickets: ok([
+          ticket("t-mesa", 7, "ANULADO", "c-mesa"),
+          ticket("t-mostrador", 8, "ANULADO", "c-mostrador"),
+          ticket("t-baja", 9, "COBRADO", "c-baja"),
+        ]),
+        mesas,
+      });
+
+    it("un ticket ANULADO de una mesa lleva el número de la mesa; el del mostrador y el corregido a la baja quedan con su número de ticket; a salón se le pregunta solo por los anulados", async () => {
+      const { f, d } = escenario(ok([{ cuentaId: "c-mesa", numero: 12 }]));
+      const c = await dato(cargar(d));
+      expect(f.numerosDeMesaDeCuentas).toHaveBeenCalledWith(CONTEXTO, {
+        sucursalId: SUCURSAL,
+        cuentaIds: ["c-mesa", "c-mostrador"],
+      });
+      expect(c.conciliacion?.cobradoContraTicket).toEqual([
+        { ticketNumero: 7, mesaAnulada: 12, diferencia: "2000.00" },
+        { ticketNumero: 8, mesaAnulada: null, diferencia: "500.00" },
+        { ticketNumero: 9, mesaAnulada: null, diferencia: "30.00" },
+      ]);
+    });
+
+    it("si salón rechaza (sin permiso de ver mesas, sin la perilla) el cierre NO falla: todo queda con su número de ticket", async () => {
+      const { d } = escenario(err("SIN_PERMISO"));
+      const c = await dato(cargar(d));
+      expect(c.conciliacion?.cobradoContraTicket.map((t) => t.mesaAnulada)).toEqual([
+        null,
+        null,
+        null,
+      ]);
+      expect(c.conciliacion?.cobradoContraTicket.map((t) => t.ticketNumero)).toEqual([7, 8, 9]);
+    });
   });
 });
 

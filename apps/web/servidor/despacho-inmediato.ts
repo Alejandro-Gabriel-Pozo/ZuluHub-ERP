@@ -2,6 +2,7 @@ import "server-only";
 
 import { after } from "next/server";
 import type { EmpresaId } from "../../../src/primitivas/identificadores/marca";
+import { claveDeEnvioDeInvitacion } from "../../../src/modulos/identidad/publico";
 import { trabajos } from "./composicion";
 
 /**
@@ -54,4 +55,15 @@ export function despacharPorClavesDespuesDeConfirmar(
       );
     }
   });
+}
+
+/**
+ * El mail de una invitación recién creada (`enviar_invitacion`, clave `invitacion:<id>:envio`): sale en segundos y no cuando pase el cron. Va DESPUÉS de confirmada la transacción que
+ * creó la invitación y encoló el trabajo (quien llama ya recibió su resultado) y es mejor esfuerzo, igual que el resto: si falla, la acción de la persona no falla, queda registrado por su
+ * tipo y el trabajo sigue `PENDIENTE` para el cron. Despachar dos veces, o a la vez que el cron, no manda dos mails: la toma del trabajo es condicionada y el envío lleva su clave de
+ * idempotencia. Previene: que una invitación (y el alta de un empleado nuevo) espere al cron, que de noche corre cada 2 horas. Chequeo: `test/web/despacho.test.ts` y
+ * `test/integracion/trabajos-envio-invitacion.test.ts` (despacho inmediato por clave).
+ */
+export function despacharElEnvioDeUnaInvitacion(empresaId: EmpresaId, invitacionId: string): void {
+  despacharPorClavesDespuesDeConfirmar(empresaId, [claveDeEnvioDeInvitacion(invitacionId)]);
 }

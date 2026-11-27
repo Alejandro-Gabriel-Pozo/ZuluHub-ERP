@@ -55,6 +55,12 @@ const DEL_DUENO: FuenteDeTexto = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta cierre-del-dia.html (abierta, impedimentos, en-cierre, corregir, conciliacion, reconocer, bloqueos, lista, diferencia, cambiaron, cerrada, sin-permiso); brief CD v2",
 };
+const ANULACION_DE_MESA: FuenteDeTexto = {
+  decidio:
+    "el dueño, 26/11/2026 (pidió que el cierre diga «diferencia por anulación de la mesa X» y no solo un faltante, para que el gerente registre la salida; texto aceptado por delegación, fila 173); decisiones-del-dueno-2026-11.md",
+  donde:
+    "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (26/11/2026, anulación del cobro de una mesa); DEC-SAL-009",
+};
 const REUSADO: FuenteDeTexto = {
   decidio:
     "el dueño: texto ya aprobado en su módulo y reutilizado por la maqueta del cierre (una regla, un lugar; decisión del 21/11/2026)",
@@ -217,6 +223,12 @@ export const FICHA_DE_CIERRE_DEL_DIA = {
     "cierre.medio_correcto": { usos: ["campo de la hoja «Corregir medio»"], fuente: DEL_DUENO },
     "cierre.corregido_por": { usos: ["línea de un cobro corregido"], fuente: DEL_DUENO },
     "cierre.ticket_numero": { usos: ["línea «Cobrado contra el ticket»"], fuente: DEL_DUENO },
+    "cierre.diferencia_por_anulacion_de_la_mesa": {
+      usos: [
+        "línea «Cobrado contra el ticket» de un ticket anulado de una mesa (con el número de la mesa)",
+      ],
+      fuente: ANULACION_DE_MESA,
+    },
     "cierre.error.accion_no_permitida": {
       usos: ["aviso de cualquier rechazo de negocio de la pantalla"],
       fuente: DEL_DUENO,

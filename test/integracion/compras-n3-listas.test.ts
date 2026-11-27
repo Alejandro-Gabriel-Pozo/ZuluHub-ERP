@@ -143,7 +143,7 @@ describe.skipIf(base === null)("compras N3: listados de recepciones y facturas",
     expect(estados.size).toBe(6);
   });
 
-  it("el estado de cada factura: falta recibir, en parte, conciliada, anulada; el operador también las ve (comprobantes_de_proveedor.ver)", async () => {
+  it("el estado de cada factura: falta conciliar, en parte, conciliada, anulada; el operador también las ve (comprobantes_de_proveedor.ver)", async () => {
     const m = await armar();
     const recibida = await recibir(m, "2");
     const sola = await factura(m, 100);
@@ -156,11 +156,34 @@ describe.skipIf(base === null)("compras N3: listados de recepciones y facturas",
       await c.casos.anularFactura(m.e.gerente, { comprobanteId: anulada, motivo: "Mal cargada" }),
     );
     const estados = await estadosDeFacturas(m, m.e.operador);
-    expect(estados.get(sola)).toBe("FACTURADA_FALTA_RECIBIR");
+    // Quedan 600 g recibidos sin repartir: la factura que no concilió nada ya tiene con qué conciliarse.
+    expect(estados.get(sola)).toBe("FALTA_CONCILIAR");
     expect(estados.get(parcial)).toBe("CONCILIADA_EN_PARTE");
     expect(estados.get(completa)).toBe("CONCILIADA");
     expect(estados.get(anulada)).toBe("ANULADA");
     expect(estados.size).toBe(4);
+  });
+
+  it("«Facturada, falta recibir» es la factura sin nada recibido de sus productos; lo recibido sin confirmar o rechazado no cuenta; otra empresa no cuenta", async () => {
+    const m = await armar();
+    const sola = await factura(m, 100);
+    expect((await estadosDeFacturas(m)).get(sola)).toBe("FACTURADA_FALTA_RECIBIR");
+    // Una recepción pendiente (sin confirmar) todavía no es mercadería que conciliar.
+    await recibir(m, "1", false);
+    expect((await estadosDeFacturas(m)).get(sola)).toBe("FACTURADA_FALTA_RECIBIR");
+    // Una línea rechazada tampoco.
+    await c.deposito(m.e, { uso: "RECHAZO" });
+    await recibir(m, "1", true, [{ linea: 1, condicion: "RECHAZADA", observacion: "Vencida" }]);
+    expect((await estadosDeFacturas(m)).get(sola)).toBe("FACTURADA_FALTA_RECIBIR");
+    // Confirmada y conforme: ahora falta conciliar.
+    await recibir(m, "1");
+    expect((await estadosDeFacturas(m)).get(sola)).toBe("FALTA_CONCILIAR");
+    // Una factura de otro proveedor no ve esa mercadería: su estado no cambia.
+    const otraEmpresa = await armar();
+    const ajena = await factura(otraEmpresa, 100);
+    expect((await estadosDeFacturas(otraEmpresa, otraEmpresa.e.gerente)).get(ajena)).toBe(
+      "FACTURADA_FALTA_RECIBIR",
+    );
   });
 
   it("las compras de N1 y N2 no salen en estos listados; otra empresa no ve nada; filtros y cursor", async () => {

@@ -2,8 +2,8 @@
  * Los textos del módulo `stock` (prefijo `stock.`, E5 §10). Ninguno es nuevo: todos salen de la lista que el dueño aprobó el 09/11/2026 en el
  * prototipo `stock.html`, sección «Textos nuevos» (decisión D125), que es la fuente de cada grupo de abajo (`10-ux-ui/prototipos-gastronomia/
  * stock.html:266`, repositorio de documentos, una fila por grupo). Lo que esa lista no trae no se agrega acá: los errores sin texto aprobado
- * (`STOCK_SIN_DEPOSITO_DE_VENTA`, `CONTEO_SIN_REGISTROS`, `CLAVE_REUTILIZADA`, `*_DESACTUALIZADA`, `ARTICULO_NO_CONTROLADO`, `CLASE_NO_CONTROLABLE`,
- * `MOVIMIENTO_NO_ANULABLE`, `MOVIMIENTO_YA_ANULADO`, `DEPOSITO_CON_EXISTENCIA`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico que ya
+ * (`STOCK_SIN_DEPOSITO_DE_VENTA`, `CONTEO_SIN_REGISTROS`, `CLAVE_REUTILIZADA`, `*_DESACTUALIZADA` salvo el del depósito, `ARTICULO_NO_CONTROLADO`, `CLASE_NO_CONTROLABLE`,
+ * `MOVIMIENTO_NO_ANULABLE`, `MOVIMIENTO_YA_ANULADO`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico que ya
  * existe, y el aviso «falta receta» no tiene pantalla (contrato `excepciones`; D175). Cada clave de motivo es el código del motivo sembrado en
  * minúsculas (`COMPRA` → `stock.motivo.compra`) y cada clave de uso de depósito, el código del uso (`CUARENTENA` → `stock.deposito.cuarentena`).
  */
@@ -72,6 +72,178 @@ export const TEXTOS_DE_STOCK = {
   "stock.error.cantidad_invalida": { porDefecto: "La cantidad tiene que ser mayor que cero" },
   "stock.error.conteo_en_curso": { porDefecto: "Ya hay un conteo abierto en este depósito" },
   "stock.error.nombre_duplicado": { porDefecto: "Ya existe un depósito con ese nombre" },
+  // Gestión de depósitos (STK-A): los tres errores que el dueño aprobó el 25/11/2026 (N-20 y N-21, fila 449 de `decisiones-del-dueno-2026-11.md`) y el que aceptó el orquestador por delegación (N-23, fila
+  // 173); el cuarto error de esa pantalla («tiene un conteo abierto») reutiliza `stock.error.conteo_en_curso`. Cada uno lo consume su código público (`respuesta-de-stock.ts`).
+  "stock.error.deposito_con_existencia": {
+    porDefecto: "El depósito tiene existencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
+  "stock.error.es_el_de_venta": {
+    porDefecto: "No se puede desactivar el depósito de venta",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
+  "stock.error.deposito_desactualizado": {
+    porDefecto: "Otra persona modificó este depósito. Actualizá la pantalla",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
+  // Movimientos (STK-B1): rótulos de clase del libro (N-10, N-11, N-12, fila 173; DEC-1022) y «Anulado» con clave propia de stock (T4, 15/11/2026; DEC-1022: el valor repite `caja.estado.anulado`, anotado en el PR).
+  "stock.clase.transferencia": {
+    porDefecto: "Transferencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  "stock.clase.ajuste": {
+    porDefecto: "Ajuste",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  "stock.clase.anulacion": {
+    porDefecto: "Anulación",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  // Carga inicial (STK-C): N-02, N-04, N-05, N-06, N-07 y N-08 los aprobó el dueño el 25/11/2026 (fila 449) y N-03 lo aceptó el orquestador por delegación (fila 173); DEC-STK-003.
+  "stock.carga.valor": {
+    porDefecto: "Valor",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.agregar_articulo": {
+    porDefecto: "Agregar artículo",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.resumen": {
+    porDefecto: "{cantidad} artículos por {total}",
+    marcadores: ["cantidad", "total"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.es_de_hoy": {
+    porDefecto: "La carga queda con la fecha de hoy",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.revisar_costo": {
+    porDefecto: "Revisá el costo",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.ya_hay_existencia": {
+    porDefecto: "Este depósito ya tiene existencia. ¿Registrar igual?",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.sin_costo": {
+    porDefecto: "{n} sin costo: no entran al promedio",
+    marcadores: ["n"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  // Lotes (STK-E, lectura): «Lotes» (L-01) lo aprobó el dueño el 25/11/2026 (fila 449) y el resto de los rótulos (L-03, L-04, L-10, L-11, L-12, L-16) los aceptó el orquestador por delegación (fila 173); DEC-STK-002.
+  "stock.lotes.pantalla": {
+    porDefecto: "Lotes",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vence": {
+    porDefecto: "Vence",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.sin_asignar": {
+    porDefecto: "Sin asignar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vencimientos": {
+    porDefecto: "Vencimientos",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vencido": {
+    porDefecto: "Vencido",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vence_hoy": {
+    porDefecto: "Vence hoy",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.dias": {
+    porDefecto: "Vence en los próximos {dias} días",
+    marcadores: ["dias"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  // Lotes (STK-E1, escritura): Controlar por lote (L-05), Dejar de controlar (L-06), Reasignar (L-07), Corregir (L-08) y «El lote no tiene tanta existencia» (L-15) los aprobó el dueño el 25/11/2026 (fila 449); «Fecha de vencimiento» (L-09), el orquestador por delegación (fila 173); DEC-STK-005.
+  "stock.lotes.controlar": {
+    porDefecto: "Controlar por lote",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.dejar_de_controlar": {
+    porDefecto: "Dejar de controlar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.reasignar": {
+    porDefecto: "Reasignar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.corregir": {
+    porDefecto: "Corregir",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.lotes.fecha_de_vencimiento": {
+    porDefecto: "Fecha de vencimiento",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.error.vencimiento_pasado": {
+    porDefecto: "La fecha de vencimiento ya pasó",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-006" },
+  },
+  "stock.error.lote_con_otra_fecha": {
+    porDefecto:
+      "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
+    largoMaximo: 120,
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-008" },
+  },
+  "stock.error.saldo_de_lote_insuficiente": {
+    porDefecto: "El lote no tiene tanta existencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-005" },
+  },
+  "stock.estado.anulado": {
+    porDefecto: "Anulado",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  // Formularios de movimientos (STK-B2; DEC-STK-001): «Artículo» (N-01, aceptado por el orquestador por delegación, fila 173), «Sobra» (aprobado el 15/11 para caja; clave de stock) y «Falta» (N-15, dueño 25/11, fila 449).
+  "stock.accion.articulo": {
+    porDefecto: "Artículo",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-001" },
+  },
+  "stock.ajuste.sobra": {
+    porDefecto: "Sobra",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-001" },
+  },
+  "stock.ajuste.falta": {
+    porDefecto: "Falta",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-001" },
+  },
   // stock.html, nota final de «Textos nuevos» («Esta acción no está permitida» ya estaba aprobado), sin el punto final de esa nota.
   "stock.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
 

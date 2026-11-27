@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
+import { LARGO_MAXIMO_DE_LA_NOTA_DE_COCINA } from "../../../../../src/primitivas/texto/nota-de-cocina";
+import { Campo } from "../../componentes/Campo";
 import { GrupoDeOpciones } from "../../componentes/GrupoDeOpciones";
 import { Boton } from "../../componentes/Boton.cliente";
 import { formatearImporte } from "../../patrones/formato-fiscal";
@@ -26,6 +28,8 @@ export type LineaElegida = Readonly<{
   varianteId: string | null;
   opcionIds: readonly string[];
   cantidad: number;
+  /** La nota libre para la cocina («sin cebolla», SAL-G): solo la pide la mesa del salón; vacía = sin nota. */
+  nota?: string | undefined;
 }>;
 
 export type PropsDeHojaDeProducto = Readonly<{
@@ -36,6 +40,8 @@ export type PropsDeHojaDeProducto = Readonly<{
   cotizar: (pedido: unknown) => Promise<Respuesta<CotizacionDeLaVenta>>;
   alAgregar: (linea: LineaElegida) => void;
   alCancelar: () => void;
+  /** El rótulo del campo «Nota para la cocina»; solo la mesa del salón lo pasa (la venta rápida no manda a cocina): sin él, no hay campo. */
+  rotuloDeNota?: string | undefined;
 }>;
 
 /**
@@ -52,7 +58,9 @@ export function HojaDeProducto({
   cotizar,
   alAgregar,
   alCancelar,
+  rotuloDeNota,
 }: PropsDeHojaDeProducto) {
+  const [nota, setNota] = useState("");
   const [medida, setMedida] = useState<readonly string[]>([]);
   const [elegidas, setElegidas] = useState<Readonly<Record<string, readonly string[]>>>({});
   const [cantidad, setCantidad] = useState<number | null>(
@@ -113,7 +121,8 @@ export function HojaDeProducto({
     evento.preventDefault();
     if (eleccion === null || enviada.current) return;
     enviada.current = true;
-    alAgregar(eleccion);
+    // La nota se agrega aparte de la elección: escribirla no repite la cotización del servidor.
+    alAgregar(rotuloDeNota === undefined || nota.trim() === "" ? eleccion : { ...eleccion, nota });
   };
 
   const medidaElegida = producto.variante?.opciones.find((o) => o.id === medida[0]);
@@ -171,6 +180,16 @@ export function HojaDeProducto({
         importe={importe === null ? undefined : formatearImporte(importe)}
         alCambiar={setCantidad}
       />
+      {rotuloDeNota === undefined ? null : (
+        <Campo
+          dato="nota-para-la-cocina"
+          etiqueta={rotuloDeNota}
+          valor={nota}
+          alCambiar={(valor) => {
+            setNota(valor.slice(0, LARGO_MAXIMO_DE_LA_NOTA_DE_COCINA));
+          }}
+        />
+      )}
       <div className={estilos["pie"]}>
         <Boton tipo="submit" deshabilitado={!listo} ancho="completo">
           {importe === null ? textos.agregar : `${textos.agregar} · ${formatearImporte(importe)}`}

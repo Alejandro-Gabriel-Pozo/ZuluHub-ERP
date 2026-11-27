@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1035",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO: el mapa del salón es el de la sucursal de trabajo, que fija el servidor; no hay concepto de turno.",
+  "que_cambia": "Cada persona ve las mesas de su sucursal y nunca las de otra; un turno después no cambia datos. Dueño 26/11: «Sí si el hotel no necesita turnos desde el día uno. Si los necesita, cambiá a «Corrijo».»",
+  "donde": "apps/web/servidor/salon.ts (cargarElMapaDeMesas) y apps/web/app/s/app/(operacion)/salon/page.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md H-7; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)",
+  "motivo": "El código no tiene concepto de turno (hallazgo H-7 del plan) y la sucursal la decide el servidor: un mapa por turno exigiría datos que hoy no existen."
+}

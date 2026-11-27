@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1071",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "La unidad de cada ingrediente no se elige, la fija el servidor; una merma en blanco es sin merma y unos pasos en blanco son sin pasos.",
+  "que_cambia": "Qué se guarda cuando se deja algo en blanco y en qué unidad. Revertir: ofrecer la unidad como campo.",
+  "donde": "src/composicion/entradas-de-recetas.ts; recetas-pantalla.md §4, supuesto S3; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
+}

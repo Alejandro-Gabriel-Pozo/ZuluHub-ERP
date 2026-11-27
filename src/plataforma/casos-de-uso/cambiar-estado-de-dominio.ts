@@ -51,6 +51,7 @@ export type ErrorAlCambiarDominio =
   | ErrorDeCambioDeDominio
   | "ID_INVALIDO"
   | "DOMINIO_NO_ENCONTRADO"
+  | "HOST_PROTEGIDO"
   | (typeof MOTIVOS_QUE_ADMITEN)[number];
 
 type Pedido = Readonly<{
@@ -87,7 +88,7 @@ async function cambiarEstado(
   const resultado = await ejecutarCasoDeDominios<
     SalidaDeCambioDeDominio,
     Readonly<{ id: DominioId; pedido: PedidoDeCambioDeDominio }>,
-    ErrorDeCambioDeDominio | "ID_INVALIDO" | "DOMINIO_NO_ENCONTRADO"
+    ErrorDeCambioDeDominio | "ID_INVALIDO" | "DOMINIO_NO_ENCONTRADO" | "HOST_PROTEGIDO"
   >(dependencias, {
     contexto,
     accion: variante.accion,
@@ -106,6 +107,13 @@ async function cambiarEstado(
     trabajar: async (tx, { id, pedido: limpio }) => {
       const dominio = await tx.dominios.obtener(id);
       if (dominio === null) return err("DOMINIO_NO_ENCONTRADO");
+      // Verificar y activar son lo que hace servir un host: sobre uno protegido no se hacen. Desactivar y retirar siguen permitidos (sacan del aire, nunca ponen).
+      if (
+        (limpio.tipo === "VERIFICAR" || limpio.tipo === "ACTIVAR") &&
+        dependencias.hostsProtegidos.has(dominio.host)
+      ) {
+        return err("HOST_PROTEGIDO");
+      }
       const decision = decidirCambioDeDominio(dominio, limpio, contexto.ahora);
       if (!decision.ok) return decision;
       if (decision.valor.tipo === "YA_ESTABA") {

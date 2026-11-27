@@ -71,6 +71,8 @@ export type ErrorDeStock =
       control: ControlDeStock;
       detalle: readonly DetalleDeNegativo[];
     }>
+  /** La carga inicial sobre un depósito que ya tiene existencia: es un AVISO (nada se escribió); confirmar con `confirmaExistenciaPrevia` la registra igual (P-8). */
+  | Readonly<{ error: "YA_HAY_EXISTENCIA" }>
   // conteos
   | "CONTEO_NO_ENCONTRADO"
   | "CONTEO_EN_CURSO"
@@ -108,8 +110,13 @@ export type ErrorDeStock =
   | "LOTE_SIN_CALIDAD"
   | "LOTE_DESACTUALIZADO"
   | "LOTE_SIN_ASIGNAR"
+  // STK-E2a: lotes en una entrada de un artículo que no se controla por lote, y un lote que ya existe con otra fecha de vencimiento o de elaboración.
+  | "LOTES_SIN_CONTROL"
+  | "LOTE_CON_OTRA_FECHA"
   | "SALDO_DE_LOTE_INSUFICIENTE"
   | "SIN_CAMBIOS"
+  /** Darle stock propio a un plato con cuentas abiertas que lo tienen cambia lo que descuentan al cerrarse: hace falta que la persona lo vea y lo confirme (PRO-D1). `cuentas` es cuántas son. */
+  | Readonly<{ error: "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION"; cuentas: number }>
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
       perilla:

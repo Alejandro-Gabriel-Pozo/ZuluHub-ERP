@@ -6,8 +6,8 @@ import { exigirAcciones } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { comprobarQueOpera, type EmpresaNoOpera } from "../../../contexto/estados";
-import type { SucursalId } from "../../../primitivas/identificadores/marca";
-import { err, type Resultado } from "../../../primitivas/resultado/resultado";
+import { sucursalId, type SucursalId } from "../../../primitivas/identificadores/marca";
+import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import { ERRORES_DE_COMPRAS_POR_RESTRICCION } from "../persistencia/errores-por-restriccion";
@@ -41,6 +41,30 @@ export async function exigirAlcanceDeSucursal(
   return exigirSucursal(await tx.autorizacion.sucursalesDelActor(contexto), sucursal);
 }
 
+/**
+ * La sucursal de un comprobante, por la recepción a la que apuntan sus líneas: el alcance de sucursales de quien paga o anula tiene que incluirla. Un
+ * comprobante que no apunta a ninguna recepción (no lo hay en N1 y N2) exige alcance sobre TODAS y no tiene sucursal (`null`).
+ */
+export async function exigirAlcanceDelComprobante(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  comprobanteId: string,
+): Promise<Resultado<string | null, "SUCURSAL_FUERA_DE_ALCANCE">> {
+  const recepcionId = await tx.comprobantesDeProveedor.recepcionIdDe(
+    contexto.empresaId,
+    comprobanteId,
+  );
+  const recepcion =
+    recepcionId === null ? null : await tx.recepciones.obtener(contexto.empresaId, recepcionId);
+  if (recepcion === null) {
+    return (await tx.autorizacion.sucursalesDelActor(contexto)) === "TODAS"
+      ? ok(null)
+      : err("SUCURSAL_FUERA_DE_ALCANCE");
+  }
+  const alcance = await exigirAlcanceDeSucursal(tx, contexto, sucursalId(recepcion.sucursalId));
+  return alcance.ok ? ok(recepcion.sucursalId) : alcance;
+}
+
 const ES_ERROR_DE_PERSISTENCIA = (error: unknown): error is ErrorDePersistencia =>
   typeof error === "object" && error !== null && "tipo" in error;
 
@@ -65,5 +89,6 @@ export function traducir<T>(resultado: Resultado<T, ErrorDeCompras>): Resultado<
   if (codigo === "REMITO_YA_REGISTRADO") return err({ error: codigo, recepcionId: null });
   if (codigo === "COMPROBANTE_YA_REGISTRADO") return err({ error: codigo, comprobanteId: null });
   if (codigo === "COMPROBANTE_YA_PAGADO") return err({ error: codigo, pagoId: null });
+  if (codigo === "FACTURA_YA_REEMPLAZADA") return err({ error: codigo, reemplazoId: null });
   return err(codigo as ErrorDeCompras);
 }

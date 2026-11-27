@@ -108,6 +108,7 @@ async function fijarEmpresa(datos: FormData): Promise<Respuesta<null>> {
     const elegida = await elegirEmpresa(dependenciasDeSesion, {
       sesion,
       marcaId: marcaComercialId(puerta.marcaId),
+      duenioDelHost: puerta.duenio,
       empresaId: textoDe(datos, "empresaId"),
     });
     if (!elegida.ok) return elegida;

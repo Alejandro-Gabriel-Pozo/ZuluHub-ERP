@@ -80,6 +80,7 @@ function ensayo(cambios: Partial<CartaLeida> = {}): CartaLeida {
       logo: null,
     },
     colorDeLaEmpresa: null,
+    cuentasDeImagen: [],
     sucursalActiva: true,
     empresaId: empresaId("00000000-0000-4000-8000-0000000000e1"),
     tenantId: tenantId("00000000-0000-4000-8000-0000000000f1"),
@@ -177,6 +178,7 @@ describe("L-1: lo que sale y en qué orden", () => {
           logo,
         },
         colorDeLaEmpresa: "#445566",
+        cuentasDeImagen: ["mi-cafe"],
       }),
       deLaMarca(MARCA),
     );
@@ -194,6 +196,29 @@ describe("L-1: lo que sale y en qué orden", () => {
       colorDeLaEmpresa: null,
       logo: null,
     });
+  });
+
+  it("un logo de una cuenta que la empresa NO declaró (o retiró) no se muestra: la carta sale sin logo y lleva las cuentas declaradas para validar al traer", () => {
+    const logo = {
+      proveedor: "CLOUDINARY",
+      cuenta: "ajena",
+      idPublico: "carta/logo",
+      version: "1712345678",
+      extension: "png",
+    } as const;
+    for (const cuentasDeImagen of [[], ["mi-cafe"], ["otra", "ajena-2"]]) {
+      const v = armarVidrieraPublicada(
+        ensayo({ carta: { ...ensayo().carta, logo }, cuentasDeImagen }),
+        deLaMarca(MARCA),
+      );
+      expect(v?.identidad.logo, cuentasDeImagen.join(",")).toBeNull();
+      expect(v?.cuentasDeImagen).toEqual(cuentasDeImagen);
+    }
+    const declarada = armarVidrieraPublicada(
+      ensayo({ carta: { ...ensayo().carta, logo }, cuentasDeImagen: ["ajena"] }),
+      deLaMarca(MARCA),
+    );
+    expect(declarada?.identidad.logo).toEqual(logo);
   });
 
   it("el orden de la entrada se respeta: dos productos de una sección salen como llegaron (la base los ordena por nombre y id)", () => {

@@ -1,6 +1,7 @@
+import { exigirPerilla } from "../../../capacidades/planes/derechos";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { seControlaStockLaClase } from "../../catalogo/publico";
+import { seControlaStockLaClase, seProduceLaClase } from "../../catalogo/publico";
 import { esUuid } from "../persistencia/filas";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeStock } from "./contrato";
@@ -8,7 +9,14 @@ import type { ErrorDeStock } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeStock>;
 
-export type EntradaDeControlarArticulo = Readonly<{ productoId: string }>;
+/** La confirmación de que la persona vio que las cuentas abiertas con este plato pasarán a descontar el plato y no sus ingredientes (PRO-D1). */
+export const CONFIRMACION_DE_CUENTAS_ABIERTAS = "stock.cuentas_abiertas_con_el_plato";
+
+export type EntradaDeControlarArticulo = Readonly<{
+  productoId: string;
+  /** `[CONFIRMACION_DE_CUENTAS_ABIERTAS]` si la persona aceptó el aviso; cualquier otro valor se rechaza (lista de permitidos). */
+  confirmaciones?: readonly string[] | undefined;
+}>;
 export type SalidaDeControlarArticulo = Readonly<{ articuloId: string; yaExistia: boolean }>;
 export type EntradaDeDejarDeControlar = Readonly<{ productoId: string }>;
 export type SalidaDeDejarDeControlar = Readonly<{ yaEstaba: boolean }>;
@@ -20,6 +28,11 @@ export type SalidaDeDejarDeControlar = Readonly<{ yaEstaba: boolean }>;
  * el insumo y la reventa se controlan (`CLASE_NO_CONTROLABLE`): lo impone la base, una sola vez, y el caso de uso traduce el error. Si el
  * producto ya tuvo artículo y se dejó de controlar, se reactiva el MISMO (su libro sigue). Repetición (`YA_ESTABA`): ya controlado devuelve
  * `yaExistia` sin escribir ni auditar.
+ *
+ * Stock propio de un elaborado o vendible (E6, D94): solo con la perilla `produccion` y una receta vigente; la venta pasa a descontar ese artículo y no sus ingredientes.
+ * Si hay cuentas abiertas con ese plato (PRO-D1, condición del dueño sobre DEC-PRO-001), al cerrarse descontarán el plato y no sus ingredientes: sin la confirmación de la persona
+ * devuelve `CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION` y no escribe nada; con ella crea o reactiva el artículo y la auditoría deja cuántas eran. La lectura corre en la MISMA transacción
+ * (SERIALIZABLE) que la activación: una línea agregada a la vez se serializa con ella. Encenderlo ya encendido no pide nada (`yaExistia`).
  */
 export function armarControlarArticulo(dependencias: DependenciasDeStock) {
   return async function controlarArticulo(
@@ -35,6 +48,14 @@ export function armarControlarArticulo(dependencias: DependenciasDeStock) {
         const alcance = await exigirAlcanceTotal(tx, contexto);
         if (!alcance.ok) return alcance;
         if (!esUuid(entrada.productoId)) return err("PRODUCTO_NO_ENCONTRADO");
+        // Lista de permitidos: la única confirmación que existe es la de las cuentas abiertas; cualquier otra cosa se rechaza.
+        const confirmaciones = entrada.confirmaciones ?? [];
+        if (
+          !Array.isArray(confirmaciones) ||
+          confirmaciones.some((c: unknown) => c !== CONFIRMACION_DE_CUENTAS_ABIERTAS)
+        ) {
+          return err("IDENTIFICADOR_INVALIDO");
+        }
         const producto = await tx.productosParaStock.bloquearCompartido(
           empresaId,
           entrada.productoId,
@@ -45,9 +66,32 @@ export function armarControlarArticulo(dependencias: DependenciasDeStock) {
           return ok({ articuloId: existente.id, yaExistia: true });
         }
         if (!producto.activo) return err("PRODUCTO_INACTIVO");
-        // La base admite también el elaborado y el vendible (0032, E6: stock propio, D94); este caso de uso solo los controla cuando la empresa
-        // enciende la producción (T9). Hasta entonces nace cerrado: lo que no se declara no se habilita.
-        if (!seControlaStockLaClase(producto.claseDeUso)) return err("CLASE_NO_CONTROLABLE");
+        // La base admite también el elaborado y el vendible (0032, E6: stock propio, D94); este caso de uso solo los controla con la perilla `produccion`
+        // y una receta vigente. Sin ellas nace cerrado: lo que no se declara no se habilita.
+        if (!seControlaStockLaClase(producto.claseDeUso)) {
+          if (!seProduceLaClase(producto.claseDeUso)) {
+            return err("CLASE_NO_CONTROLABLE");
+          }
+          const derechos = await tx.derechos.deLaEmpresa(contexto);
+          if (!exigirPerilla(derechos, "produccion", { empresaId }).ok) {
+            return err({ error: "FUNCION_NO_INCLUIDA", perilla: "produccion" });
+          }
+          const receta = await tx.composicionesDeStock.ultimaVersion(empresaId, producto.id);
+          if (receta === null || receta.componentes.length === 0) return err("SIN_COMPOSICION");
+        }
+        let cuentasConfirmadas = 0;
+        if (
+          !seControlaStockLaClase(producto.claseDeUso) &&
+          dependencias.cuentasAbiertas !== undefined
+        ) {
+          const cuentas = await dependencias.cuentasAbiertas(tx, contexto, producto.id);
+          if (cuentas > 0) {
+            if (!confirmaciones.includes(CONFIRMACION_DE_CUENTAS_ABIERTAS)) {
+              return err({ error: "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION", cuentas });
+            }
+            cuentasConfirmadas = cuentas;
+          }
+        }
         const articulo =
           existente === null
             ? await tx.articulosDeStock.insertar(empresaId, {
@@ -68,6 +112,7 @@ export function armarControlarArticulo(dependencias: DependenciasDeStock) {
             productoId: producto.id,
             unidadDeStockId: articulo.unidadDeStockId,
             activo: true,
+            ...(cuentasConfirmadas > 0 ? { cuentasAbiertasAceptadas: cuentasConfirmadas } : {}),
           },
         });
         return ok({ articuloId: articulo.id, yaExistia: false });

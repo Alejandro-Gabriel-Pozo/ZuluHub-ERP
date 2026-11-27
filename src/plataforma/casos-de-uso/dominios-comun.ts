@@ -24,7 +24,14 @@ export type TxDeDominios = TxDeCasoDePlataforma &
     dominios: RepositorioDeDominios;
   }>;
 
-export type DependenciasDeDominios = DependenciasDeCasoDePlataforma<TxDeDominios>;
+export type DependenciasDeDominios = DependenciasDeCasoDePlataforma<TxDeDominios> &
+  Readonly<{
+    /**
+     * Los hosts de los proyectos de la propia plataforma (`PEDERNAL_HOSTS_PROTEGIDOS`): no se registran, verifican ni activan como dominio de un cliente. OBLIGATORIA, sin valor por
+     * defecto: quien arme los casos de uso decide la lista (una vacía a propósito en una prueba), nunca por omisión.
+     */
+    hostsProtegidos: ReadonlySet<string>;
+  }>;
 
 /** Lo que todo caso de dominios puede devolver además de lo propio. */
 export type ErrorComunDeDominios = ErrorComunDeCasoDePlataforma;

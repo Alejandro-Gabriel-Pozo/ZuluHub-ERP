@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   anularUnItemEnviado,
+  cambiarLaNota,
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
+  quitarUnPlatoSinEnviar,
   type DependenciasDeComandasWeb,
 } from "../../src/composicion/comandas-web";
 import {
@@ -14,6 +16,7 @@ import {
   pedirUnaCopia,
   registrarLaImpresora,
   verElPapelDelDocumento,
+  verLaCocinaDeLaSucursal,
   verLasImpresoras,
   verLosTrabajosDeImpresion,
   type DependenciasDeImpresionWeb,
@@ -49,10 +52,13 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
   let d: DependenciasDeComandasWeb;
   let di: DependenciasDeImpresionWeb;
   let proxima = 0;
+  // La grilla del salón es de 14 × 9: las pruebas nuevas de SAL-C usan su propia empresa para no agotar la de `e`.
+  let y: EscenarioDeVentas;
   beforeAll(async () => {
     if (base === null) return;
     m = await montarSalon(base);
     e = await m.escenario();
+    y = await m.escenario();
     registrados = [];
     const transacciones = m.entorno as unknown as Transacciones<TxDeComandas>;
     const casosDeComandas = crearCasosDeUsoDeComandas({ transacciones, reglas: m.reglas });
@@ -80,12 +86,15 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     trabajo: () => Promise<R>,
   ) => repetirSiAgotada(trabajo, { esAgotada: agotadaSegunElRegistro(registrados) });
 
+  const mesasPorEmpresa = new Map<string, number>();
   /** Una cuenta de mesa con `n` platos (cada uno con su salida) en la sucursal del escenario. */
   const cuentaConPlatos = async (
     salidas: readonly ("AHORA" | "DESPUES")[],
     escenario = e,
   ): Promise<{ cuenta: string; lineas: string[] }> => {
-    const n = ++proxima;
+    // El número de mesa sigue por empresa: el salón es de 14 × 9 (35 mesas en esta grilla) y cada empresa tiene el suyo.
+    const n = (mesasPorEmpresa.get(escenario.empresa) ?? 0) + 1;
+    mesasPorEmpresa.set(escenario.empresa, n);
     const mesaId = nuevoId();
     valorDe(
       await m.salon.crearMesa(escenario.gerente, {
@@ -118,8 +127,13 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     }
     return { cuenta, lineas };
   };
-  const enviar = (cuentaId: string, pedido: Record<string, unknown> = {}, contexto = e.gerente) =>
-    enviarALaCocina(d, contexto, e.sucursal, {
+  const enviar = (
+    cuentaId: string,
+    pedido: Record<string, unknown> = {},
+    contexto = e.gerente,
+    sucursal: string = e.sucursal,
+  ) =>
+    enviarALaCocina(d, contexto, sucursal, {
       envioId: nuevoId(),
       cuentaId,
       claveIdempotencia: nuevaClave(),
@@ -233,6 +247,167 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     expect(codigo(await cambiar("DESPUES"))).toBe(GENERICO);
   });
 
+  it("«Nota para la cocina»: cambia mientras no se envió, repetir devuelve yaEstaba, la sucursal la fija el servidor y con el plato enviado, una nota inválida o sin persona es el genérico y no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA"], y);
+    const linea = lineas[0] as string;
+    const nota = (texto: string, ctx = y.gerente, sucursal: string = y.sucursal) =>
+      cambiarLaNota(d, ctx, sucursal, { cuentaId: cuenta, lineaId: linea, nota: texto });
+    const viva = async () =>
+      (
+        await m.filas<{ nota: string | null }>(
+          "select nota from linea_de_comanda where linea_id = $1",
+          [linea],
+        )
+      )[0]?.nota;
+    expect(await nota("sin cebolla")).toEqual({
+      ok: true,
+      dato: { nota: "sin cebolla", yaEstaba: false },
+    });
+    expect(await nota("sin cebolla")).toEqual({
+      ok: true,
+      dato: { nota: "sin cebolla", yaEstaba: true },
+    });
+    // Sin sucursal de trabajo, de otra sucursal, de otra empresa, sin persona o con una nota inválida: el genérico y nada cambia.
+    expect(codigo(await nota("x", y.gerente, ""))).toBe(GENERICO);
+    expect(codigo(await nota("x", y.gerente, y.otraSucursal))).toBe(GENERICO);
+    expect(codigo(await nota("x", e.gerente))).not.toBeNull();
+    expect((await nota("x", { ...y.gerente, personaId: null })).ok).toBe(false);
+    expect(codigo(await nota("<b>x</b>"))).toBe(GENERICO);
+    expect(codigo(await nota("x".repeat(121)))).toBe(GENERICO);
+    expect(await viva()).toBe("sin cebolla");
+    // Enviado: la nota ya no se toca.
+    expect((await enviar(cuenta, {}, y.gerente, y.sucursal)).ok).toBe(true);
+    expect(codigo(await nota("otra"))).toBe(GENERICO);
+    expect(await viva()).toBe("sin cebolla");
+  });
+
+  it("«Quitar» un plato sin enviar: sin motivo, sin papel; repetir es yaEstabaQuitada y audita una vez; el plato queda ANULADO, no se borra", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES"]);
+    const lineaId = lineas[1] as string;
+    const quitar = (id = lineaId, pedido: Record<string, unknown> = {}) =>
+      quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+        cuentaId: cuenta,
+        lineaId: id,
+        ...pedido,
+      });
+    expect(await quitar()).toMatchObject({ ok: true, dato: { yaEstabaQuitada: false } });
+    expect(await quitar()).toMatchObject({ ok: true, dato: { yaEstabaQuitada: true } });
+    const estados = await m.filas<{
+      id: string;
+      estado: string;
+      motivo_de_anulacion: string | null;
+    }>(
+      "select id, estado, motivo_de_anulacion from linea_cuenta where cuenta_id = $1 order by posicion",
+      [cuenta],
+    );
+    expect(estados.map((l) => l.estado)).toEqual(["VIGENTE", "ANULADA"]);
+    expect(estados[1]?.motivo_de_anulacion).toBe("SIN_ENVIAR");
+    const auditadas = (await m.auditoria(e.empresa, "LINEA_ANULADA")).filter(
+      (a) => a["entidad_id"] === lineaId,
+    );
+    expect(auditadas).toHaveLength(1);
+    expect(await cuantos("envio_de_comanda", "cuenta_id", cuenta)).toBe(0);
+    // Un motivo que mande el navegador se descarta: el motivo es interno.
+    const ajena = await cuentaConPlatos(["AHORA"]);
+    expect(
+      await quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+        cuentaId: ajena.cuenta,
+        lineaId: ajena.lineas[0],
+        motivo: "me dio la gana",
+      }),
+    ).toMatchObject({ ok: true });
+    const motivo = await m.filas<{ motivo_de_anulacion: string }>(
+      "select motivo_de_anulacion from linea_cuenta where id = $1",
+      [ajena.lineas[0]],
+    );
+    expect(motivo[0]?.motivo_de_anulacion).toBe("SIN_ENVIAR");
+  });
+
+  it("«Quitar» un plato ya enviado, de otra cuenta o inexistente es el genérico y no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES"]);
+    expect((await enviar(cuenta)).ok).toBe(true);
+    const quitar = (cuentaId: string, lineaId: string) =>
+      quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, { cuentaId, lineaId });
+    expect(codigo(await quitar(cuenta, lineas[0] as string))).toBe(GENERICO);
+    const otraCuenta = await cuentaConPlatos(["AHORA"]);
+    expect(codigo(await quitar(cuenta, otraCuenta.lineas[0] as string))).toBe(GENERICO);
+    expect(codigo(await quitar(cuenta, nuevoId()))).toBe(GENERICO);
+    expect(codigo(await quitar(cuenta, "no-es-un-id"))).toBe(GENERICO);
+    const vigentes = await m.contar(
+      "select count(*) as n from linea_cuenta where cuenta_id = $1 and estado = 'VIGENTE'",
+      [cuenta],
+    );
+    expect(vigentes).toBe(2);
+    // El que esperaba (sale después) sigue sin enviar y sí se puede quitar.
+    expect(await quitar(cuenta, lineas[1] as string)).toMatchObject({ ok: true });
+  });
+
+  it("CONCURRENCIA: quitar a la vez que otro envía: o se quita o se envía, nunca las dos cosas", async () => {
+    for (let i = 0; i < 3; i++) {
+      const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "AHORA"]);
+      const lineaId = lineas[0] as string;
+      const [quitado, enviado] = await Promise.all([
+        repetir(() =>
+          quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, { cuentaId: cuenta, lineaId }),
+        ),
+        repetir(() => enviar(cuenta, {}, e.administrador)),
+      ]);
+      const fila = await m.filas<{ estado: string; envio_id: string | null }>(
+        "select l.estado, c.envio_id from linea_cuenta l join linea_de_comanda c on c.linea_id = l.id where l.id = $1",
+        [lineaId],
+      );
+      const [una] = fila;
+      expect(una).toBeDefined();
+      // Nunca un plato anulado y enviado a la vez.
+      expect(una?.estado === "ANULADA" && una.envio_id !== null).toBe(false);
+      if (quitado.ok) expect(una?.estado).toBe("ANULADA");
+      else expect(codigo(quitado)).toBe(GENERICO);
+      expect(enviado.ok || codigo(enviado) === GENERICO).toBe(true);
+    }
+  });
+
+  it("«Quitar»: la sucursal la fija el servidor; sin sucursal, de otra sucursal o de otra empresa es el genérico; sin persona no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA"]);
+    const lineaId = lineas[0] as string;
+    expect(
+      codigo(await quitarUnPlatoSinEnviar(d, e.gerente, "", { cuentaId: cuenta, lineaId })),
+    ).toBe(GENERICO);
+    expect(
+      codigo(
+        await quitarUnPlatoSinEnviar(d, e.gerente, e.otraSucursal, { cuentaId: cuenta, lineaId }),
+      ),
+    ).toBe(GENERICO);
+    const otra = await m.escenario();
+    const ajena = await cuentaConPlatos(["AHORA"], otra);
+    expect(
+      codigo(
+        await quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+          cuentaId: ajena.cuenta,
+          lineaId: ajena.lineas[0],
+        }),
+      ),
+    ).toBe(GENERICO);
+    expect(
+      (
+        await quitarUnPlatoSinEnviar(d, { ...e.gerente, personaId: null }, e.sucursal, {
+          cuentaId: cuenta,
+          lineaId,
+        })
+      ).ok,
+    ).toBe(false);
+    const vigentes = await m.contar(
+      "select count(*) as n from linea_cuenta where id = $1 and estado = 'VIGENTE'",
+      [lineaId],
+    );
+    expect(vigentes).toBe(1);
+    expect(
+      await m.contar(
+        "select count(*) as n from linea_cuenta where id = $1 and estado = 'VIGENTE'",
+        [ajena.lineas[0] as string],
+      ),
+    ).toBe(1);
+  });
+
   it("«Anular» un ítem enviado: con motivo, parcial; repetir con el mismo avisoId es un solo aviso; sin motivo o de más es el genérico", async () => {
     const { cuenta, lineas } = await cuentaConPlatos(["AHORA"]);
     await enviar(cuenta);
@@ -274,6 +449,96 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     ).toBe(GENERICO);
     expect(await cuantos("aviso_de_anulacion", "cuenta_id", cuenta)).toBe(1);
     expect(await cuantos("aviso_de_anulacion", "cuenta_id", nueva.cuenta)).toBe(0);
+  });
+
+  it("CONCURRENCIA: dos «Pedir que salga» a la vez sobre los mismos platos: cada plato sale en UN solo envío; el otro recibe el genérico (nada que pedir)", async () => {
+    for (let i = 0; i < 3; i++) {
+      const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES", "DESPUES"], y);
+      expect((await enviar(cuenta, {}, y.gerente, y.sucursal)).ok).toBe(true);
+      const pedir = (contexto: typeof y.gerente) =>
+        pedirQueSalga(d, contexto, y.sucursal, {
+          envioId: nuevoId(),
+          cuentaId: cuenta,
+          lineaIds: "TODAS",
+          claveIdempotencia: nuevaClave(),
+        });
+      const [a, b] = await Promise.all([
+        repetir(() => pedir(y.gerente)),
+        repetir(() => pedir(y.administrador)),
+      ]);
+      expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+      expect(codigo(a.ok ? b : a)).toBe(GENERICO);
+      expect(
+        await m.contar(
+          "select count(*) as n from envio_de_comanda where cuenta_id = $1 and tipo = 'SALIDA_PEDIDA'",
+          [cuenta],
+        ),
+      ).toBe(1);
+      // Cada línea que esperaba quedó en UN envío, y ninguna sin enviar.
+      const filas = await m.filas<{ linea_id: string; envio_id: string | null }>(
+        "select linea_id, envio_id from linea_de_comanda where cuenta_id = $1",
+        [cuenta],
+      );
+      expect(filas).toHaveLength(lineas.length);
+      expect(filas.every((f) => f.envio_id !== null)).toBe(true);
+    }
+  });
+
+  it("CONCURRENCIA: pedir que salga UN plato desde dos pestañas a la vez (ids distintos): sale una sola vez", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["DESPUES"], y);
+    const pedir = (contexto: typeof y.gerente) =>
+      pedirQueSalga(d, contexto, y.sucursal, {
+        envioId: nuevoId(),
+        cuentaId: cuenta,
+        lineaIds: [lineas[0] as string],
+        claveIdempotencia: nuevaClave(),
+      });
+    const [a, b] = await Promise.all([
+      repetir(() => pedir(y.gerente)),
+      repetir(() => pedir(y.administrador)),
+    ]);
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+    expect(await cuantos("envio_de_comanda", "cuenta_id", cuenta)).toBe(1);
+  });
+
+  it("CONCURRENCIA: enviar a la vez que se anula un ítem: nunca un ítem anulado que salió en un envío sin su aviso", async () => {
+    for (let i = 0; i < 4; i++) {
+      const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "AHORA"], y);
+      const lineaId = lineas[0] as string;
+      const [enviado, anulado] = await Promise.all([
+        repetir(() => enviar(cuenta, {}, y.administrador, y.sucursal)),
+        repetir(() =>
+          anularUnItemEnviado(d, y.gerente, y.sucursal, {
+            cuentaId: cuenta,
+            lineaId,
+            cantidad: "2",
+            motivo: "Se arrepintió",
+            avisoId: nuevoId(),
+          }),
+        ),
+      ]);
+      expect(enviado.ok).toBe(true);
+      const estado = await m.filas<{ estado: string }>(
+        "select estado from linea_cuenta where id = $1",
+        [lineaId],
+      );
+      const conEnvio = await m.filas<{ envio_id: string | null }>(
+        "select envio_id from linea_de_comanda where linea_id = $1",
+        [lineaId],
+      );
+      const avisos = await cuantos("aviso_de_anulacion", "linea_origen_id", lineaId);
+      if (anulado.ok) {
+        // Primero salió y después se anuló: el aviso está y el ítem estuvo en el envío.
+        expect(estado[0]?.estado).toBe("ANULADA");
+        expect(conEnvio[0]?.envio_id).not.toBeNull();
+        expect(avisos).toBe(1);
+      } else {
+        // La anulación llegó antes de que saliera: el genérico, el ítem sigue vigente y no hay aviso.
+        expect(codigo(anulado)).toBe(GENERICO);
+        expect(estado[0]?.estado).toBe("VIGENTE");
+        expect(avisos).toBe(0);
+      }
+    }
   });
 
   it("SUCURSAL: la fija el servidor; vacía cierra y una cuenta de otra sucursal o empresa no existe (no se envía nada)", async () => {
@@ -592,6 +857,108 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
       expect(Object.keys(papel.dato.lineas[0] ?? {}).sort()).toEqual(["estilo", "texto"]);
     });
 
+    it("FECHAS: la hora del papel sale en la zona de la sucursal (UTC-3) y la «Copia» conserva la del envío original aunque se pida al día siguiente", async () => {
+      const { cuenta } = await cuentaConPlatos(["AHORA"], y);
+      // El envío se hace a las 15:00 UTC = 12:00 en Argentina; la copia se pide un día después, a las 02:30 UTC (23:30 del día anterior en Argentina).
+      const envio = await enviar(cuenta, {}, y.gerente, y.sucursal);
+      expect(envio.ok).toBe(true);
+      if (!envio.ok) return;
+      const alDiaSiguiente = { ...y.gerente, ahora: new Date("2026-11-10T02:30:00Z") };
+      const papel = (copia: boolean, contexto = y.gerente) =>
+        verElPapelDelDocumento(di, contexto, y.sucursal, {
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          copia,
+        });
+      const original = await papel(false);
+      const copiaTarde = await papel(true, alDiaSiguiente);
+      expect(original.ok && copiaTarde.ok).toBe(true);
+      if (!original.ok || !copiaTarde.ok) return;
+      const textoOriginal = original.dato.lineas.map((l) => l.texto).join("\n");
+      const textoCopia = copiaTarde.dato.lineas.map((l) => l.texto).join("\n");
+      expect(textoOriginal).toContain("12:00");
+      expect(textoOriginal).not.toContain("15:00");
+      // La hora y la fecha de la copia son las del envío, no las de cuando se reimprime.
+      expect(textoCopia).toContain("12:00");
+      expect(textoCopia).not.toContain("23:30");
+      expect(textoCopia).not.toContain("02:30");
+      const fecha = textoOriginal.match(/\d{2}\/\d{2}\/\d{4}/)?.[0];
+      expect(fecha).toBe("09/11/2026");
+      expect(textoCopia).toContain(fecha ?? "");
+    });
+
+    it("AISLAMIENTO: pedir una copia o declarar un resultado de un documento o trabajo de otra sucursal o empresa es el genérico y no escribe nada", async () => {
+      const { cuenta } = await cuentaConPlatos(["AHORA"], y);
+      const envio = await enviar(cuenta, {}, y.gerente, y.sucursal);
+      expect(envio.ok).toBe(true);
+      if (!envio.ok) return;
+      const copia = (sucursal: string, contexto = y.gerente) =>
+        pedirUnaCopia(di, contexto, sucursal, {
+          trabajoId: nuevoId(),
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: nuevaClave(),
+        });
+      expect(codigo(await copia(y.otraSucursal))).toBe(GENERICO);
+      expect(codigo(await copia(""))).toBe(GENERICO);
+      const otra = await m.escenario();
+      expect(codigo(await copia(y.sucursal, otra.gerente))).not.toBeNull();
+      expect(
+        await m.contar(
+          "select count(*) as n from trabajo_de_impresion where documento_id = $1 and es_copia",
+          [envio.dato.envioId],
+        ),
+      ).toBe(0);
+      const declarar = (sucursal: string, contexto = y.gerente) =>
+        declararElResultadoDeImpresion(di, contexto, sucursal, {
+          trabajoId: envio.dato.trabajoId,
+          numero: 1,
+          resultado: "IMPRESA",
+        });
+      expect(codigo(await declarar(""))).toBe(GENERICO);
+      expect((await declarar(y.sucursal, otra.gerente)).ok).toBe(false);
+      expect(
+        await m.contar("select count(*) as n from intento_de_impresion where trabajo_id = $1", [
+          envio.dato.trabajoId,
+        ]),
+      ).toBe(0);
+    });
+
+    it("PERMISOS: sin persona no se pide la copia ni se declara; el operador reimprime (tiene el permiso) pero no administra impresoras", async () => {
+      const { cuenta } = await cuentaConPlatos(["AHORA"], y);
+      const envio = await enviar(cuenta, {}, y.gerente, y.sucursal);
+      expect(envio.ok).toBe(true);
+      if (!envio.ok) return;
+      const sinPersona = { ...y.gerente, personaId: null };
+      expect(
+        (
+          await pedirUnaCopia(di, sinPersona, y.sucursal, {
+            trabajoId: nuevoId(),
+            documentoTipo: "COMANDA",
+            documentoId: envio.dato.envioId,
+            claveIdempotencia: nuevaClave(),
+          })
+        ).ok,
+      ).toBe(false);
+      expect(
+        (
+          await declararElResultadoDeImpresion(di, sinPersona, y.sucursal, {
+            trabajoId: envio.dato.trabajoId,
+            numero: 1,
+            resultado: "IMPRESA",
+          })
+        ).ok,
+      ).toBe(false);
+      expect(
+        await pedirUnaCopia(di, y.operador, y.sucursal, {
+          trabajoId: nuevoId(),
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: nuevaClave(),
+        }),
+      ).toMatchObject({ ok: true });
+    });
+
     it("un documento o una impresora que no existen, un tipo inexistente o un pedido mal formado son el genérico", async () => {
       expect(codigo(await imprimir(nuevoId()))).toBe(GENERICO);
       expect(codigo(await imprimir(nuevoId(), { documentoTipo: "OTRO" }))).toBe(GENERICO);
@@ -616,6 +983,128 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
           }),
         ),
       ).toBe(GENERICO);
+    });
+  });
+
+  describe("la cocina de la sucursal (SAL-H)", () => {
+    const cocina = async (contexto = e.gerente, sucursal = e.sucursal) => {
+      const r = await verLaCocinaDeLaSucursal(di, contexto, sucursal);
+      return r.ok ? r.dato.envios : null;
+    };
+    const declarar = (trabajoId: string, numero: number, resultado: string, k: EscenarioDeVentas) =>
+      declararElResultadoDeImpresion(di, k.gerente, k.sucursal, { trabajoId, numero, resultado });
+
+    it("lista lo pendiente y lo fallido (mesa, «Envío N», hora en UTC-3, sin huella ni clave); lo impreso y las copias no están; «Reintentar» es el mismo trabajo", async () => {
+      const k = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      const envio = await enviar(cuenta, {}, k.gerente, k.sucursal);
+      expect(envio.ok).toBe(true);
+      if (!envio.ok) return;
+      const trabajoId = envio.dato.trabajoId;
+      let lista = await cocina(k.gerente, k.sucursal);
+      expect(lista).toHaveLength(1);
+      // El reloj fijo del escenario es el 09/11/2026 15:00Z: las 12:00 en Argentina.
+      expect(lista?.[0]).toMatchObject({
+        trabajoId,
+        envioId: envio.dato.envioId,
+        numero: 1,
+        hora: "12:00",
+        estado: "PENDIENTE",
+        intentos: 1,
+        sinImpresora: true,
+      });
+      expect(lista?.[0]?.rotulo).toMatch(/^Mesa \d+$/);
+      expect(Object.keys(lista?.[0] ?? {}).sort()).toEqual(
+        [
+          "envioId",
+          "estado",
+          "hora",
+          "intentos",
+          "numero",
+          "rotulo",
+          "sinImpresora",
+          "trabajoId",
+        ].sort(),
+      );
+      // Falló: sigue en la lista; «Reintentar» es el mismo trabajo con un intento más.
+      expect(await declarar(trabajoId, 1, "FALLIDA", k)).toMatchObject({ ok: true });
+      lista = await cocina(k.gerente, k.sucursal);
+      expect(lista?.[0]).toMatchObject({ estado: "FALLIDA", intentos: 1 });
+      const reintento = await pedirLaImpresion(di, k.gerente, k.sucursal, {
+        trabajoId,
+        documentoTipo: "COMANDA",
+        documentoId: envio.dato.envioId,
+        claveIdempotencia: nuevaClave(),
+      });
+      expect(reintento).toMatchObject({
+        ok: true,
+        dato: { trabajoId, intentos: 2, reintento: true },
+      });
+      expect(await cocina(k.gerente, k.sucursal)).toHaveLength(1);
+      // Una copia pendiente no es un trabajo de la cocina; lo impreso sale de la lista.
+      expect(
+        await pedirUnaCopia(di, k.gerente, k.sucursal, {
+          trabajoId: nuevoId(),
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: nuevaClave(),
+        }),
+      ).toMatchObject({ ok: true });
+      expect(await declarar(trabajoId, 2, "IMPRESA", k)).toMatchObject({ ok: true });
+      expect(await cocina(k.gerente, k.sucursal)).toEqual([]);
+    });
+
+    it("AISLAMIENTO: la lista es solo de la sucursal de trabajo; otra sucursal, otra empresa y la sucursal vacía o fuera de alcance no ven nada", async () => {
+      const k = await m.escenario();
+      const otra = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      expect((await enviar(cuenta, {}, k.gerente, k.sucursal)).ok).toBe(true);
+      const { cuenta: enOtra } = await cuentaConPlatos(["AHORA"], otra);
+      expect((await enviar(enOtra, {}, otra.gerente, otra.sucursal)).ok).toBe(true);
+      expect(await cocina(k.gerente, k.sucursal)).toHaveLength(1);
+      expect(await cocina(otra.gerente, otra.sucursal)).toHaveLength(1);
+      // La otra sucursal de la misma empresa no tiene envíos propios.
+      expect(await cocina(k.gerente, k.otraSucursal)).toEqual([]);
+      // Una sucursal de OTRA empresa nombrada por esta no existe (genérico, sin filtrar nada).
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.gerente, otra.sucursal))).toBe(GENERICO);
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.gerente, ""))).toBe(GENERICO);
+      // El operador está asignado solo a la sucursal principal.
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.operador, k.otraSucursal))).toBe(GENERICO);
+      expect(await cocina(k.operador, k.sucursal)).toHaveLength(1);
+    });
+
+    it("PERMISOS: sin persona o sin sesión no hay lista (decide el servidor)", async () => {
+      expect(
+        (await verLaCocinaDeLaSucursal(di, { ...e.gerente, personaId: null }, e.sucursal)).ok,
+      ).toBe(false);
+    });
+
+    it("DOS ACTORES: dos dispositivos de la cocina declaran «Impresa» a la vez y piden imprimir a la vez: un solo trabajo, un solo intento, el mismo resultado", async () => {
+      const k = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      const envio = await enviar(cuenta, {}, k.gerente, k.sucursal);
+      if (!envio.ok) throw new Error("no se envió");
+      const trabajoId = envio.dato.trabajoId;
+      const pedido = (clave: string) =>
+        pedirLaImpresion(di, k.gerente, k.sucursal, {
+          trabajoId,
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: clave,
+        });
+      const [a, b] = await Promise.all([
+        repetir(() => pedido(nuevaClave())),
+        repetir(() => pedido(nuevaClave())),
+      ]);
+      expect(a.ok && b.ok).toBe(true);
+      expect(await cuantos("trabajo_de_impresion", "documento_id", envio.dato.envioId)).toBe(1);
+      const [x, y2] = await Promise.all([
+        repetir(() => declarar(trabajoId, 1, "IMPRESA", k)),
+        repetir(() => declarar(trabajoId, 1, "IMPRESA", k)),
+      ]);
+      expect(x.ok && y2.ok).toBe(true);
+      expect(await cuantos("intento_de_impresion", "trabajo_id", trabajoId)).toBe(1);
+      expect(await cocina(k.gerente, k.sucursal)).toEqual([]);
     });
   });
 });

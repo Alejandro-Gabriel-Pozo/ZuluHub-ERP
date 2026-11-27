@@ -9,11 +9,12 @@ import { Campo } from "../../../componentes/Campo";
 import { Selector } from "../../../componentes/Selector";
 import { ErrorDelDetalle } from "../../../patrones/ErrorDelDetalle";
 import { Texto } from "../../../primitivas/Texto";
-import { rutaDeLaCompra } from "../rutas-de-compras";
+import { rutaDeLaCompra, rutaDeLaRecepcion } from "../rutas-de-compras";
 import { BloqueDeFactura } from "./BloqueDeFactura.cliente";
 import { HojaDeNuevoProveedor, type AgregarProveedor } from "./HojaDeNuevoProveedor.cliente";
 import {
   armarElPedido,
+  armarElPedidoDeRecepcion,
   type CompraCotizada,
   conRenglon,
   idSiguiente,
@@ -36,6 +37,7 @@ import {
   type FacturaCotizada,
   type FacturaEscrita,
 } from "./modelo-de-factura";
+import { irAPorDefecto, sinCotizarFactura } from "./apoyo-de-nueva-compra";
 import { TarjetaDeRenglon } from "./TarjetaDeRenglon.cliente";
 import { anuncioDeResultados, type TextosDeNuevaCompra } from "./textos-de-nueva-compra";
 import { useEnvioDeLaCompra, type RegistrarLaCompra } from "./useEnvioDeLaCompra.cliente";
@@ -58,19 +60,16 @@ export type PropsDePantallaDeNuevaCompra = Readonly<{
   puedeAgregarProveedor: boolean;
   /** Los depósitos de uso normal y activos de la sucursal, SOLO si hay más de uno (con uno, el servidor lo toma). */
   depositos: readonly Readonly<{ id: string; nombre: string }>[];
+  /**
+   * «Recibir» (Compras 4, recepción separada; maqueta `compra-recibir.html`): el mismo formulario SIN precio, sin factura, sin cotización y sin depósito (se elige al confirmar), con el botón «Recibir»,
+   * que al terminar abre el detalle de la recepción. Por defecto es «Nueva compra».
+   */
+  modo?: "COMPRA" | "RECEPCION";
   /** Adónde va al terminar. Por defecto, una navegación completa a la ficha de la compra. */
   irA?: (ruta: string) => void;
   esperaEntreVerificacionesMs?: number | undefined;
   esperaDeLaLecturaMs?: number | undefined;
 }>;
-
-/** Sin cuentas de factura (la empresa compra «Sin factura»): nunca se llama, porque no hay nada que cotizar. */
-const sinCotizarFactura = (): Promise<Respuesta<FacturaCotizada>> =>
-  Promise.reject(new Error("la factura no se cotiza en «Sin factura»"));
-
-const irAPorDefecto = (ruta: string): void => {
-  window.location.assign(ruta);
-};
 
 /**
  * «Nueva compra» (maqueta `compra.html`, estado `nueva`; Compras PR 6b): se elige el proveedor (o se agrega sin salir), se agregan los productos (cada uno con su cantidad y su precio) y se guarda con
@@ -86,13 +85,17 @@ export function PantallaDeNuevaCompra({
   cotizarFactura,
   registrar,
   agregarProveedor,
-  conFactura = false,
+  conFactura: conFacturaPedida = false,
   puedeAgregarProveedor,
   depositos,
+  modo = "COMPRA",
   irA = irAPorDefecto,
   esperaEntreVerificacionesMs,
   esperaDeLaLecturaMs,
 }: PropsDePantallaDeNuevaCompra) {
+  const recepcion = modo === "RECEPCION";
+  // «Recibir» nunca lleva factura: se carga aparte y se concilia.
+  const conFactura = conFacturaPedida && !recepcion;
   const [proveedor, setProveedor] = useState<ProveedorParaElegir | null>(null);
   const [consultaDeProveedor, setConsultaDeProveedor] = useState("");
   const [hojaAbierta, setHojaAbierta] = useState(false);
@@ -119,7 +122,7 @@ export function PantallaDeNuevaCompra({
   );
   const paraCotizar = renglonesParaCotizar(renglones);
   const cotizacion = useLecturaDemorada(
-    paraCotizar.length === 0 ? null : paraCotizar,
+    recepcion || paraCotizar.length === 0 ? null : paraCotizar,
     cotizar,
     esperaDeLaLecturaMs,
   );
@@ -146,8 +149,9 @@ export function PantallaDeNuevaCompra({
 
   const recepcionId = estado.tipo === "hecho" ? estado.valor.recepcionId : null;
   useEffect(() => {
-    if (recepcionId !== null) irA(rutaDeLaCompra(recepcionId));
-  }, [recepcionId, irA]);
+    if (recepcionId !== null)
+      irA(recepcion ? rutaDeLaRecepcion(recepcionId) : rutaDeLaCompra(recepcionId));
+  }, [recepcionId, irA, recepcion]);
 
   /** Cualquier cambio de lo escrito descarta el resultado anterior (un rechazo): el próximo toque es otro intento. */
   const editado = () => {
@@ -169,7 +173,7 @@ export function PantallaDeNuevaCompra({
   );
 
   const total = totalDelPie(renglones, cotizacion.dato, textos.sinPrecio);
-  const hayDepositoAElegir = depositos.length > 1;
+  const hayDepositoAElegir = !recepcion && depositos.length > 1;
   const listo =
     proveedor !== null &&
     renglones.length > 0 &&
@@ -179,6 +183,10 @@ export function PantallaDeNuevaCompra({
 
   const tocarComprar = () => {
     if (!editable || !listo) return;
+    if (recepcion) {
+      comprar(armarElPedidoDeRecepcion(proveedor.id, remito, renglones));
+      return;
+    }
     comprar(
       armarElPedido(
         proveedor.id,
@@ -193,7 +201,7 @@ export function PantallaDeNuevaCompra({
   const agregarElProducto = (productoId: string) => {
     const elegido = productos.dato?.productos.find((p) => p.productoId === productoId);
     if (elegido === undefined) return;
-    setRenglones([...renglones, renglonNuevo(idSiguiente(renglones), elegido)]);
+    setRenglones([...renglones, renglonNuevo(idSiguiente(renglones), elegido, !recepcion)]);
     setConsultaDeProducto("");
     editado();
   };
@@ -238,7 +246,9 @@ export function PantallaDeNuevaCompra({
         <TarjetaDeRenglon
           key={renglon.id}
           renglon={renglon}
-          resumen={resumenDeRenglon(renglon, cotizados.get(renglon.productoId), textos)}
+          resumen={
+            recepcion ? null : resumenDeRenglon(renglon, cotizados.get(renglon.productoId), textos)
+          }
           alCambiar={(cambios) => {
             setRenglones(conRenglon(renglones, renglon.id, cambios));
             editado();
@@ -249,6 +259,7 @@ export function PantallaDeNuevaCompra({
           }}
           textos={textos}
           deshabilitada={!editable}
+          sinPrecio={recepcion}
         />
       ))}
 
@@ -367,7 +378,7 @@ export function PantallaDeNuevaCompra({
         deshabilitado={!envio.enCurso && !hecho && (!listo || envio.bloqueado)}
         motivo={incierto ? undefined : envio.motivoQueNoPuede}
       >
-        {textos.comprarYRecibir}
+        {recepcion ? textos.recibir : textos.comprarYRecibir}
       </Boton>
 
       <HojaDeNuevoProveedor

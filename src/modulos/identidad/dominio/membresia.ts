@@ -1,4 +1,4 @@
-import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
+import type { RolDeEmpresa, RolDeLaMembresia } from "../../../capacidades/permisos/roles";
 import type {
   EmpresaId,
   PersonaId,
@@ -12,13 +12,15 @@ import type { ErrorDeMembresia } from "./errores";
  * Rol de una persona en una empresa. La lista de roles es de `capacidades/permisos/roles.ts`; se
  * reexporta acá para que invitación y membresía no se importen entre sí.
  */
-export type { RolDeEmpresa };
+export type { RolDeEmpresa, RolDeLaMembresia };
 
 /** La pertenencia de una persona a una empresa, con su rol. */
 export type Membresia = Readonly<{
   empresaId: EmpresaId;
   personaId: PersonaId;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
+  /** El rol propio de la empresa cuando `rol` es `PROPIO` (la base lo exige); `null` en los otros tres. */
+  rolPropioId: string | null;
   activo: boolean;
   version: number;
 }>;
@@ -38,10 +40,11 @@ export type PersonaConUsuario = Persona & Readonly<{ usuarioAuth: UsuarioAuthId 
 
 /**
  * "Admin" de una empresa es el gerente o un administrador: los roles que gestionan usuarios según la
- * matriz de permisos (una prueba comprueba que ambas listas dicen lo mismo). Cuando los roles sean
- * datos de cada empresa, esta lista tendrá que venir de ellos.
+ * matriz de permisos (una prueba comprueba que ambas listas dicen lo mismo). Un rol propio (`PROPIO`) puede llevar `usuarios.invitar` pero nunca cuenta acá: con un
+ * gerente activo (que no se apaga ni se baja) SIEMPRE queda un admin, así que «el último administrador» (I15, el último con `usuarios.invitar`) no depende de los roles
+ * propios; lo fija `membresia.test.ts`.
  */
-function esAdmin(rol: RolDeEmpresa): boolean {
+function esAdmin(rol: RolDeLaMembresia): boolean {
   return rol === "GERENTE" || rol === "ADMINISTRADOR";
 }
 

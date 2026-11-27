@@ -311,3 +311,83 @@ describe("BotonDeImprimir", () => {
     await expect.element(imprimirBoton()).toBeDisabled();
   });
 });
+
+describe("BotonDeImprimir con el trabajo que ya creó el envío (SAL-C)", () => {
+  const conTrabajoInicial = (
+    inicial: Readonly<{ intentos: number; sinImpresora: boolean }>,
+    arrancarSolo = true,
+  ) => {
+    servidor.trabajo = { id: "t1", estado: "PENDIENTE", intentos: 1, resultados: new Map() };
+    return render(
+      <BotonDeImprimir
+        textos={armarLosTextosDeImprimir()}
+        pedirImpresion={pedirImpresion}
+        cargarPapel={cargarPapel}
+        declarar={declarar}
+        nuevaClave={() => `clave-${String(++claves)}`}
+        trabajoInicial={inicial}
+        arrancarSolo={arrancarSolo}
+      />,
+    );
+  };
+
+  it("arranca solo: imprime el intento del trabajo SIN pedirlo de nuevo (el servidor diría «ya existía»), abre el diálogo una vez y declara", async () => {
+    await conTrabajoInicial({ intentos: 1, sinImpresora: false });
+    await expect.element(page.getByText("Impresa")).toBeVisible();
+    expect(servidor.pedidos).toHaveLength(0);
+    expect(imprimir).toHaveBeenCalledTimes(1);
+    expect(servidor.declaraciones).toEqual(["1:IMPRESA"]);
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("si el diálogo no se abre: «No se pudo imprimir»; «Reintentar» sí pide el MISMO trabajo (intentos + 1) y declara ese intento", async () => {
+    imprimir.mockImplementationOnce(() => {
+      throw new Error("sin diálogo");
+    });
+    await conTrabajoInicial({ intentos: 1, sinImpresora: false });
+    await expect.element(reintentar()).toBeVisible();
+    expect(servidor.declaraciones).toEqual(["1:FALLIDA"]);
+    tocar(reintentar());
+    await expect.element(page.getByText("Impresa")).toBeVisible();
+    expect(servidor.pedidos).toHaveLength(1);
+    expect(servidor.trabajo).toMatchObject({ id: "t1", intentos: 2, estado: "IMPRESA" });
+    expect(servidor.declaraciones).toEqual(["1:FALLIDA", "2:IMPRESA"]);
+  });
+
+  it("sin impresora: no abre ningún diálogo, dice «No hay impresora para la comanda de cocina» y deja «Ver en pantalla»", async () => {
+    await conTrabajoInicial({ intentos: 1, sinImpresora: true });
+    await expect
+      .element(page.getByText("No hay impresora para la comanda de cocina"))
+      .toBeVisible();
+    await expect.element(verEnPantalla()).toBeVisible();
+    expect(imprimir).not.toHaveBeenCalled();
+    expect(servidor.pedidos).toHaveLength(0);
+    expect(servidor.declaraciones).toEqual([]);
+  });
+
+  it("arrancar solo corre UNA vez aunque la pantalla se vuelva a pintar", async () => {
+    const { rerender } = await conTrabajoInicial({ intentos: 1, sinImpresora: false });
+    await expect.element(page.getByText("Impresa")).toBeVisible();
+    await rerender(
+      <BotonDeImprimir
+        textos={armarLosTextosDeImprimir()}
+        pedirImpresion={pedirImpresion}
+        cargarPapel={cargarPapel}
+        declarar={declarar}
+        trabajoInicial={{ intentos: 1, sinImpresora: false }}
+        arrancarSolo
+      />,
+    );
+    expect(imprimir).toHaveBeenCalledTimes(1);
+    expect(servidor.declaraciones).toEqual(["1:IMPRESA"]);
+  });
+
+  it("sin arrancar solo espera el toque en «Imprimir»; ese primer toque tampoco pide el trabajo", async () => {
+    await conTrabajoInicial({ intentos: 1, sinImpresora: false }, false);
+    expect(imprimir).not.toHaveBeenCalled();
+    tocar(imprimirBoton());
+    await expect.element(page.getByText("Impresa")).toBeVisible();
+    expect(servidor.pedidos).toHaveLength(0);
+    expect(imprimir).toHaveBeenCalledTimes(1);
+  });
+});

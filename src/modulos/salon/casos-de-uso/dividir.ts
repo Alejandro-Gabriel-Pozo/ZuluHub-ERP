@@ -13,11 +13,11 @@ import {
   lineasDeCuenta,
 } from "../../ventas/publico";
 import {
-  huellaDeDivision,
   planDeDivision,
   type Asignacion,
   type CopiaAHacer,
-} from "../dominio/division";
+} from "../../../primitivas/cuentas/division";
+import { huellaDeDivision } from "../dominio/huella-de-division";
 import { armarComando, exigirAlcance, exigirUuid } from "./comun";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import {
@@ -40,6 +40,8 @@ export type EntradaDeDividirCuenta = Readonly<{
   partes: number;
   /** Una por cada línea vigente de la cuenta: entero, por unidades o compartido. */
   asignaciones: readonly Asignacion[];
+  /** La sucursal con la que trabaja quien divide (la fija el servidor): una cuenta de OTRA, o sin ella, es como si no existiera (`CUENTA_NO_ENCONTRADA`), también en una repetición. */
+  sucursalDeTrabajo: string;
 }>;
 
 export type SalidaDeDividirCuenta = Readonly<{
@@ -93,6 +95,7 @@ async function dividir(
   if (madre === undefined) return err("CUENTA_NO_ENCONTRADA");
   const alcance = await exigirAlcance(tx, contexto, madre.sucursalId);
   if (!alcance.ok) return alcance;
+  if (entrada.sucursalDeTrabajo !== madre.sucursalId) return err("CUENTA_NO_ENCONTRADA");
 
   // Idempotencia por el id de la división: lo mismo devuelve lo hecho; el mismo id con otra cosa no se pisa.
   const previa = await tx.unionesYDivisiones.divisionPorId(empresaId, entrada.divisionId);
@@ -133,19 +136,13 @@ async function dividir(
   const hijas = new Map<number, string>();
   for (let numero = 1; numero <= entrada.partes; numero++) {
     const cuentaId = idDerivado("salon.division", entrada.divisionId, String(numero));
-    // A2c: cada hija hereda EXACTAMENTE el departamento de la madre (también «sin departamento»): dividir no es elegir de nuevo.
-    const abierta = await abrirCuentaEnTx(
-      tx,
-      contexto,
-      persona,
-      {
-        cuentaId,
-        sucursalId: madre.sucursalId,
-        ancla: { tipo: ANCLA_DE_PARTE, id: cuentaId },
-        etiqueta: `Cuenta ${numero}`,
-      },
-      { departamentoDeLaMadre: { id: madre.departamentoId } },
-    );
+    // Las hijas nacen sin departamento: el departamento sale del producto y cada línea conserva el suyo al copiarse.
+    const abierta = await abrirCuentaEnTx(tx, contexto, persona, {
+      cuentaId,
+      sucursalId: madre.sucursalId,
+      ancla: { tipo: ANCLA_DE_PARTE, id: cuentaId },
+      etiqueta: `Cuenta ${numero}`,
+    });
     if (!abierta.ok) return abierta;
     hijas.set(numero, cuentaId);
   }

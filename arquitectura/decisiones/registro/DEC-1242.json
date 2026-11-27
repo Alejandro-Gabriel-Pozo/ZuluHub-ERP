@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1242",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Rótulo de la perilla `facturar_antes_de_cobrar` en la consola de plataforma: «Facturar antes de cobrar» (FAC-1, aprobado); reemplaza el provisorio «Facturación».",
+  "que_cambia": "El texto que ve quien arma un plan en la consola ya es «Facturar antes de cobrar» (línea de `apps/plataforma/logica/plan.ts`, #608); revertir cuesta un renglón.",
+  "donde": "apps/plataforma/logica/plan.ts; PR-R05-facturar-antes-de-cobrar.md §9 (FAC-1), repositorio de documentos; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
+}

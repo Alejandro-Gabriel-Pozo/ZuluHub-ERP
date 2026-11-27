@@ -2,5 +2,6 @@
   "grupo": "identificación (tercero identificado y exigencia)",
   "archivos": "src/primitivas/identificacion/**/*.ts",
   "minutos": 0.5,
-  "pruebas": "src/primitivas/identificacion"
+  "pruebas": "src/primitivas/identificacion",
+  "nivel": "CRITICO"
 }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-PRO-001",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Al encender el stock propio de un plato, la cuenta abierta en ese instante descuenta el stock propio (queda negativo) y no sus ingredientes, hasta cerrar una orden de producción.",
+  "que_cambia": "Qué stock baja en ese borde: el del plato en vez del de los ingredientes. Condición del dueño (26/11): al encender con cuentas abiertas la persona ve y confirma el aviso (DEC-PRO-004). Revertir: sellar el camino.",
+  "donde": "test/integracion/ventas-stock.test.ts; PR #553; orquestador, 25/11/2026; confirmada por el dueño el 26/11/2026 («Coincido con todas las recomendaciones»)"
+}

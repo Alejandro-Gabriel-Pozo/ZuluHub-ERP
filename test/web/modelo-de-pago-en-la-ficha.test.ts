@@ -18,6 +18,7 @@ const pago = (cambios: Record<string, unknown> = {}) => ({
   id: "0d0d0d0d-1111-4222-8333-444444444444",
   fechaDePago: "2026-11-24",
   medio: "TRANSFERENCIA",
+  medios: [{ medio: "TRANSFERENCIA", importe: pesos("2420.10") }],
   importe: pesos("2420.10"),
   estado: "VIGENTE" as const,
   declaradoPor: "ana@ejemplo.com",
@@ -47,11 +48,19 @@ const ficha = (cambios: Record<string, unknown> = {}): FichaDeCompraParaLaPantal
     fecha: "2026-10-31",
     vencimientoDePago: null,
     totalSegunLaFactura: pesos("2420.10"),
+    netoAPagar: pesos("2420.10"),
   },
   pagos: [],
   ...cambios,
 });
-const PUEDE = { corregir: false, anular: false, pagar: true, anularPago: true };
+const PUEDE = {
+  corregir: false,
+  anular: false,
+  pagar: true,
+  anularPago: true,
+  verNotas: false,
+  cambiarElComprobante: false,
+};
 
 describe("el pago de la factura en la ficha de la compra", () => {
   it("sin permisos (o sin decir nada) no se ofrece ni «Declarar pago» ni «Anular» el pago: todo nace cerrado", () => {
@@ -82,6 +91,64 @@ describe("el pago de la factura en la ficha de la compra", () => {
     ).toBeNull();
   });
 
+  it("con el neto en cero no se ofrece «Pagar» (criterio del dueño, 26/11/2026) y la factura figura «Saldada por notas»; con neto mayor que cero se ofrece y no figura", () => {
+    const conFactura = (neto: string) =>
+      ficha({
+        factura: {
+          comprobanteId: COMPROBANTE,
+          letra: "A",
+          puntoDeVenta: 2,
+          numero: 1187,
+          fecha: "2026-10-31",
+          vencimientoDePago: null,
+          totalSegunLaFactura: pesos("2420.10"),
+          netoAPagar: pesos(neto),
+        },
+      });
+    const saldada = armarLaFicha(conFactura("0.00"), textos, PUEDE);
+    expect(saldada.declararPago).toBeNull();
+    expect(saldada.saldadaPorNotas).toBe("Saldada por notas");
+    for (const neto of ["0.01", "2420.10", "1210.05"]) {
+      const f = armarLaFicha(conFactura(neto), textos, PUEDE);
+      expect(f.declararPago).toEqual({ texto: "Declarar pago", href: `/compras/${ID}/pago` });
+      expect(f.saldadaPorNotas).toBeNull();
+    }
+    // Una compra anulada, con un pago vigente o sin factura no figura saldada.
+    expect(
+      armarLaFicha({ ...conFactura("0.00"), estado: "ANULADA" }, textos, PUEDE).saldadaPorNotas,
+    ).toBeNull();
+    expect(
+      armarLaFicha({ ...conFactura("0.00"), pagos: [pago()] }, textos, PUEDE).saldadaPorNotas,
+    ).toBeNull();
+    expect(armarLaFicha(ficha({ factura: null }), textos, PUEDE).saldadaPorNotas).toBeNull();
+  });
+
+  it("el enlace a las notas se ofrece solo con el permiso de ver y una factura, y lleva a «Notas de la factura»", () => {
+    expect(armarLaFicha(ficha(), textos, PUEDE).notas).toBeNull();
+    expect(armarLaFicha(ficha(), textos).notas).toBeNull();
+    expect(
+      armarLaFicha(ficha({ factura: null }), textos, { ...PUEDE, verNotas: true }).notas,
+    ).toBeNull();
+    expect(armarLaFicha(ficha(), textos, { ...PUEDE, verNotas: true }).notas).toEqual({
+      texto: "Notas de crédito",
+      href: `/compras/facturas/${COMPROBANTE}/notas`,
+    });
+  });
+
+  it("«Cambiar el comprobante de la compra» se ofrece solo con los permisos, una factura y una compra no anulada, y lleva a la pantalla de la compra", () => {
+    const quien = { ...PUEDE, cambiarElComprobante: true };
+    expect(armarLaFicha(ficha(), textos, PUEDE).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha(), textos).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha({ factura: null }), textos, quien).cambiarElComprobante).toBeNull();
+    expect(
+      armarLaFicha(ficha({ estado: "ANULADA" }), textos, quien).cambiarElComprobante,
+    ).toBeNull();
+    expect(armarLaFicha(ficha(), textos, quien).cambiarElComprobante).toEqual({
+      texto: "Cambiar el comprobante de la compra",
+      href: `/compras/${ID}/cambiar-comprobante`,
+    });
+  });
+
   it("muestra el medio, la fecha, el importe con centavos exactos, quién y cuándo (hora de Argentina)", () => {
     const [p] = armarLaFicha(ficha({ pagos: [pago()] }), textos, PUEDE).pagos;
     expect(p?.titulo).toBe("Transferencia · 24/11/2026");
@@ -110,5 +177,21 @@ describe("el pago de la factura en la ficha de la compra", () => {
   it("sin correo que mostrar no se inventa ni un nombre ni una línea de «quién»", () => {
     const [p] = armarLaFicha(ficha({ pagos: [pago({ declaradoPor: null })] }), textos, PUEDE).pagos;
     expect(p?.quien).toBeNull();
+  });
+
+  it("un pago con varios medios dice cada uno con su importe, separados por « + »; uno solo dice su medio", () => {
+    const compuesto = pago({
+      medio: "COMPUESTO",
+      medios: [
+        { medio: "EFECTIVO", importe: pesos("1000.00") },
+        { medio: "QR", importe: pesos("1420.10") },
+      ],
+    });
+    expect(armarLaFicha(ficha({ pagos: [compuesto] }), textos, PUEDE).pagos[0]?.titulo).toBe(
+      "Efectivo · $ 1.000,00 + QR · $ 1.420,10 · 24/11/2026",
+    );
+    expect(armarLaFicha(ficha({ pagos: [pago()] }), textos, PUEDE).pagos[0]?.titulo).toBe(
+      "Transferencia · 24/11/2026",
+    );
   });
 });

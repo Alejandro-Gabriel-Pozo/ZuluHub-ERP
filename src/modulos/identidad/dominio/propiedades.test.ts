@@ -229,6 +229,7 @@ describe("propiedades de decidirApagado", () => {
           empresaId: empresaId("e-1"),
           personaId: personaId(`p-${n}`),
           rol: m.rol,
+          rolPropioId: null,
           activo: m.activo,
           version: 1,
         }));

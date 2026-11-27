@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0932",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO: cargar el entorno de un cliente exige confirmar escribiendo el mismo texto que el destino, como production; su destino en Vercel es siempre production.",
+  "que_cambia": "Un comando de preview copiado con una palabra cambiada no llega a un cliente sin querer. Revertir: aceptar el cliente sin confirmación (no recomendado).",
+  "donde": "scripts/ejecutar-cargar-entorno.ts (leerPedido); scripts/ejecutar-migracion.ts (parseo de --vercel y --confirmo); .github/workflows/cargar-entorno.yml; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)",
+  "motivo": "Técnica: misma protección que production aplicada a la instalación de un cliente."
+}

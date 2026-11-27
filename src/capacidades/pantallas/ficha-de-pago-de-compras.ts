@@ -4,7 +4,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 /**
  * LA FICHA DE «DECLARAR PAGO» Y ANULAR EL PAGO DE UNA FACTURA (DDD:174: toda pantalla nueva nace con ficha; Compras PR 8). Suma a la ficha de la compra (`ficha-de-compras.ts`, `ficha-de-correccion-de-compras.ts`) el pago de la
  * factura: «Declarar pago» (ruta propia `/compras/[id]/pago`, con fecha, medio y, con efectivo, la caja de la que sale la plata y el motivo del egreso) y «Anular» el pago (una hoja sobre la ficha, con motivo). Un pago por factura,
- * por el total (el importe NO es un campo: lo copia el servidor), sin parciales: el pago a cuenta, el anticipo y las retenciones son de la cuenta de proveedores y no se anticipan acá. Gerente y administrador
+ * por el total (el importe de la factura NO es un campo: lo copia el servidor; con VARIOS medios, «Agregar medio» suma una fila y cada medio dice cuánto paga, DEC-COM-001 y DEC-COM-002), sin parciales: el pago a cuenta, el anticipo y las retenciones son de la cuenta de proveedores y no se anticipan acá. Gerente y administrador
  * (`comprobantes_de_proveedor.pagar` y `.anular_pago`); quien opera ve el pago sin botones. La comprueba `test/web/ficha-de-pago-de-compras.test.ts` contra el catálogo de textos y el de permisos. No crea acciones ni permisos.
  * Previene: un botón o un texto que nadie aprobó, y una acción de permiso que se mueve sin que la ficha lo note.
  *
@@ -13,6 +13,8 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  2. «Total con IVA» de la tarjeta de la factura se dice «Total» (`fiscal.pantalla.rotulo_total`, aceptado por el orquestador, 24/11/2026): no hay texto aprobado con ese nombre exacto.
  *  3. Sin el estado «Doble toque» como pantalla: el botón queda apagado mientras corre el pedido y el servidor repite el mismo pago por la clave del intento (lo prueban la integración y el recorrido).
  *  4. Un pago en efectivo exige caja también en el servidor (DEC-0890, dueño 16/11/2026, 3A): el servidor ya no admite efectivo sin caja.
+ *  5. P1b: la pantalla de varios medios (DEC-1280: un medio de cada tipo, hasta seis). Sin textos nuevos: «Agregar medio» y «Quitar» ya existen (`caja.medios.agregar`, `catalogo.accion.quitar`). No dice «Falta asignar»: la pantalla
+ *     no calcula importes y el servidor comprueba que la suma sea el total (mensaje genérico). La ficha de la compra dice cada medio con su importe, separados por « + ».
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -43,6 +45,12 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
     "el dueño: maqueta compra-pago.html aceptada por delegación (filas 173, 174 y 187 de decisiones-del-dueno-2026-11.md); «Declarar pago» elegido por el dueño el 16/11/2026 (2A, fila 188); el pago, sobre el pago actual: fila del 23/11/2026, pregunta 3",
   donde:
     "Pedernal-docs 10-ux-ui, maqueta compra-pago.html (estados «Por pagar», «Declarar pago», «Pagada», «Anular el pago», «Pago anulado») y compra.html; brief PR-8-pago-de-una-factura.md de Compras (rama de planificación de la Ola 1)",
+};
+const DE_P1B: FuenteDeTexto = {
+  decidio:
+    "el dueño, por delegación al orquestador (fila 173 de decisiones-del-dueno-2026-11.md): el orquestador aceptó el inventario de P1b el 26/11/2026; reusa textos ya aprobados (DEC-COM-002)",
+  donde:
+    "Pedernal-docs, decisiones-del-dueno-2026-11.md (fila 173); mensaje del orquestador a Compras 4 del 26/11/2026 («P1b: inventario ACEPTADO por delegación»); la pregunta «Falta asignar $ X» se respondió que NO",
 };
 const USO = "apps/web/ui/plantillas/compras/";
 
@@ -75,6 +83,18 @@ export const FICHA_DE_PAGO_DE_COMPRAS = {
       id: "enviar-pago",
       texto: "compras.pago.declarar",
       hace: { envia: "comprobantes_de_proveedor.pagar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "agregar-medio",
+      texto: "caja.medios.agregar",
+      hace: { abre: "fila-de-medio" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "quitar-medio",
+      texto: "catalogo.accion.quitar",
+      hace: { abre: "fila-de-medio" },
       sinPermiso: "AUSENTE",
     },
     {
@@ -128,6 +148,14 @@ export const FICHA_DE_PAGO_DE_COMPRAS = {
     },
     "caja.medios.tipo.qr": { usos: ["opción «QR» del medio"], fuente: DE_LA_MAQUETA },
     "caja.medios.tipo.otro": { usos: ["opción «Otro» del medio"], fuente: DE_LA_MAQUETA },
+    "caja.medios.agregar": {
+      usos: ["«Agregar medio»: suma una fila de medio con su importe (hasta uno de cada tipo)"],
+      fuente: DE_P1B,
+    },
+    "catalogo.accion.quitar": {
+      usos: ["«Quitar»: saca una fila de medio (con varias filas)"],
+      fuente: DE_P1B,
+    },
     "caja.pantalla.titulo": {
       usos: ["«Caja»: selector de la caja de la que sale el efectivo (solo con efectivo)"],
       fuente: DE_LA_MAQUETA,

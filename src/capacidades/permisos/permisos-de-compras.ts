@@ -19,6 +19,7 @@ export const PERMISOS_DE_COMPRAS = {
   "comprobantes_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
   "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
+  "comprobantes_de_proveedor.reemplazar": ["GERENTE", "ADMINISTRADOR"],
   // Órdenes de compra (N4, decisión del dueño del 16/11/2026): crear, pedir, cerrar y anular una orden es de quien administra o gerencia, no del operador; mirarla es de los tres
   // (el operador la ve sin precios: los precios piden además `costos.ver`).
   "ordenes_de_compra.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
@@ -32,13 +33,18 @@ export const PERMISOS_DE_COMPRAS = {
   "devoluciones_a_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
   // Notas de crédito del proveedor (N4, comprobante sin saldo): cargarlas y anularlas es de quien administra o gerencia; verlas, de los tres roles. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0713).
   "notas_de_credito_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "notas_de_debito_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "notas_de_credito_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
+  "notas_de_debito_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
   "notas_de_credito_de_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
+  "notas_de_debito_de_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
   // Diferencias de la conciliación de tres vías (N4): verlas y resolverlas es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0710).
   "diferencias_de_compra.ver": ["GERENTE", "ADMINISTRADOR"],
   "diferencias_de_compra.resolver": ["GERENTE", "ADMINISTRADOR"],
   "compras.configurar": ["GERENTE"],
   "compras.corregir": ["GERENTE", "ADMINISTRADOR"],
+  // Exportar compras a Excel (dueño, 25/11/2026, pregunta 4): quien administra o gerencia, y además `costos.ver` (la consulta exige las dos; el archivo lleva importes).
+  "compras.exportar": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["compras"]["acciones"],
   readonly RolDeEmpresa[]

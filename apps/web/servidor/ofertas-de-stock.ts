@@ -4,7 +4,7 @@ import "server-only";
  */
 import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
-import { puedeLaAccion } from "./permisos-de-la-persona";
+import { permisosDeLaPersona, puedeLaAccion } from "./permisos-de-la-persona";
 
 /**
  * ¿Se ofrece este botón de Stock hoy? Es la oferta de esa acción (`ofertaDe`): con el módulo `stock` en desarrollo, no activo o en solo lectura, o sin el rol, no. Si no se pudieron leer los
@@ -20,3 +20,12 @@ export const puedeEnStock = (contexto: ContextoOperativo, accion: ClaveAccion): 
  */
 export const puedeEditarRecetas = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeEnStock(contexto, "composiciones.editar");
+
+/**
+ * ¿El plan tiene la perilla `lotes`? Solo decide si «Controlar por lote» se ofrece (con la perilla apagada no hay botón, no un error: FP-STK-13); controlar vuelve a exigirla en el servidor. Sin permisos legibles,
+ * `false` (cierra, no abre). Chequeo: `test/web/ofertas-de-stock.test.ts`.
+ */
+export async function lotesEncendidos(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && permisos.funcionesEncendidas.includes("lotes");
+}

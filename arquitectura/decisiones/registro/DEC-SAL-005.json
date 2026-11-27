@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-005",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los tres roles (gerente, administrador y operador) pueden anular el cobro de una mesa con la misma acción que anula un ticket del mostrador.",
+  "que_cambia": "Un operador puede anular un cobro de mesa con motivo; si el negocio quiere restringirlo, se cambia el permiso de anular tickets.",
+  "donde": "acción tickets.corregir; Pedernal-docs briefs/salon/SAL-C2-anular-cobro-de-mesa.md seccion 8 (DEC-1041 de ese brief, a confirmar); confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)"
+}

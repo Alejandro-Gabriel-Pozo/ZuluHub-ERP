@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { empresaId, personaId } from "../../../primitivas/identificadores/marca";
-import { decidirApagado, type Membresia, type RolDeEmpresa } from "./membresia";
+import { decidirApagado, type Membresia, type RolDeLaMembresia } from "./membresia";
 
 const EMPRESA = empresaId("e-1");
 
 const membresia = (
   persona: string,
-  rol: RolDeEmpresa,
+  rol: RolDeLaMembresia,
   activo = true,
   empresa = EMPRESA,
-): Membresia => ({ empresaId: empresa, personaId: personaId(persona), rol, activo, version: 1 });
+): Membresia => ({
+  empresaId: empresa,
+  personaId: personaId(persona),
+  rol,
+  rolPropioId: null,
+  activo,
+  version: 1,
+});
 
 /** La persona que pide el apagado: ninguna de las del escenario, salvo en las pruebas de `ES_UNO_MISMO`. */
 const QUIEN_PIDE = personaId("p-quien-pide");
@@ -17,6 +24,28 @@ const QUIEN_PIDE = personaId("p-quien-pide");
 const gerente = membresia("p-gerente", "GERENTE");
 const admin = membresia("p-admin", "ADMINISTRADOR");
 const operador = membresia("p-operador", "OPERADOR");
+
+describe("decidirApagado con un rol propio (T4 de H4b)", () => {
+  const propio = membresia("p-propio", "PROPIO");
+
+  it("una persona con rol propio se apaga como cualquier no administrador", () => {
+    expect(decidirApagado(propio, [gerente, propio], QUIEN_PIDE)).toEqual({
+      ok: true,
+      valor: "APAGAR",
+    });
+  });
+
+  it("un rol propio NO cuenta como administrador: no evita que el último administrador sea el último (con gerente activo nunca queda sin admin)", () => {
+    expect(decidirApagado(admin, [admin, propio], QUIEN_PIDE)).toEqual({
+      ok: false,
+      error: "ULTIMO_ADMIN",
+    });
+    expect(decidirApagado(admin, [admin, propio, gerente], QUIEN_PIDE)).toEqual({
+      ok: true,
+      valor: "APAGAR",
+    });
+  });
+});
 
 describe("decidirApagado", () => {
   it("una membresía que no existe es MEMBRESIA_NO_ENCONTRADA", () => {

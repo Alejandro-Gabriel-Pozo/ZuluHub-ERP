@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1037",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "El salón es un extra de pago: para el hotel se enciende la perilla salon desde la consola de plataforma; comandas va en todos los planes.",
+  "que_cambia": "Sin la perilla encendida la empresa no ve Salón en el menú ni lee mesas. Es una tarea de la consola, no de código. Se revierte apagando la perilla.",
+  "donde": "src/capacidades/modulos/catalogo-salon-y-comandas.ts; apps/web/ui/navegacion/menu-filas-ventas.ts (perilla de la fila Salón); Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1037 (P-S12); dueño 25/11, vía el orquestador; la fila la asienta diseño"
+}

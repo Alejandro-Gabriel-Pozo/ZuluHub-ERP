@@ -191,7 +191,7 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
     ).toBe(1);
   });
 
-  it("la factura exige N3 o N4 y la perilla, un producto por línea, y un producto de otra empresa no existe", async () => {
+  it("la factura exige la perilla del plan (no el nivel de la empresa), un producto por línea, y un producto de otra empresa no existe", async () => {
     const n1 = await c.escenario();
     const proveedor = await c.proveedor(n1.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     const x = await c.articulo(n1, { unidadBase: "GRAMO", dimension: "MASA" });
@@ -201,7 +201,8 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
       factura: pedidoDeFactura({ proveedor, cuit: cuitUnico() } as M, [linea(x.producto, "10")])
         .factura,
     });
-    expect(codigo(enN1)).toBe("RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL");
+    // P1 = B: la empresa en N1 o N2 con la perilla encendida ya no es rechazada por su nivel: llega a las reglas de la factura (este proveedor no declaró puntos de venta).
+    expect(codigo(enN1)).toBe("PUNTO_DE_VENTA_NO_DECLARADO");
     const m = await armar();
     const ajeno = await armar();
     const sinProducto = await c.casos.registrarFactura(
@@ -309,6 +310,114 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
       "CANTIDAD_ASIGNADA_EXCEDE_LO_RECIBIDO",
     ]).toContain(codigo(demas));
     expect(await conciliaciones(f.comprobanteId)).toBe(1);
+  });
+
+  it("T2: «excede lo facturado» y «excede lo recibido» son dos errores distintos con su código exacto", async () => {
+    const m = await armar();
+    // Lo recibido alcanza de sobra: lo que se pasa es lo facturado.
+    const mucho = await recibir(m, m.harina.producto, "5");
+    const f1 = await cargarFactura(m, [linea(m.harina.producto, "1000")], 1000);
+    const asignar = (comprobanteId: string, recepcionId: string, cantidad: string) =>
+      c.casos.conciliarFactura(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId,
+        asignaciones: [{ lineaDeFactura: 1, recepcionId, lineaDeRecepcion: 1, cantidad }],
+      });
+    valorDe(await asignar(f1.comprobanteId, mucho, "1000"));
+    expect(codigo(await asignar(f1.comprobanteId, mucho, "0.0001"))).toBe(
+      "CANTIDAD_ASIGNADA_EXCEDE_LO_FACTURADO",
+    );
+    // Lo facturado alcanza de sobra: lo que se pasa es lo recibido.
+    const poco = await recibir(m, m.harina.producto, "1");
+    const f2 = await cargarFactura(m, [linea(m.harina.producto, "9000")], 9000);
+    expect(codigo(await asignar(f2.comprobanteId, poco, "1000.0001"))).toBe(
+      "CANTIDAD_ASIGNADA_EXCEDE_LO_RECIBIDO",
+    );
+    expect(await asignadaDeLaFactura(f1.comprobanteId)).toBe("1000.0000");
+    expect(await asignadaDeLaFactura(f2.comprobanteId)).toBe("0.0000");
+  });
+
+  it("T6 y T7: cada gerente concilia lo de su sucursal: la propuesta no trae lo de otra sucursal y conciliar lo de otra es SUCURSAL_FUERA_DE_ALCANCE sin dejar nada", async () => {
+    const m = await armar();
+    const depositoDeLaOtra = await c.deposito({ empresa: m.e.empresa, sucursal: m.e.otraSucursal });
+    const deLaCentral = await recibir(m, m.harina.producto, "1");
+    const deLaNorte = valorDe(
+      await c.casos.registrarRecepcion(m.e.gerente, {
+        clave: nuevoId(),
+        sucursalId: m.e.otraSucursal,
+        proveedorId: m.proveedor,
+        renglones: [
+          {
+            productoId: m.harina.producto,
+            unidadDeCompraId: "KILOGRAMO",
+            cantidad: "1",
+            precioPor: "UNIDAD",
+            unidadDePrecioId: "KILOGRAMO",
+            precio: "1000",
+          },
+        ],
+      }),
+    ).recepcionId;
+    valorDe(
+      await c.casos.confirmarRecepcion(m.e.gerente, {
+        recepcionId: deLaNorte,
+        depositoId: depositoDeLaOtra,
+      }),
+    );
+    const f = await cargarFactura(m, [linea(m.harina.producto, "2000")], 2000);
+    // Con alcance sobre todas, la propuesta trae las dos sucursales.
+    const todas = valorDe(
+      await c.consultas.proponerConciliacion(m.e.gerente, { comprobanteId: f.comprobanteId }),
+    );
+    expect(todas?.asignaciones.map((a) => a.recepcionId).sort()).toEqual(
+      [deLaCentral, deLaNorte].sort(),
+    );
+    // Con alcance de una sola sucursal, solo la suya.
+    c.alcances.set(m.e.personaDelGerente, [m.e.sucursal]);
+    const suya = valorDe(
+      await c.consultas.proponerConciliacion(m.e.gerente, { comprobanteId: f.comprobanteId }),
+    );
+    expect(suya?.asignaciones).toEqual([
+      { lineaDeFactura: 1, recepcionId: deLaCentral, lineaDeRecepcion: 1, cantidad: "1000.0000" },
+    ]);
+    expect(suya?.recibidas.map((r) => r.recepcionId)).toEqual([deLaCentral]);
+    const fuera = await c.casos.conciliarFactura(m.e.gerente, {
+      clave: nuevoId(),
+      comprobanteId: f.comprobanteId,
+      asignaciones: [
+        { lineaDeFactura: 1, recepcionId: deLaNorte, lineaDeRecepcion: 1, cantidad: "500" },
+      ],
+    });
+    expect(codigo(fuera)).toBe("SUCURSAL_FUERA_DE_ALCANCE");
+    expect(await conciliaciones(f.comprobanteId)).toBe(0);
+    expect(await asignadaDeLaFactura(f.comprobanteId)).toBe("0.0000");
+  });
+
+  it("T8: otra empresa no ve la factura ni las recepciones de ésta: conciliar es COMPROBANTE_NO_ENCONTRADO o ASIGNACION_NO_CONCILIABLE y no queda nada", async () => {
+    const m = await armar();
+    const ajeno = await armar();
+    const recibida = await recibir(m, m.harina.producto, "1");
+    const f = await cargarFactura(m, [linea(m.harina.producto, "1000")], 1000);
+    const deOtra = await c.casos.conciliarFactura(ajeno.e.gerente, {
+      clave: nuevoId(),
+      comprobanteId: f.comprobanteId,
+      asignaciones: [
+        { lineaDeFactura: 1, recepcionId: recibida, lineaDeRecepcion: 1, cantidad: "1000" },
+      ],
+    });
+    expect(codigo(deOtra)).toBe("COMPROBANTE_NO_ENCONTRADO");
+    // Una factura de la otra empresa con la recepción de ésta: la recepción no existe para ella.
+    const fAjena = await cargarFactura(ajeno, [linea(ajeno.harina.producto, "1000")], 1000);
+    const conAjena = await c.casos.conciliarFactura(ajeno.e.gerente, {
+      clave: nuevoId(),
+      comprobanteId: fAjena.comprobanteId,
+      asignaciones: [
+        { lineaDeFactura: 1, recepcionId: recibida, lineaDeRecepcion: 1, cantidad: "1000" },
+      ],
+    });
+    expect(codigo(conAjena)).toBe("ASIGNACION_NO_CONCILIABLE");
+    expect(await conciliaciones(f.comprobanteId)).toBe(0);
+    expect(await asignadaDeLaRecepcion(recibida)).toBe("0.0000");
   });
 
   it("lo que no se puede conciliar se rechaza entero: otro producto, una línea rechazada, una recepción pendiente, más de lo recibido; un operador no concilia", async () => {

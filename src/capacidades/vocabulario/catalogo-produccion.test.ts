@@ -41,6 +41,11 @@ describe("los textos de producción, receta y lotes", () => {
       "Producir igual",
       "Se produce en tanda",
       "Se arma al usarlo",
+      // PRO-A: franja y aviso del elaborado, aprobados por el dueño el 25/11/2026 (TP-4, TP-5 y TP-9).
+      "Tiene stock propio: {existencia}",
+      "No tiene stock propio: descuenta sus ingredientes.",
+      "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
+      "Hay cuentas abiertas con este plato. Al cerrarlas se descontará el plato y no sus ingredientes. ¿Confirmás?",
       // produccion.html, textos sin fila en «Textos aprobados» aceptados por delegación (DEC-0555).
       "Todas",
       "Abiertas",
@@ -71,6 +76,18 @@ describe("los textos de producción, receta y lotes", () => {
       "Guardar como versión {numero}",
       "Versiones",
       "Comparar",
+      // Pantalla de Recetas, «ver» (REC-A): aprobados por el dueño (13, 14 y 15/11/2026; `recetas-pantalla.md` §5).
+      "Neto",
+      "Rinde",
+      "Pasos",
+      "Costo de la comida",
+      "Todas",
+      // Pantalla de Recetas, guardar (REC-B).
+      "Costo antes",
+      "Costo ahora",
+      "Diferencia",
+      "Volver a editar",
+      "Nueva receta",
       "Ficha de cocina",
       "Esta acción no está permitida",
     ]);

@@ -23,6 +23,7 @@ import type { CobranzaGuardada } from "../persistencia/repositorio-de-cobranzas"
 import { exigirAlcance, exigirClave, exigirUuid, prepararComando, traducir } from "./comun";
 import type { DependenciasDeVentas, TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
+import type { CuentaCorrienteDeVentas } from "./puertos-de-cuenta-corriente";
 
 type R<S> = Resultado<S, ErrorDeVentas>;
 
@@ -63,7 +64,11 @@ export type SalidaDeCobrar = Readonly<{
 }>;
 
 /** Lo que `venderYCobrar` verifica: que el cobro caiga en la misma sesión de la que el ticket tomó su fecha. */
-export type OpcionesDeCobrar = Readonly<{ sesionDeCajaEsperada?: string | undefined }>;
+export type OpcionesDeCobrar = Readonly<{
+  sesionDeCajaEsperada?: string | undefined;
+  /** El puerto de la cuenta corriente (CC-3): un ticket cargado a la cuenta de un cliente se cobra con su cobranza en el libro; sin el puerto, se rechaza (nace cerrado). */
+  cuentaCorriente?: CuentaCorrienteDeVentas<TxDeVentas> | undefined;
+}>;
 
 /** La salida que quedó guardada en la cobranza (la escribió esta misma función; se valida la forma por si la base no la tiene). */
 function salidaGuardada(cobranza: CobranzaGuardada): SalidaDeCobrar {
@@ -132,6 +137,10 @@ export async function cobrarTicketEnTx(
     ejemplarId: entrada.ejemplarId,
   });
   if (!decision.ok) return decision.error === "TICKET_YA_COBRADO" ? yaCobrado() : decision;
+  // Un ticket cargado a la cuenta de un cliente (CC-2) se cobra con su cobranza en el libro (CC-3): sin el puerto no se cobra, porque quedaría el cargo en el libro Y el cobro en la caja sin saldarlo.
+  if (ticket.cargadoAParteId !== null && opciones.cuentaCorriente === undefined) {
+    return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
+  }
   const total = importeDesdeTexto(ARS, vigente.total);
   const cuadra = cuadrarCobros(total, cobros.valor);
   if (!cuadra.ok) return cuadra;
@@ -235,6 +244,15 @@ export async function cobrarTicketEnTx(
       })),
     },
   });
+  // La cobranza del ticket a cuenta va AL FINAL de lo que escribe el cobro (el libro serializa el saldo del cliente hasta que confirme): si falla, se revierte TODO el cobro, la caja incluida.
+  if (ticket.cargadoAParteId !== null && opciones.cuentaCorriente !== undefined) {
+    const cobranza = await opciones.cuentaCorriente.cobrarEnTx(tx, contexto, {
+      ticketId: ticket.id,
+      cobranzaId,
+      total: importeATexto(total),
+    });
+    if (!cobranza.ok) return cobranza;
+  }
   return ok({ ...salida, yaExistia: false });
 }
 
@@ -246,7 +264,9 @@ async function cobrar(
 ): Promise<R<SalidaDeCobrar>> {
   const persona = await prepararComando(tx, contexto, dependencias.reglas, ["tickets.cobrar"]);
   if (!persona.ok) return persona;
-  return cobrarTicketEnTx(tx, contexto, persona.valor, entrada);
+  return cobrarTicketEnTx(tx, contexto, persona.valor, entrada, {
+    cuentaCorriente: dependencias.cuentaCorriente,
+  });
 }
 
 /** Los reintentos ante un conflicto de serialización: el cobro choca con otros cobros, ventas y cierres de caja a la vez (el repetido es seguro: ver arriba). */

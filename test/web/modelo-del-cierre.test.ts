@@ -175,17 +175,25 @@ describe("los controles", () => {
     expect([...m.bloquean, ...m.porReconocer, ...m.informan]).toEqual([]);
   });
 
-  it("los tres controles de stock no se muestran en esta versión (no tienen texto aprobado)", () => {
+  it("los tres controles de stock y los tickets a cuenta corriente no se muestran en esta versión (no tienen texto aprobado)", () => {
     const m = modelo(
       cierre({
-        controles: Object.values(CONTROLES_DE_STOCK).map((clave) =>
-          control({ modulo: "stock", clave, severidad: "INFORMA", cantidad: 4 }),
-        ),
+        controles: [
+          ...Object.values(CONTROLES_DE_STOCK).map((clave) =>
+            control({ modulo: "stock", clave, severidad: "INFORMA", cantidad: 4 }),
+          ),
+          control({
+            modulo: "ventas",
+            clave: "ventas.tickets_a_cuenta_corriente",
+            severidad: "INFORMA",
+            cantidad: 2,
+          }),
+        ],
       }),
     );
     expect(m.informan).toEqual([]);
     expect([...CONTROLES_QUE_NO_SE_MUESTRAN].sort()).toEqual(
-      Object.values(CONTROLES_DE_STOCK).sort(),
+      [...Object.values(CONTROLES_DE_STOCK), "ventas.tickets_a_cuenta_corriente"].sort(),
     );
   });
 
@@ -257,21 +265,29 @@ describe("los controles", () => {
       cierre({
         estado: "EN_AUDITORIA",
         controles: [
-          control({ clave: "caja.cobrado_contra_ticket", cantidad: 2 }),
+          control({ clave: "caja.cobrado_contra_ticket", cantidad: 3 }),
           control({ clave: "caja.diferencia_de_arqueo", cantidad: 1 }),
         ],
         conciliacion: {
           enVivo: true,
           lineas: [],
           cobradoContraTicket: [
-            { ticketNumero: 7, diferencia: "2000.00" },
-            { ticketNumero: null, diferencia: "-1.50" },
+            { ticketNumero: 7, mesaAnulada: null, diferencia: "2000.00" },
+            { ticketNumero: null, mesaAnulada: null, diferencia: "-1.50" },
+            { ticketNumero: 9, mesaAnulada: 12, diferencia: "2000.00" },
           ],
         },
       }),
     );
     expect(m.porReconocer.map((c) => [c.rotulo, c.detalle])).toEqual([
-      ["Cobrado contra el ticket", ["Ticket 7 · Diferencia $ 2.000,00", "Diferencia -$ 1,50"]],
+      [
+        "Cobrado contra el ticket",
+        [
+          "Ticket 7 · Diferencia $ 2.000,00",
+          "Diferencia -$ 1,50",
+          "Diferencia por anulación de la mesa 12 · $ 2.000,00",
+        ],
+      ],
       ["Diferencias de arqueo", []],
     ]);
   });
@@ -294,9 +310,12 @@ describe("los controles", () => {
     if (!r.ok) throw new Error("ventas no respondió");
     for (const c of r.valor) delModuloDeVentas.add(c.clave);
     const delModuloDeCaja = Object.values(CONTROLES_DE_CAJA).map((c) => c.clave);
-    expect([...delModuloDeCaja, ...delModuloDeVentas].sort()).toEqual(
-      Object.keys(TEXTO_DE_CONTROL).sort(),
+    // El control de los tickets a cuenta corriente (CC-2) EXISTE en el servidor pero no se muestra (sin texto aprobado): no figura en los textos y la pantalla del cierre no se rompe.
+    expect(delModuloDeVentas.has("ventas.tickets_a_cuenta_corriente")).toBe(true);
+    const visibles = [...delModuloDeCaja, ...delModuloDeVentas].filter(
+      (clave) => !CONTROLES_QUE_NO_SE_MUESTRAN.has(clave),
     );
+    expect(visibles.sort()).toEqual(Object.keys(TEXTO_DE_CONTROL).sort());
     for (const clave of Object.values(TEXTO_DE_CONTROL))
       expect(Object.hasOwn(CATALOGO_DE_TEXTOS, clave)).toBe(true);
   });

@@ -25,6 +25,11 @@ permissions:
 # verificado, con la cola de los PR esperando detrás. Lo que se pierde: ver un choque de mutación o una falla intermitente entre dos PR paralelos
 # al minuto del merge (queda a ≤ 24 h, en la nocturna); lo que NO se pierde: las pruebas, el estático y el recorrido sí corren en cada push.
 # El Gate acepta saltados `mutacion-plan`, `mutacion` y `estabilidad` solo en `push` (ver `arquitectura/evaluar-gate.cjs`).
+#
+# CI liviano (dueño, 25/11/2026): un pull request hacia `integracion/modulos-v2` NO corre mutación, Estabilidad ni la web (compilación, componentes y recorrido) salvo que el cambio
+# toque la web; lo decide `mutacion-plan` (`perfilDelPullRequest` y `tocaLaWeb`, con la rama base que llega por el entorno) y el Gate acepta esos saltos solo así (`evaluar-gate.cjs`).
+# La corrida nocturna (`nocturna-de-integracion.yml`) corre todo sobre esa rama y el pull request final hacia `main` corre el gate completo. Registrado en
+# `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`). Previene: unos 60 chequeos y 30 a 60 minutos por pull request con muchas sesiones en paralelo.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
@@ -229,8 +234,10 @@ jobs:
     needs: mutacion-plan
     if: github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')
     runs-on: ubuntu-latest
-    # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
-    timeout-minutes: 25
+    # 40 y no 25 ni 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255) y el tope de 15 canceló el job; después el tope de 25 canceló
+    # el job con la suite en 25 min (#495 y #357, 25/11/2026: ningún test falló, cortó el tiempo). En las últimas corridas de pull request las copias tardan entre 15 y 25 min según
+    # la máquina que toque, así que el tope tiene que dejar margen sobre el peor caso; lo que se mide no cambia.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -284,6 +291,8 @@ jobs:
       grupos: ${{ steps.plan.outputs.grupos }}
       paquetes: ${{ steps.paquetes.outputs.paquetes }}
       estabilidad: ${{ steps.plan.outputs.estabilidad }}
+      liviano: ${{ steps.plan.outputs.liviano }}
+      toca_web: ${{ steps.plan.outputs.toca_web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -297,6 +306,10 @@ jobs:
       - run: npm ci
       - id: plan
         run: node arquitectura/planificar-mutacion.cjs
+        env:
+          # La rama base y la de origen del pull request deciden el perfil (liviano hacia la rama de integración; ver `perfilDelPullRequest`). Van por el entorno, nunca dentro del comando.
+          BASE_DEL_PR: ${{ github.base_ref }}
+          ORIGEN_DEL_PR: ${{ github.head_ref }}
       # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
       - id: paquetes
         run: node arquitectura/empaquetar-mutacion.cjs
@@ -380,6 +393,8 @@ jobs:
           # Estabilidad saltada por el plan solo vale en un pull request; en push a main se aceptan saltados el plan, la mutación y Estabilidad (y solo
           # ahí); en la nocturna y a pedido, ninguno.
           EVENTO: ${{ github.event_name }}
+          # La rama base del pull request: el CI liviano (jobs saltados) solo se acepta hacia la rama de integración.
+          BASE_DEL_PR: ${{ github.base_ref }}
           # Con la cabeza actual y la de esta corrida, el Gate distingue «reemplazada por un push nuevo» de una falla real.
           CABEZA_ACTUAL: ${{ steps.cabeza.outputs.actual }}
           CABEZA_DE_ESTA_CORRIDA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -388,6 +403,8 @@ jobs:
     # P-12: la web y la consola de plataforma compilan sin ningún secreto. Las variables viven en Vercel y se
     # leen al primer uso, nunca al compilar; si alguien lee una al importar, este job falla.
     name: Web y consola (next build sin variables PEDERNAL_*)
+    needs: mutacion-plan
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -418,6 +435,8 @@ jobs:
     # (y sus dependencias del sistema) y no la base de datos; el proyecto de Node de Vitest (`npm test`)
     # no lo necesita. El navegador se cachea por versión de Playwright.
     name: Componentes (axe, foco y envío en Chromium)
+    needs: mutacion-plan
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -452,8 +471,11 @@ jobs:
     # variables ni base a propósito (P-12) y el build tarda ~30 s, así que reutilizarlo no ahorra nada. El proceso de la app recibe un
     # entorno cerrado desde la prueba; este job no define ninguna variable PEDERNAL_*.
     name: Recorrido (app real, Chromium y Postgres)
+    needs: mutacion-plan
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20 min: mediana 13,7 y máximo 15,0 sobre 25 corridas verdes; en c03db61a (26/11/2026) se canceló dos veces seguidas a los 15 min con 40 de 42 archivos ya en verde, sin tocar la web.
+    timeout-minutes: 20
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.

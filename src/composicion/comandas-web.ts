@@ -6,15 +6,17 @@ import type { DependenciasDeRespuesta } from "./a-respuesta";
 import { laCuentaEsDeLaSucursal } from "./cuenta-de-mesa-web";
 import {
   leerElPedidoDeAnular,
+  leerElPedidoDeCambiarNota,
   leerElPedidoDeCambiarSalida,
   leerElPedidoDeEnviar,
   leerElPedidoDePedirQueSalga,
+  leerElPedidoDeQuitarSinEnviar,
 } from "./entradas-de-comandas";
 import { accionDelSalon } from "./errores-de-salon";
 
 /**
  * Las comandas del salón (S-0r; E7 §3.5; la base de S-4 y S-5): enviar a cocina, pedir que salga, el orden de salida de cada plato y anular un ítem ya enviado. La impresión (impresoras y trabajos) está en
- * `impresion-web.ts`. Vive acá, y no en `apps/web`, para probarse con la base real sin levantar Next.
+ * `impresion-web.ts`. Quitar un plato que todavía no se envió (`quitarSinEnviar`) también vive acá. Vive acá, y no en `apps/web`, para probarse con la base real sin levantar Next.
  *
  * Reglas que cumple (cada una con su prueba en `test/integracion/comandas-web.test.ts`):
  *  - **El permiso es del caso de uso y de la consulta** (`comandas.enviar`, `cuentas.anular_linea`): acá no se decide ninguno.
@@ -33,7 +35,7 @@ export type DependenciasDeComandasWeb = Readonly<{
     CasosDeUsoDeSalon,
     "enviarACocina" | "pedirQueSalga" | "anularItemEnviado"
   >;
-  casosDeUso: () => Pick<CasosDeUsoDeComandas, "cambiarSalida">;
+  casosDeUso: () => Pick<CasosDeUsoDeComandas, "cambiarSalida" | "cambiarNota" | "quitarSinEnviar">;
   /** Solo para saber qué cuentas son de la sucursal de trabajo. */
   consultasDeSalon: () => Pick<ConsultasDeSalon, "mapaDeMesas">;
   respuesta: DependenciasDeRespuesta;
@@ -184,5 +186,48 @@ export function cambiarLaSalida(
         d.casosDeUso().cambiarSalida(contexto, pedido),
       ),
     (s) => ({ salida: s.salida, yaEstaba: s.yaEstaba }),
+  );
+}
+
+/**
+ * La nota libre de un plato todavía no enviado («sin cebolla», SAL-G): vacía la quita; pedir la que ya tiene devuelve `yaEstaba`; con el plato ya enviado (o enviado a la vez por otro) es el genérico y la nota no cambia.
+ * No toca precio, stock ni ticket.
+ */
+export function cambiarLaNota(
+  d: Dependencias,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<Respuesta<Readonly<{ nota: string | null; yaEstaba: boolean }>>> {
+  return accionDelSalon(
+    d.respuesta,
+    sucursalId,
+    crudo,
+    leerElPedidoDeCambiarNota,
+    (pedido) =>
+      conLaCuenta(d, contexto, sucursalId, pedido.cuentaId, () =>
+        d.casosDeUso().cambiarNota(contexto, pedido),
+      ),
+    (s) => ({ nota: s.nota, yaEstaba: s.yaEstaba }),
+  );
+}
+
+/** Quita un plato que todavía no se envió a cocina: sin motivo, sin papel. Repetir devuelve `yaEstabaQuitada`; uno ya enviado es el genérico (para eso, anular el ítem enviado). */
+export function quitarUnPlatoSinEnviar(
+  d: Dependencias,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<Respuesta<Readonly<{ yaEstabaQuitada: boolean }>>> {
+  return accionDelSalon(
+    d.respuesta,
+    sucursalId,
+    crudo,
+    leerElPedidoDeQuitarSinEnviar,
+    (pedido) =>
+      conLaCuenta(d, contexto, sucursalId, pedido.cuentaId, () =>
+        d.casosDeUso().quitarSinEnviar(contexto, pedido),
+      ),
+    (s) => ({ yaEstabaQuitada: s.yaEstabaQuitada }),
   );
 }

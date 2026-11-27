@@ -54,6 +54,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon"
       | "clientes"
       | "compras"
+      | "cuenta_corriente"
       | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
@@ -63,6 +64,11 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "usuarios.ver"
       | "usuarios.asignar_sucursales"
       | "usuarios.revocar_invitacion"
+      | "roles.ver"
+      | "roles.crear"
+      | "roles.editar"
+      | "roles.archivar"
+      | "usuarios.asignar_rol"
       | "sucursales.ver"
       | "sucursales.crear"
       | "sucursales.editar"
@@ -110,6 +116,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "vidrieras.renovar_enlace"
       | "vidrieras.retirar_de_linea"
       | "vidrieras.administrar_portal"
+      | "vidrieras.administrar_cuentas_de_imagen"
       | "stock.ver"
       | "stock.verificar_saldos"
       | "costos.ver"
@@ -163,6 +170,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "movimientos_caja.anular_de_otros"
       | "cobros.corregir_medio"
       | "declaraciones_de_total.registrar"
+      | "salidas_de_dinero.registrar"
       | "jornadas.ver"
       | "jornadas.iniciar_auditoria"
       | "jornadas.cancelar_auditoria"
@@ -191,6 +199,11 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon.dividir"
       | "tickets.cobrar"
       | "tickets.corregir"
+      | "cuenta_corriente.ver"
+      | "cuenta_corriente.administrar"
+      | "cuenta_corriente.cargar_a_cuenta"
+      | "cuenta_corriente.aprobar_exceso"
+      | "cuenta_corriente.consultar_al_vender"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"
@@ -199,6 +212,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "partes.desvincular_contacto"
       | "partes.desactivar"
       | "partes.reactivar"
+      | "partes.anonimizar"
       | "proveedores.editar_ficha"
       | "proveedores.pedir_ficha"
       | "recepciones.ver"
@@ -218,16 +232,21 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "devoluciones_a_proveedor.registrar"
       | "devoluciones_a_proveedor.anular"
       | "notas_de_credito_de_proveedor.ver"
+      | "notas_de_debito_de_proveedor.ver"
       | "notas_de_credito_de_proveedor.registrar"
+      | "notas_de_debito_de_proveedor.registrar"
       | "notas_de_credito_de_proveedor.anular"
+      | "notas_de_debito_de_proveedor.anular"
       | "diferencias_de_compra.ver"
       | "diferencias_de_compra.resolver"
       | "comprobantes_de_proveedor.ver"
       | "comprobantes_de_proveedor.registrar"
       | "comprobantes_de_proveedor.pagar"
       | "comprobantes_de_proveedor.anular_pago"
+      | "comprobantes_de_proveedor.reemplazar"
       | "compras.configurar"
       | "compras.corregir"
+      | "compras.exportar"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -294,6 +313,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "salon",
       "clientes",
       "compras",
+      "cuenta_corriente",
       "produccion",
     ]);
   });
@@ -407,6 +427,7 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
       | "modulos_de_empresa.desactivar"
       | "listas.ver"
       | "listas.editar"
+      | "dominios.ver"
     >();
     expectTypeOf<ClaveCapacidadDePlataforma>().toEqualTypeOf<never>();
     expectTypeOf<RolDePlataforma>().toEqualTypeOf<"ADMIN" | "SOPORTE">();

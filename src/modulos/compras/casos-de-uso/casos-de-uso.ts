@@ -1,5 +1,8 @@
 import { armarAnularCompra } from "./anular-compra";
 import { armarCorregirCompra } from "./correcciones";
+import { armarCorregirLoRecibido } from "./corregir-lo-recibido";
+import { armarTomarElCosto } from "./tomar-el-costo";
+import { armarExportarCompras } from "./exportar-compras";
 import { armarAnularPago, armarDeclararPago } from "./pagos";
 import { armarConfigurarCompras } from "./configuracion";
 import { armarAnularConciliacion, armarConciliarFactura } from "./conciliar-factura";
@@ -8,7 +11,10 @@ import { armarRegistrarFactura } from "./registrar-factura";
 import { armarAnularRecepcionPendiente, armarConfirmarRecepcion } from "./confirmar-recepcion";
 import { armarRegistrarRecepcion } from "./registrar-recepcion";
 import { armarCrearOrden, armarEditarOrden } from "./ordenes";
+import { armarCambiarElComprobanteDeLaCompra } from "./cambiar-comprobante-de-la-compra";
+import { armarReemplazarFactura } from "./reemplazar-factura";
 import { armarAnularNotaDeCredito, armarRegistrarNotaDeCredito } from "./notas-de-credito";
+import { armarAnularNotaDeDebito, armarRegistrarNotaDeDebito } from "./notas-de-debito";
 import { armarAnularDevolucion, armarDevolverAlProveedor } from "./devoluciones";
 import { armarConfigurarTolerancias, armarResolverDiferencia } from "./diferencias";
 import { armarAnularOrden, armarCerrarOrden, armarPedirOrden } from "./ordenes-de-estado";
@@ -45,6 +51,8 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     anularRecepcionPendiente: armarAnularRecepcionPendiente(dependencias),
     registrarFactura: armarRegistrarFactura(dependencias),
     anularFactura: armarAnularFactura(dependencias),
+    reemplazarFactura: armarReemplazarFactura(dependencias),
+    cambiarElComprobanteDeLaCompra: armarCambiarElComprobanteDeLaCompra(dependencias),
     conciliarFactura: armarConciliarFactura(dependencias),
     anularConciliacion: armarAnularConciliacion(dependencias),
     crearOrden: armarCrearOrden(dependencias),
@@ -54,6 +62,8 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     anularOrden: armarAnularOrden(dependencias),
     registrarNotaDeCredito: armarRegistrarNotaDeCredito(dependencias),
     anularNotaDeCredito: armarAnularNotaDeCredito(dependencias),
+    registrarNotaDeDebito: armarRegistrarNotaDeDebito(dependencias),
+    anularNotaDeDebito: armarAnularNotaDeDebito(dependencias),
     devolverAlProveedor: armarDevolverAlProveedor(dependencias),
     anularDevolucion: armarAnularDevolucion(dependencias),
     configurarTolerancias: armarConfigurarTolerancias(dependencias),
@@ -63,6 +73,9 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     declararPago: armarDeclararPago(dependencias),
     anularPago: armarAnularPago(dependencias),
     corregirCompra: armarCorregirCompra(dependencias),
+    corregirLoRecibido: armarCorregirLoRecibido(dependencias),
+    tomarElCosto: armarTomarElCosto(dependencias),
+    exportarCompras: armarExportarCompras(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

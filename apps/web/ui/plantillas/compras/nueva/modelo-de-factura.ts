@@ -1,5 +1,9 @@
 import type { ClaveDeTexto } from "../../../../../../src/capacidades/vocabulario/catalogo";
-import type { RenglonEscrito, RenglonCotizado } from "./modelo-de-nueva-compra";
+import {
+  presentacionElegida,
+  type RenglonEscrito,
+  type RenglonCotizado,
+} from "./modelo-de-nueva-compra";
 
 /**
  * El modelo de la factura que se carga con «Nueva compra» cuando la empresa compra «Con factura» (maqueta `compra.html`, estados `factura` y `factura-total`; Compras PR 7). Puro: sin React ni servidor. NO calcula ningún
@@ -88,7 +92,10 @@ export function cantidadDeLaLinea(
 ): string {
   const escrita = factura.lineas[renglon.id]?.cantidad;
   if (escrita !== undefined) return escrita;
-  if (renglon.unidadDeCompra === renglon.unidadBase) return renglon.cantidad;
+  // Con una presentación la cantidad del renglón son presentaciones («3 cajas»): la factura va en la unidad base, así que se precarga lo que entra al stock.
+  if (renglon.unidadDeCompra === renglon.unidadBase && presentacionElegida(renglon) === null) {
+    return renglon.cantidad;
+  }
   return cotizado === undefined ? "" : sinCerosDeRelleno(cotizado.cantidadEnStock);
 }
 
@@ -103,7 +110,7 @@ export const alicuotaDeLaLinea = (factura: FacturaEscrita, renglon: RenglonEscri
   factura.lineas[renglon.id]?.alicuota ?? ALICUOTA_INICIAL;
 
 /** «2000.0000» pasa a «2000»; «1.5000», a «1.5»: el mismo valor canónico, sin ceros de relleno. */
-function sinCerosDeRelleno(decimal: string): string {
+export function sinCerosDeRelleno(decimal: string): string {
   if (!decimal.includes(".")) return decimal;
   return decimal.replace(/0+$/, "").replace(/\.$/, "");
 }

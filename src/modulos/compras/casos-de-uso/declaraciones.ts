@@ -1,4 +1,5 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES_DE_NOTAS } from "./declaraciones-de-notas";
 
 const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
 const ARCHIVO_DE_FACTURA = "test/integracion/compras-factura.test.ts";
@@ -8,7 +9,6 @@ const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.tes
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
-const ARCHIVO_DE_NOTAS = "test/integracion/compras-n4-notas-de-credito.test.ts";
 const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.ts";
 
 /**
@@ -17,6 +17,7 @@ const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.t
  * módulo que usan (`stock.*`, `partes.*`): la declaración lista la propia.
  */
 export const DECLARACIONES = {
+  ...DECLARACIONES_DE_NOTAS,
   agregarPuntoDeVenta: {
     accion: "proveedores.editar_ficha",
     repeticion: {
@@ -197,26 +198,6 @@ export const DECLARACIONES = {
       },
     },
   },
-  registrarNotaDeCredito: {
-    accion: "notas_de_credito_de_proveedor.registrar",
-    repeticion: {
-      regla: "CLAVE_DE_IDEMPOTENCIA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS,
-        it: "I1: la misma nota dos veces (misma clave) deja una sola nota y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
-      },
-    },
-  },
-  anularNotaDeCredito: {
-    accion: "notas_de_credito_de_proveedor.anular",
-    repeticion: {
-      regla: "YA_ESTABA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS,
-        it: "I2: anular dos veces la misma nota devuelve yaEstaba y la segunda no escribe ni audita",
-      },
-    },
-  },
   confirmarRecepcion: {
     accion: "recepciones.confirmar",
     repeticion: {
@@ -327,6 +308,20 @@ export const DECLARACIONES = {
       },
     },
   },
+  exportarCompras: {
+    accion: "compras.exportar",
+    // Exportar mira muchas compras y trae importes: además de la acción propia exige las dos de ver compras y los costos (dueño, 25/11/2026, pregunta 4).
+    tambien: ["recepciones.ver", "comprobantes_de_proveedor.ver", "costos.ver"],
+    repeticion: {
+      regla: "NO_APLICA",
+      motivo:
+        "Es una lectura: repetirla devuelve lo mismo y no duplica nada de compras, pagos ni stock; cada exportación deja su propio registro de auditoría (quién, cuándo, período y cantidad de filas).",
+      prueba: {
+        archivo: "test/integracion/compras-exportacion.test.ts",
+        it: "I6: exportar dos veces el mismo período da las mismas filas, deja dos registros de auditoría sin los datos y no cambia ninguna tabla de compras",
+      },
+    },
+  },
   corregirCompra: {
     accion: "compras.corregir",
     repeticion: {
@@ -334,6 +329,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: "test/integracion/compras-correcciones.test.ts",
         it: "I6: la misma corrección dos veces (misma clave) deja una sola fila, un solo ajuste de costo y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  corregirLoRecibido: {
+    accion: "compras.corregir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/compras-correccion-recibido.test.ts",
+        it: "I1: la misma corrección dos veces (misma clave) deja una sola fila y un solo movimiento y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  tomarElCosto: {
+    accion: "compras.corregir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/compras-tomar-el-costo.test.ts",
+        it: "I1: tomar el costo dos veces (misma clave) deja una sola corrección y un solo ajuste y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
       },
     },
   },

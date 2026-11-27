@@ -1,6 +1,6 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { DatosDelCobro } from "../modulos/caja/publico";
+import type { DatosDelCobro, OpcionesDeCobro } from "../modulos/caja/publico";
 import { ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
@@ -41,8 +41,9 @@ export type DependenciasDeCobrarWeb = Readonly<{
 type Importe = Readonly<{ moneda: string; monto: string }>;
 
 /** Los datos del cobro sin las claves ausentes: para el dominio `undefined` es «no vino» y no puede viajar como valor (`exactOptionalPropertyTypes`). */
-const sinAusentes = (datos: Readonly<Record<string, string | number | undefined>>): DatosDelCobro =>
-  Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined));
+export const sinAusentes = (
+  datos: Readonly<Record<string, string | number | undefined>>,
+): DatosDelCobro => Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined));
 const importe = (i: Importe): Importe => ({ moneda: i.moneda, monto: i.monto });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -75,21 +76,29 @@ export function cajasParaCobrar(
     {},
     () => ok({}),
     () => d.consultas().estadoDeCajasParaCobrar(contexto, { sucursalId }),
-    (estado) => ({
-      cajas: estado.cajas.map((c) => ({
-        cajaId: c.cajaId,
-        nombre: c.nombre,
-        estado: c.estado,
-        sesionId: c.sesionId,
-        fechaDeNegocio: c.fechaDeNegocio,
-        jornadaVencida: c.jornadaVencida,
-      })),
-      jornadaActual: {
-        fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
-        estado: estado.jornadaActual.estado,
-      },
-    }),
+    presentarLasCajas,
   );
+}
+
+/** Las cajas con su sesión como salen a la pantalla (lista blanca campo por campo); las comparten el cobro del mostrador y el cobro a cuenta. */
+export function presentarLasCajas(estado: {
+  cajas: readonly CajasParaCobrarParaLaPantalla["cajas"][number][];
+  jornadaActual: CajasParaCobrarParaLaPantalla["jornadaActual"];
+}): CajasParaCobrarParaLaPantalla {
+  return {
+    cajas: estado.cajas.map((c) => ({
+      cajaId: c.cajaId,
+      nombre: c.nombre,
+      estado: c.estado,
+      sesionId: c.sesionId,
+      fechaDeNegocio: c.fechaDeNegocio,
+      jornadaVencida: c.jornadaVencida,
+    })),
+    jornadaActual: {
+      fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
+      estado: estado.jornadaActual.estado,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -122,6 +131,34 @@ export type OpcionesDeCobroParaLaPantalla = Readonly<{
   marcasDeTarjeta: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
 
+/** Las opciones de cobro como salen a la pantalla (lista blanca campo por campo); las comparten el cobro del mostrador y el cobro a cuenta. */
+export function presentarLasOpciones(opciones: OpcionesDeCobro): OpcionesDeCobroParaLaPantalla {
+  return {
+    medios: opciones.medios.map((m) => ({
+      id: m.id,
+      tipo: m.tipo,
+      nombre: m.nombre,
+      cuentaObligatoria: m.cuentaObligatoria,
+      cuentas: m.cuentas.map((c) => ({ id: c.id, tipo: c.tipo, nombre: c.nombre })),
+      datosQuePide: {
+        cupon: m.datosQuePide.cupon,
+        ultimos4: m.datosQuePide.ultimos4,
+        marca: m.datosQuePide.marca,
+        cuotas: m.datosQuePide.cuotas,
+        dni: m.datosQuePide.dni,
+      },
+      datosQueSePiden: {
+        cupon: m.datosQueSePiden.cupon,
+        ultimos4: m.datosQueSePiden.ultimos4,
+        marca: m.datosQueSePiden.marca,
+        cuotas: m.datosQueSePiden.cuotas,
+        dni: m.datosQueSePiden.dni,
+      },
+    })),
+    marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
+  };
+}
+
 /** Medios activos, cuentas de la sucursal de la caja, qué datos pide cada medio y las marcas. La caja tiene que ser de una sucursal del alcance. */
 export function opcionesDeCobroDeLaCaja(
   d: DependenciasDeCobrarWeb,
@@ -133,30 +170,7 @@ export function opcionesDeCobroDeLaCaja(
     crudo,
     entradaDeOpcionesDeCobro,
     (entrada) => d.consultas().opcionesParaCobrar(contexto, entrada),
-    (opciones) => ({
-      medios: opciones.medios.map((m) => ({
-        id: m.id,
-        tipo: m.tipo,
-        nombre: m.nombre,
-        cuentaObligatoria: m.cuentaObligatoria,
-        cuentas: m.cuentas.map((c) => ({ id: c.id, tipo: c.tipo, nombre: c.nombre })),
-        datosQuePide: {
-          cupon: m.datosQuePide.cupon,
-          ultimos4: m.datosQuePide.ultimos4,
-          marca: m.datosQuePide.marca,
-          cuotas: m.datosQuePide.cuotas,
-          dni: m.datosQuePide.dni,
-        },
-        datosQueSePiden: {
-          cupon: m.datosQueSePiden.cupon,
-          ultimos4: m.datosQueSePiden.ultimos4,
-          marca: m.datosQueSePiden.marca,
-          cuotas: m.datosQueSePiden.cuotas,
-          dni: m.datosQueSePiden.dni,
-        },
-      })),
-      marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
-    }),
+    presentarLasOpciones,
   );
 }
 
@@ -250,24 +264,45 @@ export function cobrarLaVenta(
           })),
         },
       }),
-    (venta) => ({
-      ticketId: venta.ticketId,
-      ejemplarId: venta.ejemplarId,
-      numero: venta.numero,
-      estado: venta.estado,
-      fechaNegocio: venta.fechaNegocio,
-      total: importe(venta.total),
-      cobranzaId: venta.cobranzaId,
-      cobros: venta.cobros.map((c) => ({
-        orden: c.orden,
-        medioDePagoId: c.medioDePagoId,
-        cuentaDeCobroId: c.cuentaDeCobroId,
-        importe: importe(c.importe),
-      })),
-      pendienteDeFacturar: venta.pendienteDeFacturar,
-      yaExistia: venta.yaExistia,
-    }),
+    presentarLaVentaCobrada,
   );
+}
+
+/** Lo que sale a la pantalla de una venta cobrada (lista blanca campo por campo: sin ids internos de más); lo comparten el mostrador y la mesa. */
+export function presentarLaVentaCobrada(venta: {
+  ticketId: string;
+  ejemplarId: string;
+  numero: number;
+  estado: string;
+  fechaNegocio: string;
+  total: Importe;
+  cobranzaId: string | null;
+  cobros: readonly {
+    orden: number;
+    medioDePagoId: string;
+    cuentaDeCobroId: string | null;
+    importe: Importe;
+  }[];
+  pendienteDeFacturar: boolean;
+  yaExistia: boolean;
+}): VentaCobradaParaLaPantalla {
+  return {
+    ticketId: venta.ticketId,
+    ejemplarId: venta.ejemplarId,
+    numero: venta.numero,
+    estado: venta.estado,
+    fechaNegocio: venta.fechaNegocio,
+    total: importe(venta.total),
+    cobranzaId: venta.cobranzaId,
+    cobros: venta.cobros.map((c) => ({
+      orden: c.orden,
+      medioDePagoId: c.medioDePagoId,
+      cuentaDeCobroId: c.cuentaDeCobroId,
+      importe: importe(c.importe),
+    })),
+    pendienteDeFacturar: venta.pendienteDeFacturar,
+    yaExistia: venta.yaExistia,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -282,17 +317,22 @@ export type TicketAnuladoParaLaPantalla = Readonly<{
   yaExistia: boolean;
 }>;
 
-/** Anula el ticket recién cobrado (decisión 172: «anular todo» con motivo). Idempotente por la clave y el `ejemplarNuevoId` de la pantalla. */
+/**
+ * Anula el ticket recién cobrado (decisión 172: «anular todo» con motivo). Idempotente por la clave y el `ejemplarNuevoId` de la pantalla. La sucursal la fija el servidor y la valida el caso de uso: un ticket de otra sucursal
+ * (o sin sucursal de trabajo, `""`) es el genérico y no escribe nada.
+ */
 export function anularElTicket(
   d: DependenciasDeCobrarWeb,
   contexto: ContextoOperativo,
+  sucursalId: string,
   crudo: unknown,
 ): Promise<Respuesta<TicketAnuladoParaLaPantalla>> {
   return accionDeCobrar(
     d.respuesta,
     crudo,
     entradaDeAnularElTicket,
-    (entrada) => d.casosDeUso().anularTicket(contexto, entrada),
+    (entrada) =>
+      d.casosDeUso().anularTicket(contexto, { ...entrada, sucursalDeTrabajo: sucursalId }),
     (anulado) => ({
       ticketId: anulado.ticketId,
       numero: anulado.numero,

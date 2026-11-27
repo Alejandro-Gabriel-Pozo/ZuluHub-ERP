@@ -59,6 +59,8 @@ const SECRETOS = {
   PEDERNAL_CLAVE_CONTEXTO: "1:secreto-contexto-centinela",
   PEDERNAL_SECRETO_INVITACIONES: HEX_CENTINELA,
   CRON_SECRET: CRON_CENTINELA,
+  // La variable (no un secreto) de los hosts de la plataforma: con la forma que acepta `leerHostsProtegidos`.
+  PEDERNAL_HOSTS_PROTEGIDOS: "consola.centinela.test, app.centinela.test",
 };
 const PROHIBIDOS = [
   ...Object.values(PERSONALES),
@@ -282,7 +284,7 @@ describe("preparar la empresa de pruebas: cierra ante la duda", () => {
     expect(t.errores.join("\n")).toContain("PEDERNAL_DB_PLATAFORMA, PEDERNAL_CLAVE_CONTEXTO");
     expect(t.sembrar).not.toHaveBeenCalled();
     expect(t.llamadas).toEqual([]);
-    expect(VARIABLES_OBLIGATORIAS).toHaveLength(6);
+    expect(VARIABLES_OBLIGATORIAS).toHaveLength(7);
   });
 
   it("un dato mal escrito se rechaza ANTES de sembrar nada, sin repetir el valor", async () => {
@@ -429,6 +431,35 @@ describe("preparar la empresa de pruebas: secretos del dueño, validación previ
     for (const valor of Object.values(entorno)) {
       if (valor !== undefined) expect(t.texto()).not.toContain(valor);
     }
+  });
+
+  it("falta PEDERNAL_HOSTS_PROTEGIDOS: se nombra y no se siembra nada (agregar el dominio falla cerrado sin ella)", async () => {
+    for (const faltante of [undefined, "  "]) {
+      const t = armar({ entorno: { PEDERNAL_HOSTS_PROTEGIDOS: faltante } });
+      expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+      expect(t.errores.join("\n")).toContain("PEDERNAL_HOSTS_PROTEGIDOS");
+      expect(t.sembrar).not.toHaveBeenCalled();
+      expect(t.llamadas).toEqual([]);
+    }
+  });
+
+  it.each([
+    ["con https://", "https://consola.centinela.test"],
+    ["con una barra", "consola.centinela.test/ruta"],
+    ["con un elemento vacío", "consola.centinela.test,,app.centinela.test"],
+    ["con un host repetido", "consola.centinela.test, CONSOLA.centinela.test"],
+    ["con más de 50 hosts", Array.from({ length: 51 }, (_, i) => `h${i}.centinela.test`).join(",")],
+  ])("PEDERNAL_HOSTS_PROTEGIDOS %s: se rechaza antes de sembrar nada", async (_nombre, lista) => {
+    const t = armar({ entorno: { PEDERNAL_HOSTS_PROTEGIDOS: lista } });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(2);
+    expect(t.errores.join("\n")).toContain("PEDERNAL_HOSTS_PROTEGIDOS");
+    expect(t.sembrar).not.toHaveBeenCalled();
+    expect(t.llamadas).toEqual([]);
+  });
+
+  it("--validar no la pide: el paso de validar del workflow no la recibe, a propósito", async () => {
+    const t = armar({ soloValidar: true, entorno: { PEDERNAL_HOSTS_PROTEGIDOS: undefined } });
+    expect(await prepararEmpresaDePruebas(t.entrada)).toBe(0);
   });
 
   it("el administrador y el gerente con el mismo email se rechazan, y el mensaje lo explica", async () => {

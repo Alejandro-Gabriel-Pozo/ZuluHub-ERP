@@ -31,6 +31,67 @@ const paso = (parte: string) => {
   return encontrado;
 };
 
+/** Las opciones del campo «ambiente» (en el orden del archivo). */
+function opcionesDeAmbiente(texto: string): string[] {
+  const desde = texto.indexOf("      ambiente:");
+  const hasta = texto.indexOf("      accion:");
+  return [...texto.slice(desde, hasta).matchAll(/^ {10}- (\S+)$/gm)].map((m) => m[1] as string);
+}
+
+const CODIGO_DE_CLIENTE = /^cliente-[a-z0-9-]{3,30}$/;
+const CASO_POR_OMISION = '*) echo "::error::Ambiente no permitido."; exit 1 ;;';
+
+/**
+ * Los ambientes de `migrar.yml` y su caso en «validar»: preview y produccion fijos, y los clientes con base propia (extra de plan, dueño
+ * 25/11/2026) como lista CERRADA: cada uno con su opción, su caso, su frase `MIGRAR CLIENTE-<CODIGO>` y el respaldo obligatorio. `[]` si cumple.
+ * Previene: un cliente que migre sin respaldo (se pierde el punto de retorno de SU base), una frase que no lo nombre (se aprueba una
+ * migración por otra) o un ambiente con texto libre (un error de tipeo apunta al Environment equivocado).
+ */
+function problemasDeAmbientes(texto: string): string[] {
+  const problemas: string[] = [];
+  const opciones = opcionesDeAmbiente(texto);
+  if (opciones[0] !== "preview" || opciones[1] !== "produccion") problemas.push("ambientes-fijos");
+  if (new Set(opciones).size !== opciones.length) problemas.push("opciones-repetidas");
+  for (const o of opciones.slice(2)) {
+    if (!CODIGO_DE_CLIENTE.test(o)) problemas.push(`codigo-de-cliente: ${o}`);
+  }
+  const desde = texto.indexOf('case "$AMBIENTE" in');
+  const hasta = texto.indexOf("esac", desde);
+  if (desde < 0 || hasta < 0) return [...problemas, "sin-caso-de-ambiente"];
+  const lineas = texto
+    .slice(desde, hasta)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "" && !l.startsWith("#"))
+    .slice(1);
+  const casos = new Map<string, { frase: string; respaldo: string }>();
+  for (const linea of lineas) {
+    const caso = /^(\S+)\) esperado="([^"]+)"; con_respaldo=(true|false) ;;$/.exec(linea);
+    if (caso !== null) {
+      casos.set(caso[1] as string, { frase: caso[2] as string, respaldo: caso[3] as string });
+    } else if (linea !== CASO_POR_OMISION) {
+      problemas.push(`caso-ilegible: ${linea}`);
+    }
+  }
+  if (!lineas.includes(CASO_POR_OMISION)) problemas.push("sin-cierre-por-omision");
+  for (const o of opciones) if (!casos.has(o)) problemas.push(`opcion-sin-caso: ${o}`);
+  for (const c of casos.keys()) if (!opciones.includes(c)) problemas.push(`caso-sin-opcion: ${c}`);
+  const esperado = (o: string) =>
+    o === "preview"
+      ? { frase: "MIGRAR PREVIEW", respaldo: "false" }
+      : o === "produccion"
+        ? { frase: "MIGRAR PRODUCCION", respaldo: "true" }
+        : { frase: `MIGRAR CLIENTE-${o.slice("cliente-".length).toUpperCase()}`, respaldo: "true" };
+  for (const o of opciones) {
+    const real = casos.get(o);
+    if (real === undefined) continue;
+    const debe = esperado(o);
+    if (real.frase !== debe.frase) problemas.push(`frase: ${o}`);
+    if (real.respaldo !== debe.respaldo) problemas.push(`respaldo: ${o}`);
+  }
+  return problemas;
+}
+
 describe("workflow migrar.yml", () => {
   it("solo se dispara a mano: sin push, pull request, cron ni otro disparador", () => {
     expect(TEXTO).toMatch(/^on:\n {2}workflow_dispatch:/m);
@@ -41,12 +102,10 @@ describe("workflow migrar.yml", () => {
     expect(dentroDeOn.match(/^ {2}[a-z_]+:/gm)).toEqual(["  workflow_dispatch:"]);
   });
 
-  it("los ambientes son exactamente preview y produccion", () => {
-    const opciones = TEXTO.slice(TEXTO.indexOf("      ambiente:"), TEXTO.indexOf("      accion:"));
-    expect(opciones.match(/^ {10}- (\w+)$/gm)).toEqual([
-      "          - preview",
-      "          - produccion",
-    ]);
+  it("los ambientes son preview, produccion y, a lo sumo, clientes de la lista cerrada (hoy uno), cada uno con su caso", () => {
+    expect(problemasDeAmbientes(TEXTO)).toEqual([]);
+    // La lista de clientes con base propia está VACÍA hoy (dueño, 25/11/2026): sumar uno es una decisión y un cambio a propósito.
+    expect(opcionesDeAmbiente(TEXTO)).toEqual(["preview", "produccion", "cliente-hdn"]);
   });
 
   it("solo corre desde main, y lo verifica ANTES de entregar los secretos", () => {
@@ -62,13 +121,11 @@ describe("workflow migrar.yml", () => {
   });
 
   it("aplicar exige la frase exacta de cada ambiente; ver no", () => {
-    expect(TEXTO).toContain('preview) esperado="MIGRAR PREVIEW" ;;');
-    expect(TEXTO).toContain('produccion) esperado="MIGRAR PRODUCCION" ;;');
+    expect(TEXTO).toContain('preview) esperado="MIGRAR PREVIEW"; con_respaldo=false ;;');
+    expect(TEXTO).toContain('produccion) esperado="MIGRAR PRODUCCION"; con_respaldo=true ;;');
     expect(TEXTO).toContain('[ "$CONFIRMACION" != "$esperado" ]');
     expect(TEXTO).toMatch(/aplicar\)\n\s+if \[ "\$CONFIRMACION"/);
-    expect(TEXTO).toContain(
-      '*) echo "::error::Ambiente no permitido (preview o produccion)."; exit 1 ;;',
-    );
+    expect(TEXTO).toContain('*) echo "::error::Ambiente no permitido."; exit 1 ;;');
   });
 
   it("el Environment sale solo de la salida YA validada (un preview no puede apuntar a producción)", () => {
@@ -85,7 +142,7 @@ describe("workflow migrar.yml", () => {
 
   it("ningún comando recibe una expresión interpolada: van en env, nombres, condiciones y claves", () => {
     const permitida =
-      /^\s*(- )?([A-Z_]+|name|group|environment|ambiente|accion|outputs?|confirmacion|node-version|if):/;
+      /^\s*(- )?([A-Z_]+|name|group|environment|ambiente|accion|con_respaldo|outputs?|confirmacion|node-version|if):/;
     const conExpresion = LINEAS.filter((l) => l.includes("${{") && !l.trim().startsWith("#"));
     expect(conExpresion.length).toBeGreaterThan(0);
     for (const linea of conExpresion) expect(linea, linea).toMatch(permitida);
@@ -170,15 +227,18 @@ describe("workflow migrar.yml", () => {
     expect(paso("Ver qué falta").texto).not.toContain("--aplicar");
   });
 
-  it("el respaldo: solo producción, solo con algo para aplicar, por el nombre de la rama, y si se pide y falla NO se migra", () => {
+  it("el respaldo: solo producción, solo con algo para aplicar, por el nombre de la rama, y si falta o falla NO se migra", () => {
     const { texto } = paso("Rama de respaldo");
-    expect(texto).toContain("needs.validar.outputs.ambiente == 'produccion'");
+    expect(texto).toContain("needs.validar.outputs.con_respaldo == 'true'");
     expect(texto).toContain('grep -q "faltan aplicar"');
+    expect(texto).toContain('grep -q "la base está al día"');
     expect(texto).toContain('nombre="antes-de-$ultima"');
     expect(texto).toContain('select(.name == "production")');
     expect(texto).toContain("https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches");
-    // Sin las dos variables se migra sin respaldo, pero avisando.
-    expect(texto).toContain("::warning::Sin NEON_API_KEY y NEON_PROJECT_ID");
+    // Sin las dos variables NO se migra producción (antes era un aviso y se migraba sin respaldo): lo detalla
+    // `problemasDelRespaldo`, con una violación inyectada por cada propiedad.
+    expect(texto).toContain("sin respaldo no se migra producción");
+    expect(texto).not.toContain("::warning::");
     // Cada falla del respaldo corta el paso con error (el job no sigue a «Aplicar»).
     expect(texto.match(/exit 1/g)?.length).toBeGreaterThanOrEqual(4);
     expect(texto).toContain("No se migra.");
@@ -216,5 +276,203 @@ describe("workflow migrar.yml", () => {
   it("instala solo lo de producción y sin scripts de instalación (el job tiene los secretos)", () => {
     expect(TEXTO).toContain("run: npm ci --omit=dev --ignore-scripts");
     expect(TEXTO).not.toMatch(/cache:\s*npm/);
+  });
+});
+
+/**
+ * «Sin respaldo no se migra producción» (dueño, 25/11/2026, respuesta a la pregunta H-1 de `base-por-cliente-opciones.md`).
+ * Devuelve los códigos de lo que NO se cumple en el paso de respaldo de un texto de `migrar.yml`; `[]` si todo se cumple.
+ * Previene: migrar producción sin punto de retorno porque faltan las claves de Neon (antes: un aviso y se migraba), porque el
+ * texto de `--ver` cambió y el paso lo tomó por «al día», o porque la falla del respaldo no cortó el job.
+ */
+function problemasDelRespaldo(texto: string): string[] {
+  const problemas: string[] = [];
+  const exigir = (codigo: string, cumple: boolean) => {
+    if (!cumple) problemas.push(codigo);
+  };
+  const desde = texto.indexOf("      - name: Rama de respaldo");
+  const hasta = texto.indexOf("      - name: Aplicar las migraciones");
+  exigir("paso-de-respaldo-antes-de-aplicar", desde >= 0 && hasta > desde);
+  if (desde < 0 || hasta <= desde) return problemas;
+  const paso = texto.slice(desde, hasta);
+  const sinClaves = /if \[ -z "\$\{NEON_API_KEY:-\}" \][^\n]*; then\n([\s\S]*?)\n\s+fi\n/.exec(
+    paso,
+  )?.[1];
+  exigir("claves-obligatorias", sinClaves !== undefined);
+  exigir(
+    "sin-claves-corta",
+    sinClaves !== undefined &&
+      /exit 1/.test(sinClaves) &&
+      !/exit 0/.test(sinClaves) &&
+      !/::warning::/.test(sinClaves),
+  );
+  exigir("sin-avisos-en-lugar-de-error", !/::warning::/.test(paso));
+  // Lo desconocido no es «al día»: el texto de «ver» tiene que ser uno de los dos resultados conocidos o se corta.
+  const iPendientes = paso.indexOf('grep -q "faltan aplicar"');
+  const iAlDia = paso.indexOf('grep -q "la base está al día"');
+  exigir("resultado-conocido", iPendientes >= 0 && iAlDia > iPendientes);
+  exigir(
+    "salida-desconocida-corta",
+    /\n {10}else\n[^\n]*::error::No se pudo saber si hay migraciones pendientes[^\n]*\n {12}exit 1\n {10}fi\n/.test(
+      paso,
+    ),
+  );
+  const iSinPendientes = paso.indexOf("No hay migraciones pendientes");
+  exigir("sin-pendientes-solo-si-al-dia", iAlDia >= 0 && iSinPendientes > iAlDia);
+  // Cada falla corta el paso: salida desconocida, claves, forma del proyecto, listar, rama de producción y crear.
+  exigir("cada-falla-corta", (paso.match(/exit 1/g)?.length ?? 0) >= 6);
+  exigir(
+    "solo-con-respaldo-y-aplicar",
+    /needs\.validar\.outputs\.con_respaldo == 'true'/.test(paso),
+  );
+  exigir("el-paso-no-se-ignora", !/continue-on-error/.test(texto));
+  return problemas;
+}
+
+describe("workflow migrar.yml: sin respaldo no se migra producción", () => {
+  it("cumple todas las propiedades", () => {
+    expect(problemasDelRespaldo(TEXTO)).toEqual([]);
+  });
+
+  const reemplazar = (de: string, a: string) => (texto: string) => {
+    if (!texto.includes(de)) throw new Error(`la violación inyectada no encuentra «${de}»`);
+    return texto.replace(de, a);
+  };
+  const SIN_CLAVES = [
+    '            echo "::error::Faltan NEON_API_KEY o NEON_PROJECT_ID en el Environment: sin respaldo no se migra producción ni la base de un cliente. No se migra."',
+    "            exit 1",
+  ].join("\n");
+  const casos: [string, string, (texto: string) => string][] = [
+    [
+      "sin-claves-corta",
+      "sin las claves se migra con un aviso (el comportamiento anterior)",
+      reemplazar(
+        SIN_CLAVES,
+        '            echo "::warning::Sin NEON_API_KEY y NEON_PROJECT_ID: se migra SIN rama de respaldo."\n            exit 0',
+      ),
+    ],
+    [
+      "claves-obligatorias",
+      "se quita la comprobación de las claves",
+      reemplazar('if [ -z "${NEON_API_KEY:-}" ]', 'if [ -z "${NEON_OTRA:-}" ]'),
+    ],
+    [
+      "salida-desconocida-corta",
+      "una salida de «ver» desconocida se toma por «al día»",
+      reemplazar(
+        '            echo "::error::No se pudo saber si hay migraciones pendientes (la salida de «ver» no tiene un resultado conocido). No se migra."\n            exit 1',
+        '            echo "No hay migraciones pendientes: no hace falta respaldo."\n            exit 0',
+      ),
+    ],
+    [
+      "resultado-conocido",
+      "se vuelve a mirar solo «faltan aplicar»",
+      reemplazar('grep -q "la base está al día"', 'grep -q "algo distinto"'),
+    ],
+    [
+      "el-paso-no-se-ignora",
+      "el paso del respaldo con continue-on-error",
+      reemplazar(
+        "        shell: bash\n        run: |\n          set -eu\n          # Fail closed",
+        "        shell: bash\n        continue-on-error: true\n        run: |\n          set -eu\n          # Fail closed",
+      ),
+    ],
+    [
+      "cada-falla-corta",
+      "la creación de la rama no corta el paso",
+      reemplazar(
+        '*) echo "::error::No se pudo crear la rama de respaldo «$nombre» (HTTP $codigo; si ya existe, borrala en Neon o elegí otra). No se migra."; exit 1 ;;',
+        '*) echo "::error::No se pudo crear la rama de respaldo «$nombre» (HTTP $codigo). No se migra." ;;',
+      ),
+    ],
+    [
+      "solo-con-respaldo-y-aplicar",
+      "el respaldo sin mirar si el ambiente lo exige",
+      reemplazar(" && needs.validar.outputs.con_respaldo == 'true'", ""),
+    ],
+  ];
+
+  it.each(casos)("violación inyectada «%s»: %s", (codigo, _descripcion, inyectar) => {
+    expect(problemasDelRespaldo(inyectar(TEXTO))).toContain(codigo);
+  });
+});
+
+describe("workflow migrar.yml: clientes con base propia (lista cerrada)", () => {
+  const CASO_FINAL = `            ${CASO_POR_OMISION}`;
+  const OPCION_PRODUCCION = "          - produccion\n";
+
+  /** Suma un cliente de EJEMPLO al texto (la lista real está vacía): la opción y el caso, como se sumaría a mano. */
+  function conCliente(
+    texto: string,
+    codigo: string,
+    caso = `esperado="MIGRAR CLIENTE-${codigo.slice("cliente-".length).toUpperCase()}"; con_respaldo=true`,
+  ): string {
+    if (!texto.includes(OPCION_PRODUCCION) || !texto.includes(CASO_FINAL)) {
+      throw new Error("la violación inyectada no encuentra dónde sumar el cliente");
+    }
+    return texto
+      .replace(OPCION_PRODUCCION, `${OPCION_PRODUCCION}          - ${codigo}\n`)
+      .replace(CASO_FINAL, `            ${codigo}) ${caso} ;;\n${CASO_FINAL}`);
+  }
+
+  it("un cliente bien sumado (opción, caso, frase y respaldo) cumple", () => {
+    expect(problemasDeAmbientes(conCliente(TEXTO, "cliente-ejemplo"))).toEqual([]);
+    const dos = conCliente(conCliente(TEXTO, "cliente-uno"), "cliente-dos-ar");
+    expect(problemasDeAmbientes(dos)).toEqual([]);
+  });
+
+  const casos: [string, string, string][] = [
+    [
+      "respaldo: cliente-ejemplo",
+      "un cliente sin respaldo obligatorio",
+      conCliente(TEXTO, "cliente-ejemplo", 'esperado="MIGRAR CLIENTE-EJEMPLO"; con_respaldo=false'),
+    ],
+    [
+      "frase: cliente-ejemplo",
+      "un cliente cuya frase no lo nombra (la de producción)",
+      conCliente(TEXTO, "cliente-ejemplo", 'esperado="MIGRAR PRODUCCION"; con_respaldo=true'),
+    ],
+    [
+      "codigo-de-cliente: Cliente_Ejemplo",
+      "un código con mayúsculas y guion bajo",
+      conCliente(TEXTO, "Cliente_Ejemplo"),
+    ],
+    ["codigo-de-cliente: cliente-x", "un código demasiado corto", conCliente(TEXTO, "cliente-x")],
+    [
+      "codigo-de-cliente: otro",
+      "una opción que no empieza con «cliente-»",
+      conCliente(TEXTO, "otro"),
+    ],
+    [
+      "opcion-sin-caso: cliente-ejemplo",
+      "una opción sin su caso (se rechazaría recién al correr)",
+      TEXTO.replace(OPCION_PRODUCCION, `${OPCION_PRODUCCION}          - cliente-ejemplo\n`),
+    ],
+    [
+      "caso-sin-opcion: cliente-ejemplo",
+      "un caso sin su opción (un ambiente fantasma que nadie puede elegir)",
+      TEXTO.replace(
+        CASO_FINAL,
+        `            cliente-ejemplo) esperado="MIGRAR CLIENTE-EJEMPLO"; con_respaldo=true ;;\n${CASO_FINAL}`,
+      ),
+    ],
+    [
+      "sin-cierre-por-omision",
+      "sin el caso final: un ambiente desconocido pasaría",
+      TEXTO.replace(CASO_FINAL, ""),
+    ],
+    [
+      "respaldo: produccion",
+      "producción sin respaldo obligatorio",
+      TEXTO.replace(
+        'produccion) esperado="MIGRAR PRODUCCION"; con_respaldo=true',
+        'produccion) esperado="MIGRAR PRODUCCION"; con_respaldo=false',
+      ),
+    ],
+  ];
+
+  it.each(casos)("violación inyectada «%s»: %s", (codigo, _descripcion, texto) => {
+    expect(texto).not.toBe(TEXTO);
+    expect(problemasDeAmbientes(texto)).toContain(codigo);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { PantallaDeFichaDeCompra } from "./ficha/PantallaDeFichaDeCompra";
 import type { FichaDeCompraParaLaPantalla } from "./ficha/modelo-de-ficha-de-compra";
 import { FormularioDeDeclararPago } from "./pago/FormularioDeDeclararPago.cliente";
@@ -47,6 +47,8 @@ const textosDelFormulario = () => {
     motivo: t.motivo,
     sinElegir: t.sinElegir,
     declararPago: t.declararPago,
+    agregarMedio: t.agregarMedio,
+    quitar: t.quitar,
     medios: {
       EFECTIVO: t.medioDePago("EFECTIVO"),
       TARJETA_DEBITO: t.medioDePago("TARJETA_DEBITO"),
@@ -83,6 +85,7 @@ const ficha = (cambios: Record<string, unknown> = {}) =>
       fecha: "2026-10-31",
       vencimientoDePago: null,
       totalSegunLaFactura: pesos("2420.00"),
+      netoAPagar: pesos("2420.00"),
     },
     pagos: [],
     ...cambios,
@@ -160,6 +163,65 @@ describe("FormularioDeDeclararPago", () => {
     expect(datos.get("motivo")).toBe("Pago de la factura");
   });
 
+  it("«Agregar medio» suma una fila con su importe; cada medio sale una sola vez; «Quitar» la saca; con varios viajan los medios con su importe, la caja y el motivo; sin violaciones de accesibilidad", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() => Promise.resolve(DECLARAR_PAGO_INICIAL));
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    expect(page.getByRole("button", { name: "Quitar" }).elements()).toHaveLength(0);
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "EFECTIVO");
+    tocar(page.getByRole("button", { name: "Agregar medio" }));
+    await expect.element(page.getByLabelText("Medio 2")).toBeVisible();
+    const segundo = page.getByLabelText("Medio 2").element() as HTMLSelectElement;
+    expect([...segundo.options].map((o) => o.value)).not.toContain("EFECTIVO");
+    await userEvent.selectOptions(page.getByLabelText("Medio 2"), "QR");
+    const enviar = page.getByRole("button", { name: "Declarar pago" });
+    await userEvent.selectOptions(page.getByLabelText("Caja"), CAJAS[0]?.cajaId ?? "");
+    await userEvent.fill(page.getByLabelText("Motivo"), "Pago de la factura");
+    await expect.element(enviar).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Importe 1"), "1000");
+    await userEvent.fill(page.getByLabelText("Importe 2"), "1420");
+    await expect.element(enviar).toBeEnabled();
+    expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+    tocar(enviar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.getAll("medio")).toEqual(["EFECTIVO", "QR"]);
+    expect(datos.getAll("importe")).toEqual(["1000.00", "1420.00"]);
+    expect(datos.get("cajaId")).toBe(CAJAS[0]?.cajaId);
+  });
+
+  it("al quitar la segunda fila vuelve el pago de un solo medio, sin importe que escribir", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() => Promise.resolve(DECLARAR_PAGO_INICIAL));
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "TRANSFERENCIA");
+    tocar(page.getByRole("button", { name: "Agregar medio" }));
+    await expect.element(page.getByLabelText("Medio 2")).toBeVisible();
+    tocar(page.getByRole("button", { name: "Quitar" }).nth(1));
+    await vi.waitFor(() => expect(page.getByLabelText("Importe").elements()).toHaveLength(0));
+    const enviar = page.getByRole("button", { name: "Declarar pago" });
+    await expect.element(enviar).toBeEnabled();
+    tocar(enviar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.getAll("medio")).toEqual(["TRANSFERENCIA"]);
+    expect(datos.getAll("importe")).toEqual([]);
+  });
+
   it("volver a otro medio saca la caja y el motivo del envío", async () => {
     const accion = vi.fn<AccionDeDeclarar>(() => Promise.resolve(DECLARAR_PAGO_INICIAL));
     await render(
@@ -208,6 +270,34 @@ describe("FormularioDeDeclararPago", () => {
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(accion).toHaveBeenCalledTimes(1);
   });
+
+  it("tras un error del servidor, y DESPUÉS del reinicio que React dispara, el pago conserva la fecha, el medio, la caja y el motivo que se escribieron", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO }),
+    );
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    await userEvent.fill(page.getByLabelText("Fecha"), "2026-11-20");
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "EFECTIVO");
+    await userEvent.selectOptions(page.getByLabelText("Caja"), CAJAS[1]!.cajaId);
+    await userEvent.fill(page.getByLabelText("Motivo"), "Pago a proveedor");
+    const cancelado = await conReinicio(() => {
+      tocar(page.getByRole("button", { name: "Declarar pago" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(page.getByLabelText("Fecha")).toHaveValue("2026-11-20");
+    await expect.element(page.getByLabelText("Medio")).toHaveValue("EFECTIVO");
+    await expect.element(page.getByLabelText("Caja")).toHaveValue(CAJAS[1]!.cajaId);
+    await expect.element(page.getByLabelText("Motivo")).toHaveValue("Pago a proveedor");
+  });
 });
 
 describe("HojaDeAnularPago", () => {
@@ -240,10 +330,33 @@ describe("HojaDeAnularPago", () => {
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(accion).toHaveBeenCalledTimes(1);
   });
+
+  it("tras un error del servidor, y DESPUÉS del reinicio, la hoja conserva el motivo escrito", async () => {
+    const accion = vi.fn<AccionDeAnular>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO }),
+    );
+    await render(<HojaDeAnularPago accion={accion} textos={textos} />);
+    await userEvent.click(page.getByRole("button", { name: "Anular" }));
+    const dialogo = page.getByRole("dialog");
+    await userEvent.fill(dialogo.getByLabelText("Motivo"), "Se pagó dos veces");
+    const cancelado = await conReinicio(() => {
+      tocar(dialogo.getByRole("button", { name: "Anular" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(dialogo.getByLabelText("Motivo")).toHaveValue("Se pagó dos veces");
+  });
 });
 
 describe("la ficha de la compra con el pago de la factura", () => {
-  const acciones = { corregir: false, anular: false, pagar: true, anularPago: true };
+  const acciones = {
+    corregir: false,
+    anular: false,
+    pagar: true,
+    anularPago: true,
+    verNotas: false,
+    cambiarElComprobante: false,
+  };
   const anularPago = () => () => Promise.resolve({ estado: "INICIAL" } as ResultadoDeAnularPago);
 
   it("sin pago y con permiso ofrece «Declarar pago» hacia la pantalla del pago; sin permiso, nada", async () => {

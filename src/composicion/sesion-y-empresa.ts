@@ -1,9 +1,10 @@
 import { decidirEmpresa } from "../capacidades/experiencia/empresa-elegida";
+import type { DuenioDeLaPuerta } from "../capacidades/experiencia/puerta";
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { EmpresaDeLaLista } from "../modulos/identidad/publico";
 import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
-import type { RolDeEmpresa } from "../capacidades/permisos/roles";
+import { rolBaseParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { SesionAutenticada } from "../puertos/autenticacion";
 import { aRespuesta, aRespuestaDeExcepcion, errorAPublico, respuestaDeFalla } from "./a-respuesta";
 import { contextoOperativo, contextoDeSesion } from "./contextos";
@@ -18,6 +19,9 @@ import type { DependenciasDeSesion } from "./dependencias-de-sesion";
  * Reglas que cumple (cada una con su prueba en `test/integracion/web-sesion-y-empresa.test.ts`):
  *  - Las empresas salen SIEMPRE filtradas por la marca de la puerta (la del host), nunca por email ni por lo
  *    que mande el navegador (P-1).
+ *  - En un host DEDICADO a una empresa (su dominio propio) solo existe esa empresa: una persona que también trabaja en otra no la abre por ese
+ *    host (DEC-0911). El dueño del host es obligatorio en cada llamada (no hay valor por defecto): olvidarlo no compila. Previene: abrir la
+ *    empresa B bajo el dominio de la A.
  *  - La cookie `pd_empresa` se valida contra esa lista en cada pedido; una empresa que no está (la de otra
  *    marca, una a la que ya no se pertenece) es `SIN_PERMISO`.
  *  - El contexto operativo se arma SOLO con `contextoOperativo` de `contextos.ts` (R-W3), con la empresa ya
@@ -28,13 +32,15 @@ import type { DependenciasDeSesion } from "./dependencias-de-sesion";
 /** Una empresa de la lista de la persona, con lo que la pantalla necesita para elegir y para avisar si no opera. */
 export type EmpresaParaLaPantalla = Pick<
   EmpresaDeLaLista,
-  "empresaId" | "nombre" | "rol" | "estadoEfectivo"
->;
+  "empresaId" | "nombre" | "estadoEfectivo"
+> &
+  /** `null`: rol propio de esa empresa (las pantallas de elección y de cuenta no lo muestran). */
+  Readonly<{ rol: RolDeEmpresa | null }>;
 
 const paraLaPantalla = (e: EmpresaDeLaLista): EmpresaParaLaPantalla => ({
   empresaId: e.empresaId,
   nombre: e.nombre,
-  rol: e.rol,
+  rol: rolBaseParaMostrar(e.rol),
   estadoEfectivo: e.estadoEfectivo,
 });
 
@@ -49,11 +55,22 @@ type Interno = Readonly<{
   empresas: readonly EmpresaDeLaLista[];
 }>;
 
+/** Las empresas que el host admite: todas las de la marca si el host es de la marca; solo la dueña si el host es de una empresa. Un dueño que no es ninguno de los dos no admite ninguna (todo nace cerrado). */
+function soloLasDelHost(
+  lista: readonly EmpresaDeLaLista[],
+  duenio: DuenioDeLaPuerta,
+): readonly EmpresaDeLaLista[] {
+  if (duenio.tipo === "MARCA") return lista;
+  if (duenio.tipo === "EMPRESA") return lista.filter((e) => e.empresaId === duenio.empresaId);
+  return [];
+}
+
 /** Lo que la sesión puede ver de la marca de esta puerta: su persona y sus empresas EN ESA MARCA. */
 async function leerEmpresas(
   d: DependenciasDeSesion,
   sesion: SesionAutenticada,
   marcaId: MarcaComercialId,
+  duenioDelHost: DuenioDeLaPuerta,
 ): Promise<Respuesta<Interno>> {
   try {
     const contexto = contextoDeSesion({ usuarioAuth: sesion.usuarioAuth, ahora: d.ahora() });
@@ -65,7 +82,11 @@ async function leerEmpresas(
       if (persona.valor === null) return { ok: true, dato: { personaId: null, empresas: [] } };
       const personaId = persona.valor.personaId;
       const empresas = await consultas.empresasDeLaSesion(contexto, { marcaId });
-      return aRespuesta(empresas, d.respuesta, (lista) => ({ personaId, empresas: lista }));
+      return aRespuesta(empresas, d.respuesta, (lista) => ({
+        personaId,
+        // Lista blanca: en un host de empresa solo pasa esa empresa; en uno de marca, las de la marca.
+        empresas: soloLasDelHost(lista, duenioDelHost),
+      }));
     };
     const compartir = d.lecturasCompartidas?.();
     return compartir === undefined
@@ -81,8 +102,9 @@ export async function empresasDeLaPersona(
   d: DependenciasDeSesion,
   sesion: SesionAutenticada,
   marcaId: MarcaComercialId,
+  duenioDelHost: DuenioDeLaPuerta,
 ): Promise<Respuesta<EmpresasDeLaPersona>> {
-  const leidas = await leerEmpresas(d, sesion, marcaId);
+  const leidas = await leerEmpresas(d, sesion, marcaId, duenioDelHost);
   if (!leidas.ok) return leidas;
   return {
     ok: true,
@@ -105,6 +127,8 @@ export type EntradaDeResolverEmpresa = Readonly<{
   sesion: SesionAutenticada;
   /** La marca de la puerta: la que resolvió el servidor desde el host. */
   marcaId: MarcaComercialId;
+  /** El dueño del host de la puerta (marca o empresa): en un host de empresa solo se entra a esa empresa. */
+  duenioDelHost: DuenioDeLaPuerta;
   /** El valor de la cookie `pd_empresa` DE ESTE HOST, tal como llegó (no es de confianza). */
   cookieDeEmpresa: string | null;
 }>;
@@ -117,7 +141,7 @@ export async function resolverEmpresa(
   d: DependenciasDeSesion,
   entrada: EntradaDeResolverEmpresa,
 ): Promise<Respuesta<EntradaALaEmpresa>> {
-  const leidas = await leerEmpresas(d, entrada.sesion, entrada.marcaId);
+  const leidas = await leerEmpresas(d, entrada.sesion, entrada.marcaId, entrada.duenioDelHost);
   if (!leidas.ok) return leidas;
   const { personaId, empresas } = leidas.dato;
   const decision = decidirEmpresa(empresas, entrada.cookieDeEmpresa);
@@ -168,10 +192,11 @@ export async function elegirEmpresa(
   entrada: Readonly<{
     sesion: SesionAutenticada;
     marcaId: MarcaComercialId;
+    duenioDelHost: DuenioDeLaPuerta;
     empresaId: string;
   }>,
 ): Promise<Respuesta<Readonly<{ empresaId: EmpresaId }>>> {
-  const leidas = await leerEmpresas(d, entrada.sesion, entrada.marcaId);
+  const leidas = await leerEmpresas(d, entrada.sesion, entrada.marcaId, entrada.duenioDelHost);
   if (!leidas.ok) return leidas;
   const elegida =
     entrada.empresaId === ""

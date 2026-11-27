@@ -95,6 +95,8 @@ export interface MovimientosYSaldos {
     articuloId: string,
     sucursal: string | null,
   ): Promise<boolean>;
+  /** ¿El depósito tiene algún artículo con existencia DISTINTA DE CERO (también negativa)? Lo usa el aviso de la carga inicial (P-8); es una lectura, sin bloqueo. */
+  conExistenciaEnElDeposito(empresa: EmpresaId, depositoId: string): Promise<boolean>;
 }
 
 /** El libro de movimientos: escritura y lectura de movimientos y saldos más las lecturas de las consultas (`lecturas-del-libro.ts`). */
@@ -278,6 +280,15 @@ function crearMovimientosYSaldos(db: Kysely<StockDb>): MovimientosYSaldos {
           join deposito d on d.id = s.deposito_id and d.empresa_id = s.empresa_id
          where s.empresa_id = ${empresa} and s.articulo_id = ${articuloId}::uuid and s.existencia <> 0
            ${sucursal === null ? sql`` : sql`and d.sucursal_id = ${sucursal}::uuid`}
+         limit 1`.execute(db);
+      return rows.length > 0;
+    },
+    async conExistenciaEnElDeposito(empresa, depositoId) {
+      if (!esUuid(depositoId)) return false;
+      const { rows } = await sql<{ uno: number }>`
+        select 1 as uno
+          from saldo_de_stock s
+         where s.empresa_id = ${empresa} and s.deposito_id = ${depositoId}::uuid and s.existencia <> 0
          limit 1`.execute(db);
       return rows.length > 0;
     },

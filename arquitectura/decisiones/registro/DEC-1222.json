@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1222",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "El módulo `cuenta_corriente` nace «en desarrollo» (cerrado para todos) aunque sus casos de uso ya existen, hasta que la pantalla de cuenta corriente (CC-5) lo declare disponible.",
+  "que_cambia": "Nadie puede usar la cuenta corriente ni verla en el editor de planes hasta entonces; no hay pantalla ni textos aprobados. Revertir: cambiar `estado` a «disponible» en el catálogo y sacarlo de la lista de cerrados de la prueba del catálogo.",
+  "donde": "src/capacidades/modulos/catalogo-cuenta_corriente.ts; test/arquitectura/catalogo-modulos.test.ts (CERRADOS_HASTA_LA_PANTALLA); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
+  "motivo": "Todo nace cerrado (CLAUDE.md): un módulo disponible entra al editor de planes de la plataforma y esta entrega no trae pantalla ni textos aprobados."
+}

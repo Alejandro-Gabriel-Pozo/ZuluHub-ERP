@@ -5,6 +5,7 @@ import {
   NOMBRE_DE_LA_CADENA_DE_DUENO,
   PROYECTO_DE_VERCEL,
   PROYECTO_DE_VERCEL_DE_LA_CONSOLA,
+  PROYECTOS_DE_VERCEL_DE_CLIENTES,
   VARIABLE_CLAVE_CONTEXTO,
   VARIABLES_GENERABLES,
   VARIABLE_CLAVE_CERTIFICADOS,
@@ -15,6 +16,7 @@ import {
   generarSecretos,
   generarValor,
   leerDestino,
+  leerPedidoDeVercel,
   leerTokenDeVercel,
   leerVariablesRemotas,
   noDebeEstarEnVercel,
@@ -513,5 +515,85 @@ describe("noDebeEstarEnVercel", () => {
     for (const nombre of ["PEDERNAL_DB_APP", "CRON_SECRET", "VERCEL_ENV", "PEDERNAL_DB_PUBLICO"]) {
       expect(noDebeEstarEnVercel(nombre)).toBe(false);
     }
+  });
+});
+
+describe("leerPedidoDeVercel (proyectos de clientes con base propia)", () => {
+  const ID = "prj_EjemploEjemploEjemploEjemplo1";
+  const OTRO_ID = "prj_OtroOtroOtroOtroOtroOtroOtro2";
+
+  it("preview y production van a pedernal-erp, como siempre", () => {
+    expect(leerPedidoDeVercel("preview")).toEqual({
+      texto: "preview",
+      destino: "preview",
+      proyecto: PROYECTO_DE_VERCEL,
+      etiqueta: "pedernal-erp",
+    });
+    expect(leerPedidoDeVercel("production")?.proyecto).toBe(PROYECTO_DE_VERCEL);
+  });
+
+  it("la lista real tiene un solo cliente, Hoteles del Neuquén; cualquier otro no resuelve a ningún proyecto (falla cerrado)", () => {
+    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual(["cliente-hdn"]);
+    for (const texto of [
+      "cliente-ejemplo",
+      "cliente-uno",
+      "cliente-",
+      "cliente-hd",
+      "hdn",
+      "",
+      undefined,
+    ]) {
+      expect(leerPedidoDeVercel(texto)).toBeNull();
+    }
+  });
+
+  it("cliente-hdn va a SU proyecto de Vercel, en production, y no al de la web ni al de la consola", () => {
+    const pedido = leerPedidoDeVercel("cliente-hdn");
+    expect(pedido).toMatchObject({
+      texto: "cliente-hdn",
+      destino: "production",
+      etiqueta: "cliente-hdn",
+    });
+    expect(pedido?.proyecto).toBe(PROYECTOS_DE_VERCEL_DE_CLIENTES["cliente-hdn"]);
+    expect(pedido?.proyecto).not.toBe(PROYECTO_DE_VERCEL);
+    expect(pedido?.proyecto).not.toBe(PROYECTO_DE_VERCEL_DE_LA_CONSOLA);
+  });
+
+  it("un cliente de la lista va a SU proyecto, siempre en production, y nunca al de pedernal-erp", () => {
+    const pedido = leerPedidoDeVercel("cliente-ejemplo", { "cliente-ejemplo": ID });
+    expect(pedido).toEqual({
+      texto: "cliente-ejemplo",
+      destino: "production",
+      proyecto: ID,
+      etiqueta: "cliente-ejemplo",
+    });
+    expect(pedido?.proyecto).not.toBe(PROYECTO_DE_VERCEL);
+  });
+
+  it.each([
+    ["el proyecto de la web", { "cliente-ejemplo": PROYECTO_DE_VERCEL }],
+    ["el proyecto de la consola", { "cliente-ejemplo": PROYECTO_DE_VERCEL_DE_LA_CONSOLA }],
+    ["un id con otra forma", { "cliente-ejemplo": "prj_corto" }],
+    ["un id repetido en otro cliente", { "cliente-ejemplo": ID, "cliente-otro": ID }],
+  ])("%s: no resuelve", (_nombre, lista) => {
+    expect(leerPedidoDeVercel("cliente-ejemplo", lista)).toBeNull();
+  });
+
+  it("un cliente que no está en la lista, o un texto que no es un código, no resuelve", () => {
+    const lista = { "cliente-ejemplo": ID, "cliente-otro": OTRO_ID };
+    expect(leerPedidoDeVercel("cliente-ejempl", lista)).toBeNull();
+    expect(leerPedidoDeVercel("Cliente-Ejemplo", lista)).toBeNull();
+    expect(leerPedidoDeVercel("cliente-ejemplo ", lista)).toBeNull();
+    expect(leerPedidoDeVercel("cliente-x", { "cliente-x": ID })).toBeNull();
+    // Nombres heredados de Object no son clientes.
+    for (const nombre of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+      expect(leerPedidoDeVercel(nombre, lista)).toBeNull();
+    }
+  });
+
+  it("un cliente no se confunde con el otro", () => {
+    const lista = { "cliente-ejemplo": ID, "cliente-otro": OTRO_ID };
+    expect(leerPedidoDeVercel("cliente-ejemplo", lista)?.proyecto).toBe(ID);
+    expect(leerPedidoDeVercel("cliente-otro", lista)?.proyecto).toBe(OTRO_ID);
   });
 });

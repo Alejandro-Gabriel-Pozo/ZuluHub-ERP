@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0916",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Exportar compras a Excel: acción nueva «compras.exportar» solo para gerente y administrador, que además exige «costos.ver»; el operador no exporta.",
+  "que_cambia": "Se suma la acción compras.exportar (efecto LECTURA) al catálogo y a la matriz. Revertir: sacarla de catalogo-compras.ts y permisos-de-compras.ts (y los conteos de las pruebas de matriz).",
+  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; pregunta 4 del diseño y P4 del plan; catalogo-compras.ts, permisos-de-compras.ts, exportar-compras.ts"
+}

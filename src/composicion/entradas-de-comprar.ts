@@ -37,13 +37,14 @@ export function entradaDeProductosParaComprar(
 /**
  * La frontera de «cotizar la compra» (cuánto entra al stock y cuánto cuesta, antes de guardar): de lo que escribe la pantalla a los renglones que acepta la consulta. Solo se toman los campos
  * declarados de cada renglón (el producto, la unidad de compra de la lista de unidades, la cantidad, el peso real, cómo se paga el precio y el precio, todo como TEXTO decimal: nunca `number`);
- * la presentación no se toma (la primera versión compra en la unidad base). Que la cantidad, el precio y las unidades tengan sentido lo decide el servidor con la misma cuenta del alta.
+ * la presentación elegida (opcional: sin ella se compra en una unidad) viaja como identificador y el servidor comprueba que sea del producto, de la empresa y activa. Que la cantidad, el precio y las unidades tengan sentido lo decide el servidor con la misma cuenta del alta.
  * Previene: dinero o cantidades como `number`, y un renglón con campos que el navegador inventó. Chequeo: `entradas-de-comprar.test.ts`.
  */
-const unidad = z.string().refine((u) => Object.hasOwn(UNIDADES, u));
+export const unidad = z.string().refine((u) => Object.hasOwn(UNIDADES, u));
 
 const formaDeRenglon = z.object({
   productoId: identificador,
+  presentacionId: identificador.nullish(),
   unidadDeCompraId: unidad,
   cantidad: decimal,
   pesoReal: decimal.nullish(),
@@ -57,7 +58,7 @@ const formaDeCotizar = z.object({ renglones: z.array(formaDeRenglon).min(1) });
 export type EntradaWebDeCotizarCompra = Readonly<{
   renglones: readonly Readonly<{
     productoId: string;
-    presentacionId: null;
+    presentacionId: string | null;
     unidadDeCompraId: string;
     cantidad: string;
     pesoReal: string | null;
@@ -67,23 +68,27 @@ export type EntradaWebDeCotizarCompra = Readonly<{
   }>[];
 }>;
 
+/** Los renglones ya leídos con su forma, a los que acepta la consulta y el alta: los opcionales ausentes (presentación, peso, precio) son `null`. Un solo lugar para la cotización y para «Comprar y recibir». */
+const aRenglonesDeCompra = (
+  renglones: readonly z.infer<typeof formaDeRenglon>[],
+): EntradaWebDeCotizarCompra["renglones"] =>
+  renglones.map((r) => ({
+    productoId: r.productoId,
+    presentacionId: r.presentacionId ?? null,
+    unidadDeCompraId: r.unidadDeCompraId,
+    cantidad: r.cantidad,
+    pesoReal: r.pesoReal ?? null,
+    precioPor: r.precioPor,
+    unidadDePrecioId: r.unidadDePrecioId ?? null,
+    precio: r.precio ?? null,
+  }));
+
 export function entradaDeCotizarCompra(
   crudo: unknown,
 ): Resultado<EntradaWebDeCotizarCompra, ErrorDeEntrada> {
   const forma = leer(formaDeCotizar, crudo);
   if (!forma.ok) return forma;
-  return ok({
-    renglones: forma.valor.renglones.map((r) => ({
-      productoId: r.productoId,
-      presentacionId: null,
-      unidadDeCompraId: r.unidadDeCompraId,
-      cantidad: r.cantidad,
-      pesoReal: r.pesoReal ?? null,
-      precioPor: r.precioPor,
-      unidadDePrecioId: r.unidadDePrecioId ?? null,
-      precio: r.precio ?? null,
-    })),
-  });
+  return ok({ renglones: aRenglonesDeCompra(forma.valor.renglones) });
 }
 
 /**
@@ -95,7 +100,7 @@ export function entradaDeCotizarCompra(
  * Previene: dinero o cantidades como `number`, una compra con campos que el navegador inventó y una compra con la empresa o la sucursal que diga el navegador. Chequeo: `entradas-de-comprar.test.ts`.
  */
 const formaDeRemito = z.object({ puntoDeVenta: entero, numero: entero, fecha: texto });
-const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
+export const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
 
 /**
  * La factura que llega con la compra (nivel «Con factura»; Compras PR 7): el tipo de la lista de comprobantes, el punto de venta y el número (enteros), la fecha, el vencimiento de pago (opcional), cada línea
@@ -113,7 +118,7 @@ const formaDeLineaDeFactura = z.strictObject({
   alicuota: z.enum(ALICUOTAS_DE_COMPRA).nullish(),
 });
 
-const formaDeFactura = z.strictObject({
+export const formaDeFactura = z.strictObject({
   tipo: z.enum(TIPOS_DE_COMPROBANTE_DE_PROVEEDOR),
   puntoDeVenta: entero,
   numero: entero,
@@ -143,6 +148,25 @@ export type FacturaWebDeRegistrarCompra = Readonly<{
   cuitDelProveedor: string | null;
   condicionIva: string | null;
 }>;
+
+/** La factura leída con su forma, a la que acepta el caso de uso: los opcionales en blanco son `null`. Un solo lugar para «Comprar y recibir» y para «Cambiar el comprobante de la compra». */
+export const aFacturaWeb = (f: z.infer<typeof formaDeFactura>): FacturaWebDeRegistrarCompra => ({
+  tipo: f.tipo,
+  puntoDeVenta: f.puntoDeVenta,
+  numero: f.numero,
+  fecha: f.fecha,
+  vencimientoDePago: enBlancoEsNada(f.vencimientoDePago),
+  lineas: f.lineas.map((l) => ({
+    renglon: l.renglon,
+    cantidadFacturada: l.cantidadFacturada,
+    precioNeto: l.precioNeto,
+    alicuota: l.alicuota ?? null,
+  })),
+  percepciones: enBlancoEsNada(f.percepciones),
+  totalSegunFactura: f.totalSegunFactura,
+  cuitDelProveedor: enBlancoEsNada(f.cuitDelProveedor),
+  condicionIva: enBlancoEsNada(f.condicionIva),
+});
 
 /**
  * La frontera de «cotizar la factura» (las cuentas antes de guardar; Compras PR 7): solo lo que entra en la cuenta (el tipo, cada línea con su cantidad, su precio neto y su alícuota, las percepciones y el total según la factura),
@@ -204,49 +228,39 @@ export type EntradaWebDeRegistrarCompra = Readonly<{
 
 const enBlanco = (valor: string): boolean => valor.trim() === "";
 
+/** El remito tal como se escribió: todo en blanco (o ausente) es «sin remito»; a medio llenar se rechaza (nunca se guarda una compra distinta de la que la persona empezó a escribir). Lo comparten «Nueva compra» y «Recibir». */
+export function leerElRemitoEscrito(
+  escrito: Readonly<{ puntoDeVenta: string; numero: string; fecha: string }> | null | undefined,
+): Resultado<
+  Readonly<{ puntoDeVenta: number; numero: number; fecha: string }> | null,
+  ErrorDeEntrada
+> {
+  if (
+    escrito === undefined ||
+    escrito === null ||
+    (enBlanco(escrito.puntoDeVenta) && enBlanco(escrito.numero) && enBlanco(escrito.fecha))
+  ) {
+    return ok(null);
+  }
+  return leer(formaDeRemito, escrito);
+}
+
 export function entradaDeRegistrarCompra(
   crudo: unknown,
 ): Resultado<EntradaWebDeRegistrarCompra, ErrorDeEntrada> {
   const forma = leer(formaDeRegistrar, crudo);
   if (!forma.ok) return forma;
-  let remito: EntradaWebDeRegistrarCompra["remito"] = null;
-  const escrito = forma.valor.remito;
-  if (
-    escrito !== undefined &&
-    escrito !== null &&
-    !(enBlanco(escrito.puntoDeVenta) && enBlanco(escrito.numero) && enBlanco(escrito.fecha))
-  ) {
-    const leido = leer(formaDeRemito, escrito);
-    if (!leido.ok) return leido;
-    remito = leido.valor;
-  }
-  const renglones = entradaDeCotizarCompra({ renglones: forma.valor.renglones });
-  if (!renglones.ok) return renglones;
+  const remito = leerElRemitoEscrito(forma.valor.remito);
+  if (!remito.ok) return remito;
   return ok({
     clave: forma.valor.clave,
     proveedorId: forma.valor.proveedorId,
     depositoId: forma.valor.depositoId ?? null,
-    remito,
-    renglones: renglones.valor.renglones,
+    remito: remito.valor,
+    renglones: aRenglonesDeCompra(forma.valor.renglones),
     factura:
       forma.valor.factura === undefined || forma.valor.factura === null
         ? null
-        : {
-            tipo: forma.valor.factura.tipo,
-            puntoDeVenta: forma.valor.factura.puntoDeVenta,
-            numero: forma.valor.factura.numero,
-            fecha: forma.valor.factura.fecha,
-            vencimientoDePago: enBlancoEsNada(forma.valor.factura.vencimientoDePago),
-            lineas: forma.valor.factura.lineas.map((l) => ({
-              renglon: l.renglon,
-              cantidadFacturada: l.cantidadFacturada,
-              precioNeto: l.precioNeto,
-              alicuota: l.alicuota ?? null,
-            })),
-            percepciones: enBlancoEsNada(forma.valor.factura.percepciones),
-            totalSegunFactura: forma.valor.factura.totalSegunFactura,
-            cuitDelProveedor: enBlancoEsNada(forma.valor.factura.cuitDelProveedor),
-            condicionIva: enBlancoEsNada(forma.valor.factura.condicionIva),
-          },
+        : aFacturaWeb(forma.valor.factura),
   });
 }

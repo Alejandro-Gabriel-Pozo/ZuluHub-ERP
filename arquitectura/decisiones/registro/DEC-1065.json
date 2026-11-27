@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1065",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Cinco textos de la pantalla de Recetas pasan al vocabulario con su fuente: Neto, Rinde, Pasos, Costo de la comida y Todas.",
+  "que_cambia": "Los rótulos que ve el cliente. Todos figuran como aprobados por el dueño en recetas-pantalla.md §5. Revertir: cambiar su texto por defecto en el catálogo.",
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; recetas-pantalla.md §5, fuentes 13, 14 y 15 de noviembre de 2026; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja C, fila del ID)"
+}

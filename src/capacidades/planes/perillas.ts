@@ -148,6 +148,15 @@ export const CATALOGO_DE_PERILLAS = {
     modulo: "compras",
     requiere: "recepcion_separada",
   },
+  // R-05 (decisión del dueño, 14/11/2026: «se permite facturar antes de cobrar»; ratificada el 25/11/2026; brief PR-R05): permite facturar un ticket EMITIDO (sin cobrar),
+  // por ejemplo la venta a cuenta corriente. Base APAGADA: sin ella se factura solo lo cobrado, como hasta ahora (Q-A, recomendación A; todo nace cerrado). La verifica
+  // `emitirComprobanteDeTicket` y las lecturas de ventas que ofrecen tickets para facturar, leída en la transacción. Apagarla no invalida lo ya facturado.
+  facturar_antes_de_cobrar: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "ventas",
+  },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
   // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
   // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.
@@ -156,6 +165,15 @@ export const CATALOGO_DE_PERILLAS = {
     tipo: "LIMITE",
     base: { limite: 1 },
     modulo: "caja",
+  },
+  // Roles propios (H4b T4; decisión del dueño del 25/11/2026, DEC de T4b): cuántos roles propios ACTIVOS puede tener una empresa. Sin límite comercial (base `ILIMITADO`, sin migración: el tipo y
+  // el CHECK de la base ya admiten `ILIMITADO`); la plataforma puede ponerle un número a un plan o a una empresa con un ajuste. «Sin límite» no es infinito: el servidor además aplica el tope técnico
+  // `MAXIMO_DE_ROLES_PROPIOS_ACTIVOS_POR_EMPRESA`. La verifican `crearRol` y `editarRol` (al reactivar) con `exigirPerilla`.
+  roles_propios_por_empresa: {
+    ambito: "EMPRESA",
+    tipo: "LIMITE",
+    base: { limite: "ILIMITADO" },
+    modulo: "administracion",
   },
 } as const satisfies Record<string, DefinicionDePerilla>;
 

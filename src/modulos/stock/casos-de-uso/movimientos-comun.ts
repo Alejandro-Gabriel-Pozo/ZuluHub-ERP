@@ -2,7 +2,6 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import {
   cantidadConSignoATexto,
   cantidadConSignoDesdeCantidad,
-  cantidadConSignoDesdeTexto,
   type CantidadConSigno,
 } from "../../../primitivas/cantidad/con-signo";
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
@@ -15,14 +14,26 @@ import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantid
 import type { CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { datosDeJornada } from "../../empresas/publico";
 import { esUnidadConocida } from "../dominio/composicion";
-import { cantidadDeUnidades, type RenglonDeLibro } from "../dominio/movimiento";
+import { MOTIVO_DE_CARGA_INICIAL } from "../dominio/motivos";
+import { leerCantidad, type RenglonDeLibro } from "../dominio/movimiento";
 import { esUuid } from "../persistencia/filas";
+import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
 import type { Articulo, Deposito } from "../persistencia/modelo";
 import { exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { TxDeStock } from "./contrato";
 import { leerCostoDeclarado } from "./costos";
 import type { ControlDeStock, ErrorDeStock } from "./errores";
+import {
+  leerLotesDelRenglon,
+  lotesParaLaHuella,
+  type LoteDePedido,
+  type LoteLeido,
+  type LoteResuelto,
+} from "./lotes-del-pedido";
+import type { LoteDeEntrada, LotesDelPedido } from "./lotes-del-libro";
 import { CONTROL_DE_NEGATIVO } from "./movimiento-en-tx";
+
+export { leerCantidad };
 
 type R<S> = Resultado<S, ErrorDeStock>;
 
@@ -41,6 +52,8 @@ export type RenglonPedido = Readonly<{
   cantidad: string;
   unidadId: string;
   costoUnitario?: string | undefined;
+  /** Solo en una ENTRADA manual de un artículo controlado por lote (STK-E2a): los lotes que suman `cantidad`, con su vencimiento. Sin esto, la entrada va al lote «sin asignar». */
+  lotes?: readonly LoteDePedido[] | undefined;
 }>;
 
 /** Un renglón que ya pasó la lista de permitidos: la cantidad es una `Cantidad` mayor que cero y la unidad una conocida. */
@@ -50,6 +63,8 @@ export type RenglonLeido = Readonly<{
   unidadId: CodigoDeUnidad;
   /** Lo que declaró la entrada; `null` si no declaró costo (queda `SIN_COSTO`, nunca cero). */
   costoUnitario: PrecioUnitario | null;
+  /** Los lotes del renglón (solo en una entrada manual), o `null` si no trae. */
+  lotes: readonly LoteLeido[] | null;
 }>;
 
 /** Un renglón llevado a la unidad de stock de su artículo (conversión exacta o rechazada): el que se escribe en el libro. */
@@ -60,6 +75,8 @@ export type RenglonResuelto = Readonly<{
   cantidad: CantidadConSigno;
   /** El costo declarado, por unidad de stock (`null`: sin costo). */
   costoUnitario: PrecioUnitario | null;
+  /** Los lotes del renglón llevados a la unidad de stock (cantidad en texto decimal fijo), o `null` si no trae. */
+  lotes: readonly LoteResuelto[] | null;
 }>;
 
 /**
@@ -101,24 +118,18 @@ export function leerConfirmaciones(valor: unknown): R<readonly ControlDeStock[]>
   return ok(confirmaciones);
 }
 
-/** Una cantidad en texto decimal con hasta 4 decimales, y mayor que cero (o también cero con `conCero`); si no, `CANTIDAD_INVALIDA`. */
-export function leerCantidad(
-  texto: unknown,
-  conCero = false,
-): Resultado<Cantidad, "CANTIDAD_INVALIDA"> {
-  if (typeof texto !== "string") return err("CANTIDAD_INVALIDA");
-  const leida = cantidadConSignoDesdeTexto(texto);
-  if (!leida.ok || leida.valor.unidades < (conCero ? 0n : 1n)) return err("CANTIDAD_INVALIDA");
-  return ok(cantidadDeUnidades(leida.valor.unidades));
-}
-
 /**
  * La lista de renglones que manda la pantalla: de 1 a `MAXIMO_DE_RENGLONES`, cada uno con producto (UUID), cantidad mayor que cero y una
  * unidad conocida. Un producto que no es UUID no tiene artículo (`ARTICULO_NO_CONTROLADO`); una unidad desconocida es un identificador malo.
  * `admiteCosto`: solo una entrada por compra o carga inicial declara `costoUnitario` (texto decimal, mayor que cero: `leerCostoDeclarado`);
- * en cualquier otro movimiento un costo mandado es `COSTO_INVALIDO` (el costo de lo que sale lo pone el promedio, no la persona).
+ * en cualquier otro movimiento un costo mandado es `COSTO_INVALIDO` (el costo de lo que sale lo pone el promedio, no la persona). `admiteLotes`: solo una ENTRADA puede traer `lotes` por renglón
+ * (que suman EXACTO su cantidad); en cualquier otro movimiento, `lotes` es un pedido mal formado (nunca se ignoran en silencio).
  */
-export function leerRenglones(valor: unknown, admiteCosto = false): R<readonly RenglonLeido[]> {
+export function leerRenglones(
+  valor: unknown,
+  admiteCosto = false,
+  admiteLotes = false,
+): R<readonly RenglonLeido[]> {
   if (!Array.isArray(valor) || valor.length === 0 || valor.length > MAXIMO_DE_RENGLONES) {
     return err("RENGLONES_INVALIDOS");
   }
@@ -144,7 +155,14 @@ export function leerRenglones(valor: unknown, admiteCosto = false): R<readonly R
       if (!costo.ok) return costo;
       costoUnitario = costo.valor;
     }
-    leidos.push({ productoId, cantidad: cantidad.valor, unidadId, costoUnitario });
+    let lotes: readonly LoteLeido[] | null = null;
+    if (renglon["lotes"] !== undefined) {
+      if (!admiteLotes) return err("RENGLONES_INVALIDOS");
+      const delRenglon = leerLotesDelRenglon(renglon["lotes"], cantidad.valor);
+      if (!delRenglon.ok) return delRenglon;
+      lotes = delRenglon.valor;
+    }
+    leidos.push({ productoId, cantidad: cantidad.valor, unidadId, costoUnitario, lotes });
   }
   return ok(leidos);
 }
@@ -159,9 +177,16 @@ export const renglonesDeHuella = (leidos: readonly RenglonLeido[]) =>
     ] as const;
     // El costo entra a la huella SOLO si se declaró: mismo pedido con otro costo es otro pedido (`CLAVE_REUTILIZADA`), y un pedido sin costo
     // conserva la huella de siempre.
-    return r.costoUnitario === null
-      ? base
-      : ([...base, precioUnitarioATexto(r.costoUnitario)] as const);
+    const conCosto =
+      r.costoUnitario === null ? base : ([...base, precioUnitarioATexto(r.costoUnitario)] as const);
+    // Los lotes entran SOLO si el renglón los trae, como un último elemento (texto canónico): un renglón sin lotes conserva byte a byte la huella de siempre, así el reintento de un pedido viejo con la misma clave sigue siendo
+    // una repetición (no `CLAVE_REUTILIZADA`). Sin costo, el lugar del costo va `null` para que el texto de los lotes no se confunda con un costo.
+    return r.lotes === null
+      ? conCosto
+      : ([
+          ...(r.costoUnitario === null ? [...base, null] : conCosto),
+          lotesParaLaHuella(r.lotes),
+        ] as const);
   });
 
 /**
@@ -207,11 +232,27 @@ export async function resolverRenglones(
     if (r.costoUnitario !== null && r.unidadId !== articulo.unidadDeStockId) {
       return err("COSTO_INVALIDO");
     }
+    // Cada lote se lleva a la unidad de stock con la misma conversión exacta que el renglón: como la conversión es lineal y exacta, lo que suman los lotes sigue siendo la cantidad del renglón.
+    let lotes: LoteResuelto[] | null = null;
+    if (r.lotes !== null) {
+      lotes = [];
+      for (const lote of r.lotes) {
+        const delLote = aUnidadDeStock(lote.cantidad, r.unidadId, articulo);
+        if (!delLote.ok) return delLote;
+        lotes.push({
+          codigo: lote.codigo,
+          fechaDeVencimiento: lote.fechaDeVencimiento,
+          fechaDeElaboracion: lote.fechaDeElaboracion,
+          cantidad: cantidadConSignoATexto(cantidadConSignoDesdeCantidad(delLote.valor)),
+        });
+      }
+    }
     resueltos.push({
       productoId: r.productoId,
       articuloId: articulo.id,
       cantidad: cantidadConSignoDesdeCantidad(convertida.valor),
       costoUnitario: r.costoUnitario,
+      lotes,
     });
   }
   return ok(resueltos);
@@ -292,4 +333,46 @@ export function traducirMovimiento<T>(resultado: R<T>): R<T> {
     }
   }
   return traducir(resultado);
+}
+
+/**
+ * P-8 (aviso, no bloqueo): ¿hay que avisar «este depósito ya tiene existencia» antes de registrar esta entrada? Solo la `CARGA_INICIAL`, y solo si la persona no confirmó (`confirmaExistenciaPrevia`). Es una lectura
+ * sin bloqueo dentro de la transacción del comando, después de detectar la repetición: repetir la misma clave nunca avisa.
+ */
+export async function hayQueAvisarLaCarga(
+  tx: Pick<TxDeStock, "movimientosDeStock">,
+  contexto: Pick<ContextoOperativo, "empresaId">,
+  pedido: Readonly<{ motivo: string; confirmaExistenciaPrevia?: boolean | undefined }>,
+  depositoId: string,
+): Promise<boolean> {
+  return (
+    pedido.motivo === MOTIVO_DE_CARGA_INICIAL &&
+    pedido.confirmaExistenciaPrevia !== true &&
+    (await tx.movimientosDeStock.conExistenciaEnElDeposito(contexto.empresaId, depositoId))
+  );
+}
+
+/**
+ * Los lotes que trae una ENTRADA manual (STK-E2a, DEC-STK-006): solo si algún renglón los trae. Cada artículo con lotes tiene que llevar control por lote ACTIVO (`LOTES_SIN_CONTROL`: nunca se ignoran en silencio) y
+ * aparecer UNA sola vez en el pedido (los lotes se reparten por depósito y artículo: dos renglones del mismo artículo serían ambiguos, `RENGLONES_INVALIDOS`). Que los lotes sumen el renglón, que el
+ * vencimiento exista y no haya pasado, y la identidad del lote las resuelve `asignarLotesDelLibro` dentro de la misma transacción del movimiento. Sin lotes en ningún renglón no devuelve nada: la entrada sigue como siempre.
+ */
+export async function lotesDeLaEntrada(
+  tx: TxDeStock,
+  contexto: ContextoOperativo,
+  depositoId: string,
+  resueltos: readonly Readonly<{ articuloId: string; lotes: readonly LoteResuelto[] | null }>[],
+): Promise<R<LotesDelPedido | undefined>> {
+  const conLotes = resueltos.filter((r) => r.lotes !== null);
+  if (conLotes.length === 0) return ok(undefined);
+  const articulos = new Set(conLotes.map((r) => r.articuloId));
+  const apariciones = resueltos.filter((r) => articulos.has(r.articuloId)).length;
+  if (apariciones !== articulos.size) return err("RENGLONES_INVALIDOS");
+  const controles = await tx.lotesDeStock.controlesDe(contexto.empresaId, [...articulos]);
+  const entradas = new Map<string, readonly LoteDeEntrada[]>();
+  for (const r of conLotes) {
+    if (controles.get(r.articuloId)?.activo !== true) return err("LOTES_SIN_CONTROL");
+    entradas.set(llaveDeSaldo(depositoId, r.articuloId), r.lotes ?? []);
+  }
+  return ok({ entradas, exigirMismasFechas: true });
 }

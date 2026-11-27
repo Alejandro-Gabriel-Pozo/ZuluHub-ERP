@@ -1,5 +1,6 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../../src/capacidades/permisos/empresa";
 import { ROLES_DE_EMPRESA } from "../../src/capacidades/permisos/roles";
 import {
   personaId,
@@ -57,6 +58,7 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     const persona = await miembro(empresa, rol);
     expect(await delActor(empresa, persona)).toEqual({
       rol,
+      acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA)[rol]],
       modulosActivados: [],
       modulosHabilitados: [],
     });
@@ -68,6 +70,7 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
       const persona = await miembro(empresa, rol === "GERENTE" ? "OPERADOR" : rol, false);
       expect(await delActor(empresa, persona)).toEqual({
         rol: null,
+        acciones: [],
         modulosActivados: [],
         modulosHabilitados: [],
       });
@@ -80,6 +83,7 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     const ajena = personaId((await crearPersonaDeBase(dueno)).id);
     expect(await delActor(empresa, ajena)).toEqual({
       rol: null,
+      acciones: [],
       modulosActivados: [],
       modulosHabilitados: [],
     });
@@ -90,6 +94,7 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     await miembro(empresa, "GERENTE");
     expect(await delActor(empresa, null)).toEqual({
       rol: null,
+      acciones: [],
       modulosActivados: [],
       modulosHabilitados: [],
     });
@@ -101,11 +106,13 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     const gerenteDeOtra = await miembro(otra, "GERENTE");
     expect(await delActor(empresa, gerenteDeOtra)).toEqual({
       rol: null,
+      acciones: [],
       modulosActivados: [],
       modulosHabilitados: [],
     });
     expect(await delActor(otra, gerenteDeOtra)).toEqual({
       rol: "GERENTE",
+      acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA).GERENTE],
       modulosActivados: [],
       modulosHabilitados: [],
     });
@@ -144,6 +151,7 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
     await dueno.query("update persona set activo_global = false where id = $1", [gerente]);
     expect(await delActor(empresa, gerente)).toEqual({
       rol: null,
+      acciones: [],
       modulosActivados: [],
       modulosHabilitados: [],
     });
@@ -222,11 +230,16 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
       return [...(rows[0]?.def ?? "").matchAll(/'([A-Z_]+)'/g)].map((m) => m[1] ?? "").sort();
     };
 
-    it.each(["membresia_rol_ck", "invitacion_empresa_rol_ck"])(
-      "%s admite exactamente ROLES_DE_EMPRESA",
-      async (restriccion) => {
-        expect(await rolesDelCheck(restriccion)).toEqual([...ROLES_DE_EMPRESA].sort());
-      },
-    );
+    it("invitacion_empresa_rol_ck admite exactamente ROLES_DE_EMPRESA (nadie se invita directo a un rol propio)", async () => {
+      expect(await rolesDelCheck("invitacion_empresa_rol_ck")).toEqual(
+        [...ROLES_DE_EMPRESA].sort(),
+      );
+    });
+
+    it("membresia_rol_ck admite ROLES_DE_EMPRESA y PROPIO (el rol propio se asigna después, 0097)", async () => {
+      expect(await rolesDelCheck("membresia_rol_ck")).toEqual(
+        [...ROLES_DE_EMPRESA, "PROPIO"].sort(),
+      );
+    });
   });
 });

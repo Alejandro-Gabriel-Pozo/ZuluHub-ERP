@@ -11,6 +11,7 @@ import {
   type EntradaDeAgregarLinea,
   type SalidaDeAgregarLinea,
 } from "../../ventas/publico";
+import { notaDeCocinaDesdeTexto } from "../../../primitivas/texto/nota-de-cocina";
 import { registrarLineaDeComandaEnTx } from "../../comandas/publico";
 import { armarComando, exigirAlcance, exigirUuid } from "./comun";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
@@ -30,13 +31,17 @@ export type EntradaDeTomarPedido = Readonly<{
   /** Lo manda la pantalla: es la clave de idempotencia del alta de la cuenta. */
   cuentaId: string;
   mesaId: string;
-  /** A2c: el departamento del selector (se fija al abrir la cuenta). Ver `EntradaDeAbrirCuenta.departamentoId`. */
+  /** Solo si se nombra uno (la pantalla de la mesa no lo manda: el departamento sale del producto). Ver `EntradaDeAbrirCuenta.departamentoId`. */
   departamentoId?: string | undefined;
 }>;
 export type SalidaDeTomarPedido = Readonly<{ cuentaId: string; yaExistia: boolean }>;
 
 export type EntradaDeAgregarAlPedido = EntradaDeAgregarLinea &
-  Readonly<{ salida?: "AHORA" | "DESPUES" | undefined }>;
+  Readonly<{
+    salida?: "AHORA" | "DESPUES" | undefined;
+    /** La nota libre para la cocina («sin cebolla», SAL-G); no cambia precio, stock ni ticket. Vacía o ausente = sin nota. */
+    nota?: string | undefined;
+  }>;
 
 export type EntradaDeLiberarMesa = Readonly<{ cuentaId: string }>;
 export type SalidaDeLiberarMesa = Readonly<{ yaEstabaLibre: boolean }>;
@@ -114,8 +119,12 @@ async function agregar(
   if (!alcance.ok) return alcance;
   const usable = exigirCuentaUsable(await claseDeCuenta(tx, contexto, cuenta), true);
   if (!usable.ok) return usable;
-  const { salida: _salida, ...paraVentas } = entrada;
+  const { salida: _salida, nota: _nota, ...paraVentas } = entrada;
   void _salida;
+  void _nota;
+  // La nota se valida ANTES de escribir nada (una inválida no deja la línea a medias): vacía = sin nota.
+  const nota = entrada.nota === undefined || entrada.nota.trim() === "" ? undefined : entrada.nota;
+  if (nota !== undefined && !notaDeCocinaDesdeTexto(nota).ok) return err("ENTRADA_INVALIDA");
   const agregada = await agregarLineaEnTx(tx, contexto, persona, paraVentas, {
     stock: dependencias.stock,
   });
@@ -124,6 +133,7 @@ async function agregar(
     cuentaId: entrada.cuentaId,
     lineaId: entrada.lineaId,
     salida: entrada.salida ?? "AHORA",
+    nota,
   });
   if (!comanda.ok) return comanda;
   return agregada;

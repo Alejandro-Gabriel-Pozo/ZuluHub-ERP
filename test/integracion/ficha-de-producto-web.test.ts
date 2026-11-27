@@ -130,7 +130,9 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
       claseDeUso: "VENDIBLE",
       unidadBaseId: "UNIDAD",
       seVende: true,
+      seCompra: false,
       admiteControlDeStock: false,
+      admiteStockPropio: true,
       nombreDeCocina: "MILA",
       codigo: "MIL-1",
       codigoDeBarras: null,
@@ -140,6 +142,23 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
       secciones: [{ id: seccionId, nombre: "Minutas" }],
     });
     expect(Object.keys(f)).not.toContain("descripcionEnCarta");
+  });
+
+  it("la ficha dice si la clase se compra: sí para materia prima, insumo y reventa; no para lo elaborado y lo vendible", async () => {
+    for (const [claseDeUso, seCompra] of [
+      ["MATERIA_PRIMA", true],
+      ["INSUMO", true],
+      ["REVENTA", true],
+      ["ELABORADO", false],
+      ["VENDIBLE", false],
+    ] as const) {
+      const id = await nuevoProducto({
+        claseDeUso,
+        alicuota: claseDeUso === "REVENTA" || claseDeUso === "VENDIBLE" ? "21" : undefined,
+      });
+      const f = await ficha(id, e.gerente);
+      expect(f, claseDeUso).toMatchObject({ seCompra });
+    }
   });
 
   it("guardar escribe lo editado, sube la versión una vez y audita solo lo que cambió; la descripción se conserva", async () => {

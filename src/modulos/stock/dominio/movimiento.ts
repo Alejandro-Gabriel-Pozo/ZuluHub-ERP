@@ -1,5 +1,8 @@
 import { cantidadDesdeTexto, type Cantidad } from "../../../primitivas/cantidad/cantidad";
-import type { CantidadConSigno } from "../../../primitivas/cantidad/con-signo";
+import {
+  cantidadConSignoDesdeTexto,
+  type CantidadConSigno,
+} from "../../../primitivas/cantidad/con-signo";
 import { formatearDecimalFijo } from "../../../primitivas/cantidad/decimal-fijo";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 
@@ -31,12 +34,25 @@ export const DECIMALES_DE_CANTIDAD = UNIDADES_POR_ENTERO.toString().length - 1;
 export const cantidadDeUnidades = (unidades: bigint): Cantidad =>
   cantidadDesdeTexto(formatearDecimalFijo(unidades, DECIMALES_DE_CANTIDAD));
 
+/** Una cantidad en texto decimal con hasta 4 decimales, y mayor que cero (o también cero con `conCero`); si no, `CANTIDAD_INVALIDA`. */
+export function leerCantidad(
+  texto: unknown,
+  conCero = false,
+): Resultado<Cantidad, "CANTIDAD_INVALIDA"> {
+  if (typeof texto !== "string") return err("CANTIDAD_INVALIDA");
+  const leida = cantidadConSignoDesdeTexto(texto);
+  if (!leida.ok || leida.valor.unidades < (conCero ? 0n : 1n)) return err("CANTIDAD_INVALIDA");
+  return ok(cantidadDeUnidades(leida.valor.unidades));
+}
+
 /** Los orígenes que conoce E5: lo manual (pantallas de stock), el ejemplar de un ticket (ventas) y la recepción (E9, D135). */
 export const ORIGEN_MANUAL = "MANUAL";
 export const ORIGEN_EJEMPLAR_DE_TICKET = "EJEMPLAR_DE_TICKET";
 export const ORIGEN_RECEPCION = "RECEPCION";
 /** E9 N4: la devolución de mercadería al proveedor (una salida por devolución). */
 export const ORIGEN_DEVOLUCION_A_PROVEEDOR = "DEVOLUCION_A_PROVEEDOR";
+/** E9 N3: la corrección de lo recibido de una línea de recepción separada (una entrada o una salida por corrección). */
+export const ORIGEN_CORRECCION_DE_RECEPCION = "CORRECCION_DE_RECEPCION";
 /** E6: la orden de producción (consumo de ingredientes y producto obtenido). */
 export const ORIGEN_TRANSFORMACION = "TRANSFORMACION";
 

@@ -29,6 +29,10 @@ export type TxDeLecturaDeStock = Pick<
 export type OrigenDeVenta = Readonly<{ tipo: "EJEMPLAR_DE_TICKET"; id: string }>;
 export type OrigenDeRecepcion = Readonly<{ tipo: "RECEPCION"; id: string }>;
 export type OrigenDeDevolucion = Readonly<{ tipo: "DEVOLUCION_A_PROVEEDOR"; id: string }>;
+export type OrigenDeCorreccionDeRecepcion = Readonly<{
+  tipo: "CORRECCION_DE_RECEPCION";
+  id: string;
+}>;
 
 export type OpcionVendida = Readonly<{ versionDeOpcionId: string }>;
 
@@ -129,6 +133,27 @@ export type SalidaDeSalidaPorOrigen = Readonly<{
   excepciones: readonly DetalleDeNegativo[];
   /** Los renglones del movimiento, para que quien devuelve los enlace con sus líneas. */
   renglones: readonly Readonly<{ numero: number; depositoId: string; articuloId: string }>[];
+}>;
+/** La corrección de lo recibido de una recepción separada (E9 N3): una entrada (recibieron más) o una salida (recibieron menos) por corrección, por el puerto de compras. */
+export type EntradaDeCorreccionDeRecepcion = Readonly<{
+  /** UUID del pedido (idempotencia secundaria: la identidad es el origen, la corrección). */
+  clave: string;
+  origen: OrigenDeCorreccionDeRecepcion;
+  accion: ClaveAccion;
+  /** El depósito donde entró lo recibido (de uso normal): la diferencia entra o sale ahí. */
+  depositoId: string;
+  sentido: "ENTRADA" | "SALIDA";
+  hechoEn?: Date | undefined;
+  /** Un renglón con la diferencia; en la entrada puede declarar el costo de la línea. */
+  renglones: readonly RenglonPedido[];
+  /** `["stock.existencia_negativa"]` cuando quien corrige confirmó que la salida va a dejar la existencia en negativo (nivel `AVISAR`). */
+  confirmaciones?: readonly string[] | undefined;
+}>;
+export type SalidaDeCorreccionDeRecepcion = Readonly<{
+  movimientoId: string;
+  /** `true`: esa corrección ya tenía su movimiento (el primer hecho manda): no se escribió ni se auditó nada. */
+  yaExistia: boolean;
+  excepciones: readonly DetalleDeNegativo[];
 }>;
 export type EntradaDeAnulacionPorOrigen = Readonly<{
   origen: OrigenDeDevolucion;

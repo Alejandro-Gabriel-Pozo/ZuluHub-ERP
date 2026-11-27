@@ -76,6 +76,8 @@ export type VidrieraPublicada = Readonly<{
    */
   mensajeDePortada: string | null;
   identidad: IdentidadPublicada;
+  /** Las cuentas del proveedor de imágenes que la empresa de la carta declaró y tiene activas (0102): con ellas se valida el logo al traerlo. */
+  cuentasDeImagen: readonly string[];
   /**
    * Perilla `letra_base` (D10): `NORMAL` (18 px) o `GRANDE` (≈ 22 px). El comensal parte de este valor y
    * el control «Letra» se suma encima; no hay otra forma de fijar un tamaño.
@@ -84,10 +86,27 @@ export type VidrieraPublicada = Readonly<{
   secciones: readonly SeccionPublicada[];
 }>;
 
+/** Una carta en la lista de la raíz de un host dedicado: lo mismo que ya muestra su cabecera, y la dirección sale de su código. */
+export type CartaDeLaLista = Readonly<{
+  codigo: string;
+  nombre: string;
+  rubro: string | null;
+  lugar: string | null;
+}>;
+
+/** Cuántas cartas como máximo trae la lista de la raíz (un local por carta; más de esto no es una lista que se lea). UN solo lugar. */
+export const TOPE_DE_CARTAS_DE_LA_RAIZ = 20;
+
 export interface VidrieraPublica {
   /**
    * `host` es el alcance de la puerta resuelta (S2, H-DOM-1), nunca un dato del cliente: la marca y el dueño del host. Si el dueño es una EMPRESA (host dedicado),
    * solo se sirve la carta de ESA empresa; si es la marca (host compartido), la de cualquiera de sus empresas.
    */
   porCodigo(host: AlcanceDelHost, codigo: string): Promise<VidrieraPublicada | null>;
+  /**
+   * Las cartas que se sirven en la raíz del host (0096): SOLO si el dueño del host es una EMPRESA (host dedicado), las suyas en línea y que de verdad se sirven (cada una se confirma con
+   * la misma lectura por código); si el dueño es la marca (host compartido), SIEMPRE vacío: el host compartido no sirve para recorrer cartas ajenas. Ordenadas por nombre, hasta
+   * `TOPE_DE_CARTAS_DE_LA_RAIZ`. Un fallo de la base se lanza, nunca se disfraza de lista vacía.
+   */
+  listarDelHost(host: AlcanceDelHost): Promise<readonly CartaDeLaLista[]>;
 }

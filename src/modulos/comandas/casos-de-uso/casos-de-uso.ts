@@ -2,6 +2,7 @@ import { armarAnularItemEnviado, armarCambiarSalida, armarQuitarSinEnviar } from
 import type { DependenciasDeComandas } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarEnviarACocina, armarPedirQueSalga } from "./envios";
+import { armarCambiarNota } from "./notas";
 import {
   armarDeclararResultadoDeImpresion,
   armarSolicitarCopia,
@@ -24,6 +25,7 @@ export function crearCasosDeUsoDeComandas(dependencias: DependenciasDeComandas) 
     anularItemEnviado: armarAnularItemEnviado(dependencias),
     quitarSinEnviar: armarQuitarSinEnviar(dependencias),
     cambiarSalida: armarCambiarSalida(dependencias),
+    cambiarNota: armarCambiarNota(dependencias),
     registrarImpresora: armarRegistrarImpresora(dependencias),
     editarImpresora: armarEditarImpresora(dependencias),
     desactivarImpresora: armarDesactivarImpresora(dependencias),

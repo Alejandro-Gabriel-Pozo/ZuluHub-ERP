@@ -21,13 +21,14 @@ import { PERMISOS_DE_CIERRE } from "./permisos-de-cierre";
 import { PERMISOS_DE_CLIENTES } from "./permisos-de-clientes";
 import { PERMISOS_DE_COMANDAS } from "./permisos-de-comandas";
 import { PERMISOS_DE_COMPRAS } from "./permisos-de-compras";
+import { PERMISOS_DE_CUENTA_CORRIENTE } from "./permisos-de-cuenta_corriente";
 import { PERMISOS_DE_FACTURACION } from "./permisos-de-facturacion";
 import { PERMISOS_DE_PRODUCCION } from "./permisos-de-produccion";
 import { PERMISOS_DE_SALON } from "./permisos-de-salon";
 import { PERMISOS_DE_STOCK } from "./permisos-de-stock";
 import { PERMISOS_DE_VENTAS } from "./permisos-de-ventas";
 import { PERMISOS_DE_VIDRIERA } from "./permisos-de-vidriera";
-import type { RolDeEmpresa } from "./roles";
+import type { RolDeEmpresa, RolDeLaMembresia as Rol } from "./roles";
 
 /**
  * Qué puede hacer cada rol dentro de una empresa. Es una TABLA DE DATOS en el código (roles fijos
@@ -57,10 +58,11 @@ export const PERMISOS_DE_EMPRESA = {
   ...PERMISOS_DE_SALON,
   ...PERMISOS_DE_CLIENTES,
   ...PERMISOS_DE_COMPRAS,
+  ...PERMISOS_DE_CUENTA_CORRIENTE,
   ...PERMISOS_DE_PRODUCCION,
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
-export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;
+export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad, Rol>;
 
 /** El catálogo y la matriz reales, tal como la composición se los pasa a los casos de uso. */
 export const REGLAS_DE_EMPRESA: ReglasDeEmpresa = {

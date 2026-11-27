@@ -5,6 +5,7 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
 import { CLAVE_DE_CLASE, RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
+import { cantidadConUnidad } from "../produccion/modelo-de-ordenes";
 import { RUTA_DE_SECCIONES } from "./modelo-de-secciones";
 
 /**
@@ -40,6 +41,8 @@ export type FichaDeLaPantalla = Readonly<{
   seVende: boolean;
   /** Si la ficha puede ofrecer el tilde «Se controla el stock» (lo calcula la composición con la regla del módulo). */
   admiteControlDeStock: boolean;
+  /** Si la clase es de stock propio (elaborado o vendible): el tilde se llama «Se produce en tanda» y su aviso es el de TP-9. */
+  admiteStockPropio: boolean;
   nombreDeCocina: string | null;
   codigo: string | null;
   codigoDeBarras: string | null;
@@ -159,12 +162,27 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
       ? { href: RUTA_DE_SECCIONES, texto: texto(d, "catalogo.seccion.titulo") }
       : null,
     etiquetaDelControlDeStock: f.admiteControlDeStock
-      ? texto(d, "catalogo.dato.se_controla_el_stock")
+      ? texto(
+          d,
+          f.admiteStockPropio
+            ? "produccion.elaborado.se_produce_en_tanda"
+            : "catalogo.dato.se_controla_el_stock",
+        )
       : null,
     confirmacionDelControlDeStock: f.admiteControlDeStock
       ? {
-          titulo: texto(d, "catalogo.dato.se_controla_el_stock"),
-          activar: texto(d, "catalogo.control_de_stock.activar"),
+          titulo: texto(
+            d,
+            f.admiteStockPropio
+              ? "produccion.elaborado.se_produce_en_tanda"
+              : "catalogo.dato.se_controla_el_stock",
+          ),
+          activar: texto(
+            d,
+            f.admiteStockPropio
+              ? "produccion.elaborado.aviso_al_encender"
+              : "catalogo.control_de_stock.activar",
+          ),
           apagar: texto(d, "catalogo.control_de_stock.apagar"),
           confirmar: texto(d, "ventas.venta.validar"),
           cancelar: texto(d, "catalogo.accion.cancelar"),
@@ -174,4 +192,17 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
     textoDeElegir: texto(d, "catalogo.dato.sin_elegir"),
     guardar: texto(d, "catalogo.accion.guardar"),
   };
+}
+
+/** La franja de stock propio (TP-4 y TP-5): con el control encendido, la existencia; apagado, que descuenta sus ingredientes. Sin existencia legible, `null` (nunca un número inventado). */
+export function armarLaFranjaDeStockPropio(
+  controlado: boolean,
+  existencia: Readonly<{ existencia: string; unidadId: string }> | null,
+  d: DiccionarioResuelto = {},
+): string | null {
+  if (!controlado) return texto(d, "produccion.elaborado.no_tiene_stock_propio");
+  if (existencia === null) return null;
+  return texto(d, "produccion.elaborado.tiene_stock_propio", {
+    existencia: cantidadConUnidad(existencia.existencia, existencia.unidadId, d),
+  });
 }

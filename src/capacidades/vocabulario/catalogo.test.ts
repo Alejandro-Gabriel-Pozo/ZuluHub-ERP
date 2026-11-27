@@ -385,7 +385,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
     expect(Object.keys(de("clientes"))).toHaveLength(32);
-    expect(Object.keys(de("compras"))).toHaveLength(151);
+    expect(Object.keys(de("compras"))).toHaveLength(253);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
@@ -395,6 +395,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expect(de("compras")).toMatchObject({
       "compras.compra.comprar_y_recibir": "Comprar y recibir",
       "compras.compra.costo_por_unidad_de_stock": "Costo por unidad de stock",
+      "compras.factura.tomar_costo": "Tomar el costo de la factura",
       "compras.recepcion.validar_recepcion": "Confirmar recepción",
       "compras.error.remito_ya_registrado": "Ese remito ya está cargado",
       "compras.error.comprobante_ya_registrado": "Esa factura ya está cargada",
@@ -473,7 +474,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     });
   });
 
-  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, y los seis del conteo con hora el 14/11/2026), y ninguno más", () => {
+  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, los seis del conteo con hora el 14/11/2026 y los tres errores de gestión de depósitos el 25/11/2026, los cuatro textos del libro de Movimientos de DEC-1022 los tres de los formularios de movimientos de DEC-STK-001 los siete de la pestaña Lotes de DEC-STK-002 y los siete de la carga inicial de DEC-STK-003), y ninguno más", () => {
     expect(
       Object.fromEntries(
         claves
@@ -537,7 +538,41 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.error.cantidad_invalida": "La cantidad tiene que ser mayor que cero",
       "stock.error.conteo_en_curso": "Ya hay un conteo abierto en este depósito",
       "stock.error.nombre_duplicado": "Ya existe un depósito con ese nombre",
+      "stock.error.deposito_con_existencia": "El depósito tiene existencia",
+      "stock.error.es_el_de_venta": "No se puede desactivar el depósito de venta",
+      "stock.error.deposito_desactualizado":
+        "Otra persona modificó este depósito. Actualizá la pantalla",
       "stock.error.sin_permiso": "Esta acción no está permitida",
+      "stock.clase.transferencia": "Transferencia",
+      "stock.clase.ajuste": "Ajuste",
+      "stock.clase.anulacion": "Anulación",
+      "stock.estado.anulado": "Anulado",
+      "stock.carga.valor": "Valor",
+      "stock.carga.agregar_articulo": "Agregar artículo",
+      "stock.carga.resumen": "{cantidad} artículos por {total}",
+      "stock.carga.es_de_hoy": "La carga queda con la fecha de hoy",
+      "stock.carga.revisar_costo": "Revisá el costo",
+      "stock.carga.ya_hay_existencia": "Este depósito ya tiene existencia. ¿Registrar igual?",
+      "stock.carga.sin_costo": "{n} sin costo: no entran al promedio",
+      "stock.lotes.controlar": "Controlar por lote",
+      "stock.lotes.dejar_de_controlar": "Dejar de controlar",
+      "stock.lotes.reasignar": "Reasignar",
+      "stock.lotes.corregir": "Corregir",
+      "stock.lotes.fecha_de_vencimiento": "Fecha de vencimiento",
+      "stock.error.vencimiento_pasado": "La fecha de vencimiento ya pasó",
+      "stock.error.lote_con_otra_fecha":
+        "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
+      "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
+      "stock.lotes.pantalla": "Lotes",
+      "stock.lotes.vence": "Vence",
+      "stock.lotes.sin_asignar": "Sin asignar",
+      "stock.lotes.vencimientos": "Vencimientos",
+      "stock.lotes.vencido": "Vencido",
+      "stock.lotes.vence_hoy": "Vence hoy",
+      "stock.lotes.dias": "Vence en los próximos {dias} días",
+      "stock.accion.articulo": "Artículo",
+      "stock.ajuste.sobra": "Sobra",
+      "stock.ajuste.falta": "Falta",
     });
   });
 

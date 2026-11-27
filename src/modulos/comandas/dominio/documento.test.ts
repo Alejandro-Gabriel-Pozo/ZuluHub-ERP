@@ -204,3 +204,71 @@ describe("documentoDeAnulacion", () => {
     ).toBe(false);
   });
 });
+
+describe("la nota libre en el papel (SAL-G)", () => {
+  const envio: EnvioParaElPapel = {
+    numero: 1,
+    tipo: "ENVIO",
+    rotulo: "Mesa 5",
+    enviadoEn: "26/11/2026 20:15",
+    tomadoPor: "Ana",
+  };
+  const renglon = (nota: string | null | undefined): RenglonDelPapel => ({
+    cantidad: "2",
+    unidadDeVenta: "UNIDAD",
+    paso: "1",
+    nombreDeCocina: "Milanesa",
+    detalle: ["Grande"],
+    rol: "SALE",
+    ...(nota === undefined ? {} : { nota }),
+  });
+  const textos = (nota: string | null | undefined, ancho: 58 | 80 = 80) => {
+    const r = documentoDeComanda(envio, [renglon(nota)], { copia: false, ancho });
+    if (!r.ok) throw new Error("no armó el papel");
+    return r.valor.lineas.map((l) => l.texto);
+  };
+
+  it("sale bajo el plato y su detalle, sangrada; sin nota (o nula) el papel es el de antes", () => {
+    const t = textos("sin cebolla");
+    const i = t.indexOf("2 Milanesa");
+    expect(t[i + 1]).toContain("Grande");
+    expect(t[i + 2]).toContain("sin cebolla");
+    expect(textos(undefined)).toEqual(textos(null));
+    expect(textos(null).some((x) => x.includes("sin cebolla"))).toBe(false);
+  });
+
+  it("una nota larga se envuelve en el papel de 58 mm sin perder texto y nunca lleva precios", () => {
+    const larga =
+      "sin cebolla ni morrón y bien cocida por favor, gracias, de parte de la mesa cinco";
+    const t = textos(larga, 58);
+    expect(t.join(" ").replace(/\s+/g, " ")).toContain("sin cebolla ni morrón");
+    expect(t.join(" ").replace(/\s+/g, " ")).toContain("de parte de la mesa cinco");
+    expect(t.join("\n")).not.toMatch(/\$/);
+  });
+
+  it("el aviso de anulación repite la nota del plato", () => {
+    const aviso: AvisoParaElPapel = {
+      rotulo: "Mesa 5",
+      envioNumero: 1,
+      enviadoEn: "26/11/2026 20:15",
+      anuladoPor: "Ana",
+      cantidadAnulada: "1",
+      quedan: "1",
+      unidadDeVenta: "UNIDAD",
+      paso: "1",
+      nombreDeCocina: "Milanesa",
+      detalle: [],
+      nota: "sin cebolla",
+      motivo: "Se cayó",
+    };
+    const con = documentoDeAnulacion(aviso, { copia: false, ancho: 80 });
+    const sin = documentoDeAnulacion({ ...aviso, nota: null }, { copia: false, ancho: 80 });
+    if (!con.ok || !sin.ok) throw new Error("no armó el aviso");
+    const textoCon = con.valor.lineas.map((l) => l.texto);
+    expect(textoCon.some((x) => x.includes("sin cebolla"))).toBe(true);
+    expect(textoCon.indexOf("1 Milanesa")).toBeLessThan(
+      textoCon.findIndex((x) => x.includes("sin cebolla")),
+    );
+    expect(sin.valor.lineas.some((l) => l.texto.includes("sin cebolla"))).toBe(false);
+  });
+});

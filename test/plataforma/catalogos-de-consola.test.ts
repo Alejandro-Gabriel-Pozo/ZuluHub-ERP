@@ -246,6 +246,14 @@ describe("catalogoDePerillas", () => {
         modulo: "administracion",
       },
       {
+        perilla: "facturar_antes_de_cobrar",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "ventas",
+      },
+      {
         perilla: "lotes",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -268,6 +276,14 @@ describe("catalogoDePerillas", () => {
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
         requiere: null,
         modulo: "compras",
+      },
+      {
+        perilla: "roles_propios_por_empresa",
+        tipo: "LIMITE",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "LIMITE", limite: "ILIMITADO" },
+        requiere: null,
+        modulo: "administracion",
       },
       {
         perilla: "salon",

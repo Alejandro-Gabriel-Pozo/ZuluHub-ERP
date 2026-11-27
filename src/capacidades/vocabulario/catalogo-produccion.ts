@@ -4,8 +4,7 @@
  * (línea 245, una fila por grupo: decisiones D85, D94 y D95), y `receta.html`, sección «Textos aprobados» (línea 240: decisiones D74, D77, D82 y
  * D99). Lo que esas listas no traen no se agrega acá: los errores sin texto aprobado (`CICLO_EN_LA_RECETA`, `RECETA_DEMASIADO_ANIDADA`,
  * `PRODUCTO_SIN_RECETA`, `ORDEN_CANCELADA`, `PRODUCTO_YA_USADO`, `CLAVE_REUTILIZADA`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico
- * que ya existe (D175), el encabezado «Pasos» no tiene texto aprobado (la pantalla no los
- * rotula) y «La central cambió» / «Receta propia» quedan fuera hasta que se haga la receta por sucursal (P-3, decidida «después»).
+ * que ya existe (D175), y «La central cambió» / «Receta propia» quedan fuera hasta que se haga la receta por sucursal (P-3, decidida «después»).
  */
 export const TEXTOS_DE_PRODUCCION = {
   // produccion.html «Textos aprobados», fila «Lista y orden».
@@ -44,6 +43,34 @@ export const TEXTOS_DE_PRODUCCION = {
   // produccion.html, fila «Elaborado» (decisión 94).
   "produccion.elaborado.se_produce_en_tanda": { porDefecto: "Se produce en tanda" },
   "produccion.elaborado.se_arma_al_usarlo": { porDefecto: "Se arma al usarlo" },
+  // La franja y el aviso del elaborado (PRO-A): aprobados por el dueño el 25/11/2026 con esta redacción exacta (respuesta relevada por el orquestador; `textos-de-produccion-dia-uno-2026-11-25.md`, TP-4, TP-5 y
+  // TP-9; DEC-1370 los resume). Cambian lo que se entiende del stock: con stock propio la venta deja de descontar los ingredientes (decisión previa 94).
+  "produccion.elaborado.tiene_stock_propio": {
+    porDefecto: "Tiene stock propio: {existencia}",
+    marcadores: ["existencia"],
+  },
+  "produccion.elaborado.no_tiene_stock_propio": {
+    porDefecto: "No tiene stock propio: descuenta sus ingredientes.",
+  },
+  "produccion.elaborado.aviso_al_encender": {
+    largoMaximo: 160,
+    porDefecto:
+      "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
+  },
+  // Condición del dueño (26/11/2026) sobre DEC-PRO-001; texto aceptado por delegación (fila 173), DEC-PRO-004.
+  "produccion.elaborado.aviso_cuentas_abiertas": {
+    largoMaximo: 160,
+    porDefecto:
+      "Hay cuentas abiertas con este plato. Al cerrarlas se descontará el plato y no sus ingredientes. ¿Confirmás?",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-de-produccion.ts",
+        nombre: "CLAVES_DE_ERRORES_DE_PRODUCCION",
+      },
+    ],
+    fuente: { decision: "DEC-PRO-004" },
+  },
 
   // Textos de la maqueta aprobada `produccion.html` (09/11/2026) que no tenían fila propia en «Textos aprobados»; aceptados por el orquestador por delegación del dueño (DDD filas 173 y 174, DEC-0555).
   // Fuente de cada uno: la línea de `10-ux-ui/prototipos-gastronomia/produccion.html` de Pedernal-docs.
@@ -86,6 +113,22 @@ export const TEXTOS_DE_PRODUCCION = {
   },
   "receta.edicion.versiones": { porDefecto: "Versiones" },
   "receta.edicion.comparar": { porDefecto: "Comparar" },
+  // Pantalla de Recetas, «ver» (REC-A): textos aprobados por el dueño y listados en `recetas-pantalla.md` §5 (repositorio de documentos): «Neto» el 13/11/2026 (DDD:102), «Rinde», «Pasos» y «Costo de la comida»
+  // el 14/11/2026 (DDD:119 y 123) y «Todas» el 15/11/2026 (T24 a T27, DDD:165). «Sin costo» reusa `stock.accion.sin_costo`; «Sin resultados», `catalogo.lista.sin_resultados`.
+  "receta.ficha.neto": { porDefecto: "Neto" },
+  "receta.ficha.rinde": { porDefecto: "Rinde" },
+  "receta.ficha.pasos": { porDefecto: "Pasos" },
+  "receta.ficha.costo_de_la_comida": { porDefecto: "Costo de la comida" },
+  "receta.lista.todas": { porDefecto: "Todas" },
+  // Pantalla de Recetas, guardar (REC-B): «Costo antes», «Costo ahora» y «Diferencia» (aprobados el 14/11/2026, DDD:119 y 123) y «Volver a editar» (15/11/2026, T24 a T27, DDD:165), de `recetas-pantalla.md` §5.
+  // «Guardar», «Quitar», «Producto», «Sin elegir», «Agregar» y «Cancelar» reusan los textos ya aprobados de catálogo y de compras (una regla, un lugar).
+  "receta.edicion.costo_antes": { porDefecto: "Costo antes" },
+  "receta.edicion.costo_ahora": { porDefecto: "Costo ahora" },
+  "receta.edicion.diferencia": { porDefecto: "Diferencia" },
+  "receta.edicion.volver_a_editar": { porDefecto: "Volver a editar" },
+  // «Nueva receta» (TP-16): el patrón aprobado «Nuevo producto», «Nueva compra», «Nueva orden» (`textos-por-aprobar.html:39`, N.° 68 y 278) y la decisión del dueño del 15/11/2026 (DDD:165). Aceptado por
+  // delegación del orquestador (fila 173, DEC-1068); se cambia su porDefecto acá.
+  "receta.lista.nueva_receta": { porDefecto: "Nueva receta" },
   // receta.html, fila «Ficha de cocina» (idea 6, decisión 99).
   "receta.ficha_de_cocina.titulo": { porDefecto: "Ficha de cocina" },
   // El genérico de la pantalla de Recetas (rechazo de guardar). Texto ya aprobado y repetido por módulo (`caja.error.accion_no_permitida`, `catalogo.error.accion_no_permitida`):

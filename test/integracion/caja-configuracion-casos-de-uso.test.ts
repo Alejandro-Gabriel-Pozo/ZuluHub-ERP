@@ -1,12 +1,12 @@
 import { sql } from "kysely";
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, inject, it, onTestFinished, vi } from "vitest";
 import { clavesDe } from "../../src/capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import { TIPOS_DE_MEDIO } from "../../src/modulos/caja/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
-import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
+import { crearBaseAparte, crearEntornoDePrueba, sinConjuntoDeAcciones } from "./entorno";
 import {
   REGLAS_DE_CAJA,
   armarCaja,
@@ -408,13 +408,16 @@ describe.skipIf(base === null)("configuración de caja: casos de uso y consultas
     it("el operador solo opera en las sucursales que tiene asignadas (cajas y cuentas)", async () => {
       const m = await mundo({ rol: "OPERADOR", asignarALaSucursal: true, limiteDeCajas: 5 });
       const otra = await otraSucursalDeCaja(dueno, m.empresa, "Sucursal ajena");
-      const propios = armarCaja(entorno, reglasConOperador);
+      // La prueba da al operador, por SUS reglas, lo que la plantilla real no le da: se decide por esa matriz y no por el conjunto de la base (DEC-0955).
+      const entornoPorMatriz = crearEntornoDeCaja(propia.base, 4, sinConjuntoDeAcciones);
+      onTestFinished(() => entornoPorMatriz.cerrar());
+      const propios = armarCaja(entornoPorMatriz, reglasConOperador);
       // Lo de la sucursal asignada pasa.
-      const propia = await propios.casos.crearCaja(m.ctx(), {
+      const cajaPropia = await propios.casos.crearCaja(m.ctx(), {
         sucursalId: m.sucursal,
         nombre: "Mía",
       });
-      expect(propia).toEqual({ ok: true, valor: { cajaId: cualquierTexto, yaExistia: false } });
+      expect(cajaPropia).toEqual({ ok: true, valor: { cajaId: cualquierTexto, yaExistia: false } });
       const cuentaPropia = await propios.casos.crearCuentaDeCobro(m.ctx(), {
         tipo: "TERMINAL",
         nombre: "Terminal mía",

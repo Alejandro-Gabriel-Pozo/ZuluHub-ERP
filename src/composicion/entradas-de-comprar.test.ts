@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   entradaDeCotizarCompra,
+  entradaDeCotizarFactura,
   entradaDeProductosParaComprar,
   entradaDeRegistrarCompra,
 } from "./entradas-de-comprar";
@@ -63,7 +64,7 @@ describe("entradaDeCotizarCompra", () => {
     precio: "1234.5678",
   };
 
-  it("toma solo los campos declarados, con cantidades y precio como texto, y sin presentación", () => {
+  it("toma solo los campos declarados, con cantidades y precio como texto, y la presentación elegida", () => {
     expect(
       entradaDeCotizarCompra({
         renglones: [{ ...renglon, presentacionId: ID, empresaId: "otra", importe: "1" }],
@@ -75,7 +76,7 @@ describe("entradaDeCotizarCompra", () => {
         renglones: [
           {
             productoId: ID,
-            presentacionId: null,
+            presentacionId: ID,
             unidadDeCompraId: "KILOGRAMO",
             cantidad: "2.5",
             pesoReal: null,
@@ -85,6 +86,28 @@ describe("entradaDeCotizarCompra", () => {
           },
         ],
       },
+    });
+  });
+
+  it("la presentación ausente o nula es «por unidad» (null); el peso real viaja como texto", () => {
+    const sin = entradaDeCotizarCompra({ renglones: [renglon] });
+    expect(sin).toMatchObject({ ok: true, valor: { renglones: [{ presentacionId: null }] } });
+    const nula = entradaDeCotizarCompra({
+      renglones: [{ ...renglon, presentacionId: null, pesoReal: "8.5" }],
+    });
+    expect(nula).toMatchObject({
+      ok: true,
+      valor: { renglones: [{ presentacionId: null, pesoReal: "8.5" }] },
+    });
+  });
+
+  it.each([
+    ["no es un identificador", "no-es-un-id"],
+    ["es un número", 12],
+    ["es vacía", ""],
+  ])("una presentación que %s se rechaza", (_caso, presentacionId) => {
+    expect(entradaDeCotizarCompra({ renglones: [{ ...renglon, presentacionId }] })).toMatchObject({
+      ok: false,
     });
   });
 
@@ -317,5 +340,106 @@ describe("entradaDeRegistrarCompra: la factura («Con factura», Compras PR 7)",
       expect(r).toMatchObject({ ok: true });
       if (r.ok) expect(r.valor.factura).toBeNull();
     }
+  });
+});
+
+describe("entradaDeCotizarCompra y entradaDeRegistrarCompra: más casos de la forma", () => {
+  const ID = "0b0b0b0b-1111-4222-8333-444444444444";
+  const renglon = {
+    productoId: ID,
+    unidadDeCompraId: "KILOGRAMO",
+    cantidad: "2",
+    precioPor: "PRESENTACION",
+    unidadDePrecioId: "KILOGRAMO",
+    precio: "1000",
+  };
+
+  it("el precio por presentación es válido (las dos formas de pagar el precio)", () => {
+    expect(entradaDeCotizarCompra({ renglones: [renglon] })).toMatchObject({
+      ok: true,
+      valor: { renglones: [{ precioPor: "PRESENTACION" }] },
+    });
+  });
+
+  it("varios renglones llegan todos, en el mismo orden; sin renglones es inválido", () => {
+    const otro = { ...renglon, cantidad: "7", precioPor: "UNIDAD" };
+    const r = entradaDeRegistrarCompra({
+      clave: ID,
+      proveedorId: ID,
+      renglones: [renglon, otro],
+    });
+    expect(r).toMatchObject({ ok: true });
+    expect(r.ok && r.valor.renglones.map((x) => x.cantidad)).toEqual(["2", "7"]);
+    expect(entradaDeCotizarCompra({ renglones: [] })).toMatchObject({ ok: false });
+  });
+
+  it("un remito nulo es «sin remito» (no se lee como un remito a medio llenar)", () => {
+    expect(
+      entradaDeRegistrarCompra({ clave: ID, proveedorId: ID, renglones: [renglon], remito: null }),
+    ).toMatchObject({ ok: true, valor: { remito: null } });
+  });
+});
+
+describe("entradaDeCotizarFactura", () => {
+  const linea = { cantidadFacturada: "2000", precioNeto: "1.5", alicuota: "21" };
+  const cotizar = {
+    tipo: "FACTURA_A",
+    lineas: [linea],
+    percepciones: "12.50",
+    totalSegunFactura: "3630.00",
+  };
+
+  it("toma solo lo que entra en la cuenta, todo como texto", () => {
+    expect(entradaDeCotizarFactura(cotizar)).toStrictEqual({
+      ok: true,
+      valor: {
+        tipo: "FACTURA_A",
+        lineas: [{ cantidadFacturada: "2000", precioNeto: "1.5", alicuota: "21" }],
+        percepciones: "12.50",
+        totalSegunFactura: "3630.00",
+      },
+    });
+  });
+
+  it("una línea sin alícuota (B o C) o con alícuota nula es null; percepciones ausentes, nulas o en blanco son «no hay»", () => {
+    for (const percepciones of [undefined, null, "", "   "]) {
+      const r = entradaDeCotizarFactura({
+        ...cotizar,
+        lineas: [
+          { cantidadFacturada: "1", precioNeto: "2" },
+          { ...linea, alicuota: null },
+        ],
+        percepciones,
+      });
+      expect(r).toStrictEqual({
+        ok: true,
+        valor: {
+          tipo: "FACTURA_A",
+          lineas: [
+            { cantidadFacturada: "1", precioNeto: "2", alicuota: null },
+            { cantidadFacturada: "2000", precioNeto: "1.5", alicuota: null },
+          ],
+          percepciones: null,
+          totalSegunFactura: "3630.00",
+        },
+      });
+    }
+  });
+
+  it("varias líneas llegan todas; sin líneas es inválido", () => {
+    const r = entradaDeCotizarFactura({ ...cotizar, lineas: [linea, linea, linea] });
+    expect(r.ok && r.valor.lineas).toHaveLength(3);
+    expect(entradaDeCotizarFactura({ ...cotizar, lineas: [] })).toMatchObject({ ok: false });
+  });
+
+  it("no acepta campos de más: ni el renglón de la factura, ni un pago, ni lo que el navegador invente", () => {
+    expect(
+      entradaDeCotizarFactura({ ...cotizar, lineas: [{ ...linea, renglon: 1 }] }),
+    ).toMatchObject({ ok: false });
+    expect(entradaDeCotizarFactura({ ...cotizar, pago: { medio: "QR" } })).toMatchObject({
+      ok: false,
+    });
+    expect(entradaDeCotizarFactura({ ...cotizar, tipo: "OTRA" })).toMatchObject({ ok: false });
+    expect(entradaDeCotizarFactura({})).toMatchObject({ ok: false });
   });
 });

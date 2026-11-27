@@ -6,6 +6,7 @@ import { FICHA_DE_TIPO_DE_COMPROBANTE } from "../dominio/comprobante";
 import { totalDeCompra } from "../dominio/importe-vigente";
 import { estadoDerivadoDeCompra, type EstadoDeCompra } from "../dominio/niveles";
 import { esUuid } from "../dominio/identificadores";
+import { netoAPagar } from "../dominio/pago";
 import type { LineaDeRecepcion, Recepcion } from "../persistencia/repositorio-de-recepciones";
 import type { FiltroDeCompras } from "../persistencia/repositorio-de-lecturas-de-compras";
 import {
@@ -158,6 +159,8 @@ export type FichaDeCompra = Readonly<{
     tributosTotal: string;
     totalCalculado: string;
     totalSegunFactura: string;
+    /** Lo que hay que pagar: el total menos lo que acreditan sus notas de crédito vigentes (`0.00` si lo acreditan todo). Lo calcula el servidor: la pantalla no hace cuentas. */
+    netoAPagar: string;
     letraNoEsperada: boolean;
     estado: string;
   }> | null;
@@ -182,7 +185,10 @@ export type FichaDeCompra = Readonly<{
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios (sus líneas, en `medios`). */
     medio: string;
+    /** Una línea por medio con lo que pagó (la suma es `importe`), en el orden de la lista de medios. */
+    medios: readonly Readonly<{ medio: string; importe: string }>[];
     importe: string;
     estado: string;
     registradoPor: string;
@@ -213,6 +219,13 @@ export async function fichaDeCompraDentro(
   const factura = await tx.comprobantesDeProveedor.delaRecepcion(contexto.empresaId, recepcion.id);
   const pagos =
     factura === null ? [] : await tx.pagosDeProveedor.deComprobante(contexto.empresaId, factura.id);
+  const mediosDeLosPagos = new Map<
+    string,
+    Awaited<ReturnType<typeof tx.pagosDeProveedor.mediosDe>>
+  >();
+  for (const p of pagos) {
+    mediosDeLosPagos.set(p.id, await tx.pagosDeProveedor.mediosDe(contexto.empresaId, p.id));
+  }
   const { lineas, importes, corregidas } = await importesVigentes(tx, contexto, [recepcion.id]);
   const productos = new Map(
     (
@@ -281,6 +294,11 @@ export async function fichaDeCompraDentro(
             tributosTotal: factura.tributosTotal,
             totalCalculado: factura.totalCalculado,
             totalSegunFactura: factura.totalSegunFactura,
+            netoAPagar:
+              netoAPagar(
+                factura.totalSegunFactura,
+                await tx.notasDeCredito.acreditadoDe(contexto.empresaId, factura.id),
+              ) ?? "0.00",
             letraNoEsperada: factura.letraNoEsperada,
             estado: factura.estado,
           },
@@ -305,6 +323,7 @@ export async function fichaDeCompraDentro(
       id: p.id,
       fechaDePago: p.fechaDePago,
       medio: p.medio,
+      medios: mediosDeLosPagos.get(p.id) ?? [],
       importe: p.importe,
       estado: p.estado,
       registradoPor: p.registradoPor,

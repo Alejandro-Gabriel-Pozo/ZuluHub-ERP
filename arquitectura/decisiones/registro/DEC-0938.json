@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0938",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Un error al recibir se cierra con un registro de corrección (cantidad, causa de lista cerrada y nota opcional), sin reabrir la recepción; no baja de lo conciliado; corrigen gerente y administrador.",
+  "que_cambia": "La recepción separada confirmada admite correcciones: mueve el stock por la diferencia y ajusta lo recibido. Una baja bajo lo conciliado exige anular antes la conciliación. Revertir: dejar de ofrecer la acción; lo corregido queda.",
+  "donde": "corregir-lo-recibido.ts, 0098_correccion_de_lo_recibido.sql, compras-correccion-recibido.test.ts; respuestas del dueño del 25/11/2026 vía el orquestador (preguntas 1 a 4 y motivo)"
+}

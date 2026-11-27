@@ -4,6 +4,8 @@ import { err, ok } from "../primitivas/resultado/resultado";
 import {
   buscarLosProductosParaComprar,
   cotizarLaCompra,
+  cotizarLaFactura,
+  leerElNivelParaComprar,
   registrarLaCompra,
   type DependenciasDeComprarWeb,
   type DependenciasDeRegistrarCompraWeb,
@@ -47,7 +49,7 @@ describe("buscarLosProductosParaComprar", () => {
   it("sin texto pide todo (la consulta pone el tope)", async () => {
     const { d, llamadas } = montar(() => ok([]));
     await buscarLosProductosParaComprar(d, contexto, {});
-    expect(llamadas).toEqual([{}]);
+    expect(llamadas).toStrictEqual([{}]);
   });
 
   it("un texto inválido da lista vacía y ni siquiera consulta", async () => {
@@ -357,5 +359,175 @@ describe("registrarLaCompra", () => {
     const r = await registrarLaCompra(rota.d, contexto, SUCURSAL_DEL_SERVIDOR, pedido);
     expect(r).toMatchObject({ ok: false });
     expect(JSON.stringify(r)).not.toContain("password");
+  });
+});
+
+describe("leerElNivelParaComprar", () => {
+  const montarNivel = (resultado: () => unknown) => {
+    const pedidos: unknown[] = [];
+    const registrados: string[] = [];
+    const d = {
+      consultas: () => ({
+        nivelParaComprar: (c: unknown) => {
+          pedidos.push(c);
+          return Promise.resolve(resultado());
+        },
+      }),
+      respuesta: { registrar: (detalle: string) => registrados.push(detalle) },
+    } as unknown as DependenciasDeComprarWeb;
+    return { d, pedidos, registrados };
+  };
+
+  it.each([true, false])(
+    "devuelve SOLO si la empresa compra «Con factura» (%s)",
+    async (conFactura) => {
+      const { d, pedidos } = montarNivel(() =>
+        ok({ conFactura, nivel: "CON_COMPROBANTE", otro: 1 }),
+      );
+      expect(await leerElNivelParaComprar(d, contexto)).toStrictEqual({
+        ok: true,
+        dato: { conFactura },
+      });
+      expect(pedidos).toStrictEqual([contexto]);
+    },
+  );
+
+  it("el rechazo del guard sale con su código y una excepción sale sin detalle y registrada", async () => {
+    expect(
+      await leerElNivelParaComprar(montarNivel(() => err("SIN_PERMISO")).d, contexto),
+    ).toMatchObject({ ok: false });
+    const falla = montarNivel(() => {
+      throw new Error("se cayó la base: secreto");
+    });
+    const r = await leerElNivelParaComprar(falla.d, contexto);
+    expect(r).toMatchObject({ ok: false });
+    expect(JSON.stringify(r)).not.toContain("secreto");
+    expect(falla.registrados).toHaveLength(1);
+  });
+});
+
+describe("cotizarLaFactura", () => {
+  const cotizar = {
+    tipo: "FACTURA_A",
+    lineas: [{ cantidadFacturada: "2000", precioNeto: "1.5", alicuota: "21" }],
+    totalSegunFactura: "3630.00",
+  };
+  const COTIZADA = {
+    lineas: [{ netoDeLinea: "3000.00", ivaDeLinea: "630.00", sobrante: "x" }],
+    importesPorAlicuota: [{ alicuota: "21", neto: "3000.00", iva: "630.00", sobrante: "x" }],
+    netoGravado: "3000.00",
+    iva: "630.00",
+    tributosTotal: "0.00",
+    totalCalculado: "3630.00",
+    totalSegunFactura: "3630.00",
+    totalCoincide: true,
+    sobrante: "x",
+  };
+  const montarCotizarFactura = (resultado: () => unknown) => {
+    const llamadas: unknown[] = [];
+    const d = {
+      consultas: () => ({
+        cotizarFactura: (_c: unknown, entrada: unknown) => {
+          llamadas.push(entrada);
+          return Promise.resolve(resultado());
+        },
+      }),
+      respuesta: { registrar: () => undefined },
+    } as unknown as DependenciasDeComprarWeb;
+    return { d, llamadas };
+  };
+
+  it("le pasa a la consulta solo lo declarado y devuelve las cuentas del servidor campo por campo, sin lo que sobra", async () => {
+    const { d, llamadas } = montarCotizarFactura(() => ok(COTIZADA));
+    expect(await cotizarLaFactura(d, contexto, { ...cotizar, empresaId: "otra" })).toMatchObject({
+      ok: false,
+    });
+    expect(llamadas).toStrictEqual([]);
+    expect(await cotizarLaFactura(d, contexto, cotizar)).toStrictEqual({
+      ok: true,
+      dato: {
+        lineas: [{ netoDeLinea: "3000.00", ivaDeLinea: "630.00" }],
+        importesPorAlicuota: [{ alicuota: "21", neto: "3000.00", iva: "630.00" }],
+        netoGravado: "3000.00",
+        iva: "630.00",
+        tributosTotal: "0.00",
+        totalCalculado: "3630.00",
+        totalSegunFactura: "3630.00",
+        totalCoincide: true,
+      },
+    });
+    expect(llamadas).toStrictEqual([
+      {
+        tipo: "FACTURA_A",
+        lineas: [{ cantidadFacturada: "2000", precioNeto: "1.5", alicuota: "21" }],
+        percepciones: null,
+        totalSegunFactura: "3630.00",
+      },
+    ]);
+  });
+
+  it("el rechazo de la cuenta sale con su código público", async () => {
+    const { d } = montarCotizarFactura(() => err("PRECIO_INVALIDO"));
+    expect(await cotizarLaFactura(d, contexto, cotizar)).toMatchObject({
+      ok: false,
+      error: { codigo: "COMPRAS_PRECIO_INVALIDO" },
+    });
+  });
+});
+
+describe("registrarLaCompra: los avisos de la factura", () => {
+  const ID = "0b0b0b0b-1111-4222-8333-444444444444";
+  const pedido = {
+    clave: ID,
+    proveedorId: ID,
+    renglones: [
+      {
+        productoId: ID,
+        unidadDeCompraId: "KILOGRAMO",
+        cantidad: "2",
+        precioPor: "UNIDAD",
+        unidadDePrecioId: "KILOGRAMO",
+        precio: "1000",
+      },
+    ],
+  };
+  const d = {
+    casosDeUso: () => ({
+      registrarCompra: () => Promise.resolve(ok({})),
+      registrarCompraConFactura: () =>
+        Promise.resolve(
+          ok({
+            recepcionId: "r1",
+            yaExistia: false,
+            avisos: [
+              { tipo: "LETRA_NO_ESPERADA", esperada: "A", sobrante: "x" },
+              { tipo: "TOTAL_NO_COINCIDE", esperada: "no debe salir" },
+            ],
+          }),
+        ),
+    }),
+    respuesta: { registrar: () => undefined },
+  } as unknown as DependenciasDeRegistrarCompraWeb;
+
+  it("la letra no esperada lleva la esperada; el total que no coincide va sin nada más", async () => {
+    const r = await registrarLaCompra(d, contexto, ID, {
+      ...pedido,
+      factura: {
+        tipo: "FACTURA_B",
+        puntoDeVenta: "5",
+        numero: "1",
+        fecha: "2026-10-31",
+        lineas: [{ renglon: 1, cantidadFacturada: "2", precioNeto: "1000" }],
+        totalSegunFactura: "2000",
+      },
+    });
+    expect(r).toStrictEqual({
+      ok: true,
+      dato: {
+        recepcionId: "r1",
+        yaExistia: false,
+        avisos: [{ tipo: "LETRA_NO_ESPERADA", esperada: "A" }, { tipo: "TOTAL_NO_COINCIDE" }],
+      },
+    });
   });
 });

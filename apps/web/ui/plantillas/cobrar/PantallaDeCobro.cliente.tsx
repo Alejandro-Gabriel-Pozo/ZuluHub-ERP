@@ -16,6 +16,9 @@ import { formatearImporte } from "../../patrones/formato-fiscal";
 import { CONFIRMACION_VENTA_A_CERO, type LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
+import { HojaDeDividirEnElCobro } from "./HojaDeDividirEnElCobro.cliente";
+import { LineaDelEstado } from "./LineaDelEstado";
+import { filasDelReparto } from "./modelo-de-reparto-en-el-cobro";
 import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
 import {
@@ -28,13 +31,15 @@ import {
   pedidoDeCobro,
   type CobroPreparado,
   type IdsDeLaVenta,
-  type LineaDeEstado,
   type PagoEnEdicion,
   type TicketAnulado,
   type VentaCobrada,
 } from "./modelo-de-cobro";
+import { type VentaACuentaDelCobro } from "./modelo-de-vender-a-cuenta";
 import { type TextosDeCobrar } from "./textos-de-cobrar";
+import type { TextosDeDividirEnElCobro } from "./textos-de-dividir-en-el-cobro";
 import { useEnvioDelPedido } from "./useEnvioDelPedido.cliente";
+import { useVenderACuenta } from "./useVenderACuenta.cliente";
 
 export type PropsDePantallaDeCobro = Readonly<{
   /** La cuenta que armó la venta rápida: lo elegido, no lo que cuesta. */
@@ -60,6 +65,20 @@ export type PropsDePantallaDeCobro = Readonly<{
   ventaCobrada?: VentaCobrada | undefined;
   /** La persona confirmó en la venta una línea a $ 0: el cobro manda «VENTA_A_CERO» (y solo entonces). */
   confirmoCero?: boolean | undefined;
+  /**
+   * Cobrar una cuenta que YA existe (SAL-D, la mesa del salón; DEC-1039: la hoja de Cobrar se reutiliza, no se duplica): el id de la cuenta lo fija la página y el pedido no lleva líneas (las lee el servidor de la
+   * cuenta). Tras cobrar se ofrece «Anular» como en el mostrador (SAL-C2; la mesa no se reabre) y el botón del resultado vuelve al salón en vez de empezar una venta nueva.
+   */
+  cuentaExistente?: Readonly<{ cuentaId: string }> | undefined;
+  /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el rótulo del botón del resultado y, si es la última cuenta, el aviso «Mesa cobrada». */
+  deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
+  /** Solo al cobrar una cuenta de una mesa (SAL-E3): los textos de «Dividir la cuenta» por porcentaje; sin ellos, no se ofrece. Dividir es UN ticket con varios cobros: la hoja solo carga las filas de cobro. */
+  dividirPorPorcentaje?: TextosDeDividirEnElCobro | undefined;
+  /**
+   * «Vender a cuenta corriente» (CC-5 B1b): los clientes que se pueden elegir y las acciones de servidor; ausente si la persona no puede cargar a cuenta o no hay clientes (el cobro no ofrece la hoja). La venta queda
+   * cargada a la cuenta del cliente sin pasar por la caja: el resultado es un ticket sin cobros.
+   */
+  aCuenta?: VentaACuentaDelCobro | undefined;
   /** Vale `true` durante los primeros instantes tras abrir la vista (lo maneja la pantalla de venta): un toque en «Cobrar» entonces se ignora. */
   esperaAlAbrir?: Readonly<{ current: boolean }>;
 }>;
@@ -90,6 +109,10 @@ export function PantallaDeCobro({
   esperaAlAbrir,
   ventaCobrada,
   confirmoCero = false,
+  cuentaExistente,
+  deLaDivision,
+  dividirPorPorcentaje,
+  aCuenta,
 }: PropsDePantallaDeCobro) {
   const medios = preparado.estado === "LISTO" ? preparado.opciones.medios : [];
   const [pagos, setPagos] = useState<readonly PagoEnEdicion[]>(() => {
@@ -108,23 +131,42 @@ export function PantallaDeCobro({
     esperaEntreVerificacionesMs,
   });
 
+  const [dividiendo, setDividiendo] = useState(false);
   const idDelTitulo = useId();
   // Con el ticket del cliente a la vista, la barra es la suya (`TicketDelCliente`): esta no se dibuja.
   const [viendoElTicket, setViendoElTicket] = useState(false);
   const [rechazoYaVisto, setRechazoYaVisto] = useState<ErrorPublico | null>(null);
-  const estado = estadoDelCobro(total, pagos, medios);
-  const ventaHecha = ventaCobrada ?? (envio.estado.tipo === "hecho" ? envio.estado.valor : null);
-  const hecho = ventaHecha !== null;
-  // Con un envío en curso, incierto o hecho nada se edita ni se vuelve: otro pedido con la misma clave sería un error, y con otra clave podría cobrar dos veces.
-  const congelado = envio.enCurso || envio.estado.tipo === "incierto" || hecho;
 
   const idsDeLaVenta = (): IdsDeLaVenta => {
-    ids.current ??= { cuentaId: nuevoId(), ejemplarId: nuevoId(), lineas: new Map() };
+    ids.current ??= {
+      cuentaId: cuentaExistente?.cuentaId ?? nuevoId(),
+      ejemplarId: nuevoId(),
+      lineas: new Map(),
+    };
     for (const linea of cuenta) {
       if (!ids.current.lineas.has(linea.clave)) ids.current.lineas.set(linea.clave, nuevoId());
     }
     return ids.current;
   };
+
+  const estado = estadoDelCobro(total, pagos, medios);
+  const aCuentaVendida = useVenderACuenta({
+    aCuenta,
+    total,
+    textosDelCobro: textos,
+    cuenta,
+    cuentaExistente,
+    confirmoCero,
+    idsDeLaVenta,
+    esperaEntreVerificacionesMs,
+  });
+  const ventaHecha =
+    ventaCobrada ??
+    (envio.estado.tipo === "hecho" ? envio.estado.valor : null) ??
+    aCuentaVendida.venta;
+  const hecho = ventaHecha !== null;
+  // Con un envío en curso, incierto o hecho nada se edita ni se vuelve: otro pedido con la misma clave sería un error, y con otra clave podría cobrar dos veces.
+  const congelado = envio.enCurso || envio.estado.tipo === "incierto" || hecho;
 
   const alCobrar = () => {
     // Los primeros instantes tras abrir la vista un toque se ignora: el segundo toque de un doble toque en «Cobrar» de la venta no cobra (decisión 171).
@@ -139,8 +181,16 @@ export function PantallaDeCobro({
       medios: preparado.opciones.medios,
       vuelto: estado.vuelto,
       confirmaciones: confirmoCero ? [CONFIRMACION_VENTA_A_CERO] : undefined,
+      sinLineas: cuentaExistente !== undefined,
     });
     if (pedido !== null) enviar(pedido);
+  };
+
+  // «Usar en el cobro»: una fila por parte con su importe y un medio distinto si hay (se cambia en cada fila); no cobra nada.
+  const usarElReparto = (importes: readonly string[]) => {
+    const filas = filasDelReparto(importes, medios, nuevoId);
+    if (filas.length > 0) setPagos(filas);
+    setDividiendo(false);
   };
 
   const cambiarPago = (clave: string, pago: PagoEnEdicion) => {
@@ -153,7 +203,9 @@ export function PantallaDeCobro({
     envio.estado.rechazo !== rechazoYaVisto
       ? envio.estado.rechazo
       : null;
-  const enResultado = (hecho && preparado.estado === "LISTO") || rechazoDelCobro !== null;
+  const enResultado =
+    (hecho && (preparado.estado === "LISTO" || aCuentaVendida.venta !== null)) ||
+    rechazoDelCobro !== null;
   const titulo = enResultado ? textos.resultado : textos.titulo;
 
   // El foco va al título al abrir la vista y cada vez que cambia de «Cobro» a «Resultado» (y al revés).
@@ -163,16 +215,19 @@ export function PantallaDeCobro({
   }, [enResultado, viendoElTicket]);
 
   const cuerpo =
-    ventaHecha !== null && preparado.estado === "LISTO" ? (
+    ventaHecha !== null && (preparado.estado === "LISTO" || aCuentaVendida.venta !== null) ? (
       <ResultadoDelCobro
         venta={ventaHecha}
-        medios={preparado.opciones.medios}
+        medios={preparado.estado === "LISTO" ? preparado.opciones.medios : []}
+        aCuenta={aCuentaVendida.venta !== null}
         vuelto={estado.vuelto?.vuelto ?? "0.00"}
         textos={textos}
         anular={anular}
         imprimir={imprimir}
         alCambiarLaVista={setViendoElTicket}
         alNuevaVenta={alNuevaVenta}
+        deLaMesa={cuentaExistente !== undefined}
+        deLaDivision={deLaDivision}
         nuevoId={nuevoId}
         esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
       />
@@ -255,6 +310,20 @@ export function PantallaDeCobro({
               {textos.agregarOtroMedio}
             </Boton>
           ) : null}
+          {preparado.estado === "LISTO" &&
+          dividirPorPorcentaje !== undefined &&
+          cuentaExistente !== undefined ? (
+            <Boton
+              variante="secundaria"
+              deshabilitado={congelado}
+              alTocar={() => {
+                setDividiendo(true);
+              }}
+            >
+              {dividirPorPorcentaje.dividirLaCuenta}
+            </Boton>
+          ) : null}
+          {aCuentaVendida.boton(congelado)}
           <LineaDelEstado linea={lineaDeEstado(estado.vuelto)} textos={textos} />
           {envio.estado.tipo === "rechazado" && !esElRechazoGenerico(envio.estado.rechazo) ? (
             <ErrorDeRespuesta error={envio.estado.rechazo} />
@@ -275,6 +344,22 @@ export function PantallaDeCobro({
         </div>
       </>
     );
+
+  if (aCuentaVendida.hoja !== null) return aCuentaVendida.hoja;
+
+  if (dividiendo && dividirPorPorcentaje !== undefined) {
+    return (
+      <HojaDeDividirEnElCobro
+        total={total}
+        textos={textos}
+        textosDeDividir={dividirPorPorcentaje}
+        alUsar={usarElReparto}
+        alVolver={() => {
+          setDividiendo(false);
+        }}
+      />
+    );
+  }
 
   return (
     <section
@@ -305,38 +390,3 @@ export function PantallaDeCobro({
 /** El genérico al que el servidor traduce todo rechazo de negocio del cobro (`errores-de-cobrar.ts`): el único que la maqueta dibuja como «No se pudo cobrar». */
 const esElRechazoGenerico = (error: ErrorPublico): boolean =>
   error.codigo === ("CAJA_ACCION_NO_PERMITIDA" satisfies CodigoPublico);
-
-/** Lo que falta, lo que sobra, el vuelto o «Cobro completo»: siempre con su texto, nunca solo por color. */
-function LineaDelEstado({
-  linea,
-  textos,
-}: Readonly<{ linea: LineaDeEstado; textos: TextosDeCobrar }>) {
-  if (linea === null) return <p className={estilos["estado"]} role="status" />;
-  const formato = (importe: string) => formatearImporte(importe);
-  switch (linea.tipo) {
-    case "VUELTO":
-      return (
-        <p className={estilos["estado"]} role="status" data-estado="vuelto">
-          {textos.vuelto} {formato(linea.importe)}
-        </p>
-      );
-    case "FALTA":
-      return (
-        <p className={estilos["estado"]} role="status" data-estado="falta">
-          {textos.faltaCobrar} {formato(linea.importe)}
-        </p>
-      );
-    case "SOBRA":
-      return (
-        <p className={estilos["estado"]} role="status" data-estado="sobra">
-          {textos.sobran} {formato(linea.importe)}
-        </p>
-      );
-    case "COMPLETO":
-      return (
-        <p className={estilos["estado"]} role="status" data-estado="completo">
-          {textos.cobroCompleto}
-        </p>
-      );
-  }
-}

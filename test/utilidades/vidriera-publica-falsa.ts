@@ -79,6 +79,7 @@ function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
       colorDeLaEmpresa: null,
       logo: null,
     },
+    cuentasDeImagen: [],
     ...complemento,
     secciones: vidriera.secciones.map((s) => ({
       ...s,
@@ -108,6 +109,10 @@ export function crearVidrieraPublicaFalsa(marcaPorCodigo: MarcaPorCodigo): Vidri
           ? null
           : comoVidrieraPublicada(vidriera),
       );
+    },
+    // El falso no tiene empresas dueñas: en un host de marca, vacío; en uno de empresa, tampoco hay cartas de ejemplo asociadas.
+    listarDelHost() {
+      return Promise.resolve([]);
     },
   };
 }

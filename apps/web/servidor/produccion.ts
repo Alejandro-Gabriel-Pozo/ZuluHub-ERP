@@ -11,6 +11,18 @@ import {
   type OrdenParaLaPantalla,
 } from "../../../src/composicion/produccion-web";
 import type { EntradaDeLaListaDeOrdenes } from "../../../src/composicion/entradas-de-produccion";
+import {
+  cargarLaOrdenParaCerrar,
+  cerrarLaOrden,
+  type DependenciasDeCierreDeOrdenWeb,
+  type OrdenParaCerrar,
+} from "../../../src/composicion/cierre-de-orden-web";
+import {
+  abrirLaOrden,
+  cargarLaNuevaOrden,
+  type DependenciasDeNuevaOrdenWeb,
+  type OfertaDeProduccion,
+} from "../../../src/composicion/nueva-orden-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { rutaDeLaOrden } from "../ui/plantillas/produccion/filtros-de-ordenes";
 import type { ResultadoDeAccion } from "./acciones";
@@ -29,6 +41,18 @@ import { sucursalDelPedido } from "./sucursal-elegida";
  */
 
 const dependencias: DependenciasDeProduccionWeb = {
+  casosDeUso: web.casosDeUsoDeProduccion,
+  consultas: web.consultasDeProduccion,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeNuevaOrden: DependenciasDeNuevaOrdenWeb = {
+  casosDeUso: web.casosDeUsoDeProduccion,
+  consultas: web.consultasDeStock,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeCierre: DependenciasDeCierreDeOrdenWeb = {
   casosDeUso: web.casosDeUsoDeProduccion,
   consultas: web.consultasDeProduccion,
   respuesta: dependenciasDeSesion.respuesta,
@@ -83,6 +107,68 @@ export async function anularLaOrdenDeLaFicha(
   return aLaFicha(
     await conLaEmpresa((contexto) =>
       anularLaOrden(dependencias, contexto, { ordenId, motivo: textoDe(datos, "motivo") }),
+    ),
+    ordenId,
+  );
+}
+
+/** Lo que ofrece «Nueva orden» en la sucursal elegida en este dispositivo (nunca la que diga el navegador; sin ninguna, el genérico). */
+export async function cargarLaNuevaOrdenDeLaSucursal(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<OfertaDeProduccion>> {
+  const sucursal = await sucursalDelPedido(contexto);
+  if (!sucursal.ok) return sucursal;
+  if (sucursal.dato.efectiva === "") return SIN_SUCURSAL;
+  return cargarLaNuevaOrden(dependenciasDeNuevaOrden, contexto, sucursal.dato.efectiva);
+}
+
+/** Abre la orden con lo que escribió la persona; si sale bien, va a la ficha de la orden. La clave de idempotencia la fija la página (`bind`): repetir el envío devuelve la misma orden. */
+export async function abrirLaOrdenDelFormulario(
+  clave: string,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa(async (contexto) => {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return sucursal;
+    if (sucursal.dato.efectiva === "") return SIN_SUCURSAL;
+    return abrirLaOrden(dependenciasDeNuevaOrden, contexto, sucursal.dato.efectiva, {
+      clave,
+      productoId: textoDe(datos, "productoId"),
+      cantidad: textoDe(datos, "cantidad"),
+      confirmar: textoDe(datos, "confirmar"),
+    });
+  });
+  if (!respuesta.ok) return { error: respuesta.error };
+  redirect(rutaDeLaOrden(respuesta.dato.ordenId));
+}
+
+/** La orden abierta a cerrar, con lo esperado de cada ingrediente. La orden sale de la empresa del servidor: una ajena, inexistente o que ya no está abierta es el genérico. */
+export function cargarLaOrdenParaElCierre(
+  contexto: ContextoOperativo,
+  ordenId: string,
+): Promise<Respuesta<OrdenParaCerrar>> {
+  return cargarLaOrdenParaCerrar(dependenciasDeCierre, contexto, { ordenId });
+}
+
+/**
+ * Cierra la orden con lo que escribió la persona; si sale bien, vuelve a la ficha (ya cerrada). La orden y la clave de idempotencia las fija la página (`bind`): repetir el envío devuelve el mismo cierre. Lo real de
+ * cada ingrediente viaja por posición (`consumos`, en el orden del formulario); la unidad y el producto de cada uno los pone el servidor desde la orden.
+ */
+export async function cerrarLaOrdenDelFormulario(
+  ordenId: string,
+  clave: string,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  return aLaFicha(
+    await conLaEmpresa((contexto) =>
+      cerrarLaOrden(dependenciasDeCierre, contexto, {
+        ordenId,
+        clave,
+        obtenido: textoDe(datos, "obtenido"),
+        vence: textoDe(datos, "vence"),
+        consumos: datos.getAll("consumos").map((c) => (typeof c === "string" ? c : "")),
+        confirmar: textoDe(datos, "confirmar"),
+      }),
     ),
     ordenId,
   );

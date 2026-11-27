@@ -1,0 +1,10 @@
+{
+  "id": "DEC-STK-008",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Un lote que ya existe con otra fecha de vencimiento se rechaza con un texto propio del dueño, no con el mensaje genérico.",
+  "que_cambia": "Texto nuevo: «Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.» Revertir: volver el código al mensaje genérico y sacar la clave.",
+  "donde": "Respuesta del dueño del 26/11/2026, fila 5 del Excel de decisiones (confirma la regla S3 de DEC-STK-006 con texto propio)"
+}

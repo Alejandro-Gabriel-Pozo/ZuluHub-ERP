@@ -11,11 +11,14 @@ export type TxDeConsultasDeComandas = LecturaDeEstados &
   Readonly<{
     envios: Pick<
       RepositorioDeEnvios,
-      "envioPorId" | "renglonesDeEnvio" | "enviosDeCuenta" | "avisoPorId"
+      "envioPorId" | "renglonesDeEnvio" | "enviosDeCuenta" | "avisoPorId" | "filaDeComanda"
     >;
     impresion: Pick<
       RepositorioDeImpresion,
-      "impresorasDeSucursal" | "impresoraPorId" | "trabajosDeDocumento"
+      | "impresorasDeSucursal"
+      | "impresoraPorId"
+      | "trabajosDeDocumento"
+      | "trabajosPendientesDeLaSucursal"
     >;
     cuentas: Pick<RepositorioDeCuentas, "obtener" | "obtenerLinea">;
     /** La zona de la empresa para mostrar la hora del envío. */

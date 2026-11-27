@@ -35,6 +35,7 @@ import { textoDe } from "./formularios-de-caja";
 const dependencias: DependenciasDeCartaEnLineaWeb = {
   casosDeUso: web.casosDeUsoDeCatalogo,
   consultas: web.consultasDeCatalogo,
+  hostPropioDeLaCarta: web.hostPropioDeLaCarta,
   respuesta: dependenciasDeSesion.respuesta,
 };
 

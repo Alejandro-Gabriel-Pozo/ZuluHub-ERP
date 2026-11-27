@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0961",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "A quien tiene un rol propio no se lo reinvita con ese rol: el gerente lo pasa antes a un rol base y reactivar sigue siendo solo por invitación; la base lo impone.",
+  "que_cambia": "Una persona con rol propio que se apaga se reasigna a Administrador o Empleado antes de invitarla de nuevo; reactivar no cambia.",
+  "donde": "migraciones/0097_roles_propios_de_la_empresa.sql (membresia_validar_cambio); src/modulos/identidad/dominio/invitacion.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
+}

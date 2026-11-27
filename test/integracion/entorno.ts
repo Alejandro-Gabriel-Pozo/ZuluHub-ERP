@@ -1,3 +1,4 @@
+import { afterAll } from "vitest";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
@@ -26,16 +27,22 @@ import {
   type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
 import {
+  crearLecturaDeTicketsParaCuentas,
   crearRepositorioDeCuentas,
   crearRepositorioDeDocumentos,
   crearRepositorioDeLecturas,
   crearRepositorioDeTickets,
+  type LecturaDeTicketsParaCuentas,
   type LecturasDeVentas,
   type RepositorioDeCuentas,
   type RepositorioDeDocumentos,
   type RepositorioDeTickets,
   type VentasDb,
 } from "../../src/modulos/ventas/publico";
+import {
+  crearRepositoriosDeClientes,
+  type RepositoriosDeClientes,
+} from "../../src/modulos/clientes/publico";
 import {
   crearRepositorioDeJornadas,
   type CierreDb,
@@ -53,6 +60,7 @@ import {
   crearRepositorioDeInvitaciones,
   crearRepositorioDeMembresias,
   crearRepositorioDePersonas,
+  crearRepositorioDeRoles,
   crearRepositorioDeTraspasos,
   type IdentidadDb,
   type TxDeIdentidad,
@@ -109,6 +117,7 @@ import {
   crearRepositorioDePrecios,
   crearRepositorioDePresentaciones,
   crearRepositorioDeCartas,
+  crearRepositorioDeCuentasDeImagen,
   crearRepositorioDeDisponibilidad,
   crearRepositorioDeFamilias,
   type RepositorioDeFamilias,
@@ -117,6 +126,7 @@ import {
   crearRepositorioDeUnidades,
   crearLectorDeCarta,
   type RepositorioDeCartas,
+  type RepositorioDeCuentasDeImagen,
   type RepositorioDeDisponibilidad,
   type RepositorioDeSecciones,
   type RepositorioDeClasificacion,
@@ -165,6 +175,8 @@ export type TxDePrueba = Readonly<{
   /** El puntero ticket → comprobante (E1, 0029). */
   documentos: RepositorioDeDocumentos;
   lecturasDeVentas: LecturasDeVentas;
+  /** CC-5: el ticket detrás de un movimiento de la cuenta corriente. */
+  ticketsParaCuentas: LecturaDeTicketsParaCuentas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
   /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
@@ -187,6 +199,7 @@ export type TxDePrueba = Readonly<{
   presentacionesDeProducto: RepositorioDePresentaciones;
   /** La carta pública, el botón «Ocultar» y las secciones (0043 y T2 de la carta real). */
   cartasPublicas: RepositorioDeCartas;
+  cuentasDeImagen: RepositorioDeCuentasDeImagen;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   familias: RepositorioDeFamilias;
   seccionesDeCarta: RepositorioDeSecciones;
@@ -196,6 +209,8 @@ export type TxDePrueba = Readonly<{
   unidades: RepositorioDeUnidades;
   lectorDeCarta: LectorDeCarta;
 }> &
+  /** Las partes (clientes): ventas valida y muestra el cliente cargado al ticket (R2 mínimo, 0107). */
+  RepositoriosDeClientes &
   PiezasDeCajaEnTx &
   TxDeIdentidad;
 
@@ -222,15 +237,18 @@ export function crearEntornoDePrueba(
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
       ...armarPiezasDeCajaEnTx(db),
+      ...crearRepositoriosDeClientes(db),
       cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
       documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
       lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
+      ticketsParaCuentas: crearLecturaDeTicketsParaCuentas(db.withTables<VentasDb>()),
       personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
       membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
       asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
       invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
       traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+      roles: crearRepositorioDeRoles(db.withTables<IdentidadDb>()),
       trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
       auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
       cola: crearColaDePostgres(db.withTables<ColaDb>()),
@@ -252,6 +270,7 @@ export function crearEntornoDePrueba(
       precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
       presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
       cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
+      cuentasDeImagen: crearRepositorioDeCuentasDeImagen(db.withTables<CatalogoDb>()),
       disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
       familias: crearRepositorioDeFamilias(db.withTables<CatalogoDb>()),
       seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),
@@ -275,6 +294,32 @@ export function crearEntornoDePrueba(
     ...(plazoParaConseguirConexionEnMs === undefined ? {} : { plazoParaConseguirConexionEnMs }),
     clave: base.clave,
   });
+}
+
+/**
+ * Quita `acciones` del actor que arma el adaptador, para las pruebas que PRUEBAN UNA MATRIZ DISTINTA de la real (un rol al que la prueba le
+ * da o le saca una acción por las reglas): sin el conjunto, el guard decide por la matriz que la prueba le pasa (H4b T3, DEC-0955). Es el
+ * camino de respaldo por matriz (DEC-0955), solo para fakes y pruebas; lo que se prueba con el conjunto real va por `crearEntornoDePrueba` a secas.
+ */
+export function sinAcciones<D extends Readonly<{ acciones?: readonly string[] }>>(
+  datos: D,
+): Omit<D, "acciones"> {
+  return Object.fromEntries(
+    Object.entries(datos).filter(([clave]) => clave !== "acciones"),
+  ) as Omit<D, "acciones">;
+}
+
+export function sinConjuntoDeAcciones<T extends Readonly<{ autorizacion: CargaDeAutorizacion }>>(
+  tx: T,
+): T {
+  return {
+    ...tx,
+    autorizacion: {
+      ...tx.autorizacion,
+      delActor: async (contexto: Parameters<CargaDeAutorizacion["delActor"]>[0]) =>
+        sinAcciones(await tx.autorizacion.delActor(contexto)),
+    },
+  };
 }
 
 const AHORA = new Date("2026-10-11T12:00:00Z");
@@ -459,7 +504,9 @@ export async function crearBaseAparte(
     clave: base.clave,
   };
   if (opciones.migrar !== false) {
-    await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"));
+    await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"), {
+      sincronizarPlantillas: true,
+    });
     if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
     await sembrarAdminsDePrueba(propia.dueno);
     // Con `sinMarcaDePrueba` la base queda como la deja la migración 0007 (para probarla tal cual).
@@ -472,6 +519,22 @@ export async function crearBaseAparte(
       await admin.end();
     },
   };
+}
+
+/**
+ * La base de UN archivo de pruebas (se destruye al terminar el archivo). Previene: un `truncate` toma el bloqueo exclusivo de la tabla (y de las que la referencian) ANTES de que
+ * el disparador o el privilegio lo rechacen, así que en la base compartida espera a lo que otros archivos, en paralelo, tengan abierto (o cae en un deadlock) y, bajo carga, la
+ * prueba no ve el rechazo esperado; además frena a esos archivos. Se usa en el archivo que intenta vaciar tablas: `const base = await baseDeEsteArchivo(inject("baseDePruebas"))`.
+ */
+export async function baseDeEsteArchivo(
+  compartida: BaseDePruebas | null,
+): Promise<BaseDePruebas | null> {
+  if (compartida === null) return null;
+  const aparte = await crearBaseAparte(compartida);
+  afterAll(async () => {
+    await aparte.destruir();
+  });
+  return aparte.base;
 }
 
 /** Punto de encuentro: todos esperan hasta que llegaron `participantes`. */

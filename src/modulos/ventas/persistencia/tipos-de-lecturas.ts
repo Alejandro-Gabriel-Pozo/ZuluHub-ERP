@@ -5,6 +5,8 @@ import type { Ejemplar, Ticket } from "./repositorio-de-tickets";
 /** Las filas planas que devuelven las lecturas de ventas (E4 §3.12, §3.13 y §3.15): importes y cantidades como TEXTO decimal exacto. */
 export type TicketDeJornada = Readonly<{
   ticketId: string;
+  /** La cuenta de la que salió el ticket (para saber si era de una mesa). */
+  cuentaId: string;
   numero: number;
   estado: EstadoDeTicket;
   ejemplarVigente: number;
@@ -19,6 +21,8 @@ export type TicketDeJornada = Readonly<{
   cobros: readonly Readonly<{ cobroId: string; origenOrden: number; importe: string }>[];
   emitidoPor: string;
   emitidoEn: Date;
+  /** El cliente al que se le cargó la venta (0107); `null` si no hay. */
+  cargadoAParteId: string | null;
 }>;
 
 export type TicketPorCobranza = Readonly<{
@@ -90,7 +94,8 @@ export type TicketPendienteDeFacturar = Readonly<{
   fechaNegocio: string;
   ejemplarVigente: number;
   total: string;
-  cobradoEn: Date;
+  /** Cuándo se cobró; `null` si el ticket está EMITIDO sin cobrar (solo con la perilla `facturar_antes_de_cobrar`). */
+  cobradoEn: Date | null;
 }>;
 
 export type CursorDePendientes = Readonly<{
@@ -104,6 +109,8 @@ export type FiltroDePendientes = Readonly<{
   sucursales: readonly SucursalId[] | null;
   fechaDesde: string | null;
   fechaHasta: string | null;
+  /** `true`: además de los COBRADO entran los EMITIDO sin cobrar (la empresa enciende `facturar_antes_de_cobrar`). Nunca CORTESIA ni ANULADO. */
+  conEmitidos: boolean;
   /** Solo `SIN_COMPROBANTE` existe hasta que E1 cree los documentos fiscales; con `COMPROBANTE_ANULADO` no hay nada. */
   despuesDe: CursorDePendientes | null;
   limite: number;
