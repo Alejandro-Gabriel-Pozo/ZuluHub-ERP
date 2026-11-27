@@ -52,6 +52,8 @@ const MEDIOS_PROPOSITO_TIPO: Proposito = {
 
 // La hoja de cobro del mostrador (módulo ventas) CONSUME estos dos datos, que son de caja (dueño, 17/11/2026, fila 247 de
 // `decisiones-del-dueno-2026-11.md`, punto 1: «medio de cobro» y «cuenta de cobro» van bajo el módulo caja; ventas los consume).
+const COBRAR_A_CUENTA =
+  "apps/web/ui/plantillas/cuenta-corriente/PantallaDeCobrarACuenta.cliente.tsx";
 const COBRO_FILA = "apps/web/ui/plantillas/cobrar/FilaDeCobro.cliente.tsx";
 const COBRO_PROPOSITO = (para: string): Proposito => ({
   para,
@@ -213,7 +215,7 @@ export const DATOS_DE_CAJA = {
         "Medio al que pasa un cobro (elección cerrada entre los medios activos de la empresa que ofrece el servidor) en el diálogo «Corregir medio» del cierre del día.",
       ),
     ],
-    consumidores: [COBRO_FILA, MODAL_DE_CORREGIR_MEDIO],
+    consumidores: [COBRO_FILA, COBRAR_A_CUENTA, MODAL_DE_CORREGIR_MEDIO],
     ponerPor: ["tickets.cobrar", "cobros.corregir_medio"],
     requiere: REQUIERE_CAJA,
   },
@@ -227,7 +229,7 @@ export const DATOS_DE_CAJA = {
         "Cuenta de cobro de la corrección (elección cerrada entre las cuentas activas de la sucursal que admite el medio, o «Sin cuenta») en el diálogo «Corregir medio» del cierre del día.",
       ),
     ],
-    consumidores: [COBRO_FILA, MODAL_DE_CORREGIR_MEDIO],
+    consumidores: [COBRO_FILA, COBRAR_A_CUENTA, MODAL_DE_CORREGIR_MEDIO],
     ponerPor: ["tickets.cobrar", "cobros.corregir_medio"],
     requiere: REQUIERE_CAJA,
   },

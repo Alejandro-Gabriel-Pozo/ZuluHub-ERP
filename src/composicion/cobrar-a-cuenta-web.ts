@@ -2,8 +2,8 @@ import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respue
 import type { ContextoOperativo } from "../contexto/contexto";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
-import type { CajasParaCobrarParaLaPantalla } from "./cobrar-web";
-import { presentarLasCajas, sinAusentes } from "./cobrar-web";
+import type { CajasParaCobrarParaLaPantalla, OpcionesDeCobroParaLaPantalla } from "./cobrar-web";
+import { presentarLasCajas, presentarLasOpciones, sinAusentes } from "./cobrar-web";
 import type { crearCobroACuenta } from "./cobro-a-cuenta";
 import { entradaDeCobrarACuenta, entradaDelTicketACobrar } from "./entradas-de-cobrar-a-cuenta";
 import { traducirErrorDeCobrar } from "./errores-de-cobrar";
@@ -25,7 +25,10 @@ type Importe = Readonly<{ moneda: string; monto: string }>;
 export type DependenciasDeCobrarACuentaWeb = Readonly<{
   cobro: () => ReturnType<typeof crearCobroACuenta>;
   casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeVentas"]>, "cobrar">;
-  consultas: () => Pick<ReturnType<Web["consultasDeVentas"]>, "estadoDeCajasParaCobrar">;
+  consultas: () => Pick<
+    ReturnType<Web["consultasDeVentas"]>,
+    "estadoDeCajasParaCobrar" | "opcionesParaCobrar"
+  >;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -57,9 +60,13 @@ export type TicketACobrarParaLaPantalla = Readonly<{
     total: Importe;
     venceEl: string | null;
     vencida: boolean;
+    /** El nombre de la sucursal del ticket (rotula cada caja); `null` si no se pudo leer. */
+    sucursal: string | null;
   }>;
   cajas: CajasParaCobrarParaLaPantalla["cajas"];
   jornadaActual: CajasParaCobrarParaLaPantalla["jornadaActual"];
+  /** Medios, cuentas, datos y marcas de la sucursal del ticket (las cuentas son de la sucursal, no de la caja); `null` si la sucursal no tiene cajas. */
+  opciones: OpcionesDeCobroParaLaPantalla | null;
 }>;
 
 /**
@@ -93,6 +100,19 @@ export async function ticketACobrarDelCliente(
     });
     if (!cajas.ok) return cajas;
     const presentadas = presentarLasCajas(cajas.valor);
+    // Las opciones dependen de la sucursal de la caja, no de la caja: alcanza con las de una (la abierta si hay, si no la primera).
+    const referencia =
+      presentadas.cajas.find((c) => c.estado === "ABIERTA") ?? presentadas.cajas[0];
+    let opciones: OpcionesDeCobroParaLaPantalla | null = null;
+    if (referencia !== undefined) {
+      const leidas = await d
+        .consultas()
+        .opcionesParaCobrar(contexto, { cajaId: referencia.cajaId });
+      if (!leidas.ok) return leidas;
+      opciones = presentarLasOpciones(leidas.valor);
+    }
+    const sucursal = await d.cobro().nombreDeLaSucursal(contexto, { sucursalId: t.sucursalId });
+    if (!sucursal.ok) return sucursal;
     return ok({
       cliente: { id: t.cliente.id, nombre: cargo.valor.cliente.nombre ?? t.cliente.nombre },
       ticket: {
@@ -105,9 +125,11 @@ export async function ticketACobrarDelCliente(
         total: { moneda: t.total.moneda, monto: t.total.monto },
         venceEl: cargo.valor.venceEl,
         vencida: cargo.valor.vencida,
+        sucursal: sucursal.valor,
       },
       cajas: presentadas.cajas,
       jornadaActual: presentadas.jornadaActual,
+      opciones,
     });
   });
 }

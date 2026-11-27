@@ -1,5 +1,10 @@
 import type { ClaveAccion } from "../modulos/catalogo";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
+import {
+  TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA,
+  type FuenteDeTexto,
+  type TextoDeFicha,
+} from "./textos-de-ficha-de-cobrar-a-cuenta";
 
 /**
  * LA FICHA DE LAS PANTALLAS DE LA CUENTA CORRIENTE DE CLIENTES (CC-5, A1: el listado y la ficha del cliente; A2: habilitar, cambiar plazo o límite, suspender y reactivar; DDD:174: toda pantalla nace con ficha). Declara lo que ofrecen: rutas y archivos, el acceso,
@@ -8,14 +13,12 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * (`reutilizados`) y no se duplican. Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  */
 
-type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
 type BotonDeLaFicha = Readonly<{
   id: string;
   texto: ClaveDeTexto;
   hace: Readonly<{ navega: string }> | Readonly<{ envia: ClaveAccion }>;
   sinPermiso: "APAGADO";
 }>;
-type TextoDeFicha = Readonly<{ usos: readonly string[]; fuente: FuenteDeTexto }>;
 
 export type FichaDeLaCuentaCorriente = Readonly<{
   archivos: readonly string[];
@@ -64,8 +67,11 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/[parteId]/page.tsx",
     "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/habilitar/page.tsx",
     "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/[parteId]/condiciones/page.tsx",
+    "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/[parteId]/cobrar/page.tsx",
     "apps/web/app/s/app/acciones-de-cuenta-corriente.ts",
+    "apps/web/app/s/app/acciones-de-cobrar-a-cuenta.ts",
     "apps/web/servidor/cuenta-corriente.ts",
+    "apps/web/servidor/cobrar-a-cuenta.ts",
     "apps/web/servidor/cuenta-corriente-escritura.ts",
     "apps/web/ui/plantillas/cuenta-corriente/PantallaDeLaListaDeCuentas.tsx",
     "apps/web/ui/plantillas/cuenta-corriente/PantallaDeLaFichaDeCuenta.tsx",
@@ -73,8 +79,11 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "apps/web/ui/plantillas/cuenta-corriente/FormularioDeCondicionesDeCuenta.cliente.tsx",
     "apps/web/ui/plantillas/cuenta-corriente/FormularioDeSuspenderCuenta.cliente.tsx",
     "apps/web/ui/plantillas/cuenta-corriente/FormularioDeReactivarCuenta.cliente.tsx",
+    "apps/web/ui/plantillas/cuenta-corriente/PantallaDeCobrarACuenta.cliente.tsx",
     "apps/web/ui/plantillas/cuenta-corriente/modelo-de-cuenta-corriente.ts",
+    "apps/web/ui/plantillas/cuenta-corriente/modelo-de-cobrar-a-cuenta.ts",
     "apps/web/ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente.ts",
+    "apps/web/ui/plantillas/cuenta-corriente/textos-de-cobrar-a-cuenta.ts",
     "apps/web/ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente.ts",
     "apps/web/ui/plantillas/cobrar/HojaDeVenderACuenta.cliente.tsx",
     "apps/web/ui/plantillas/cobrar/textos-de-vender-a-cuenta.ts",
@@ -84,6 +93,7 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "/caja/cuenta-corriente/[parteId]",
     "/caja/cuenta-corriente/habilitar",
     "/caja/cuenta-corriente/[parteId]/condiciones",
+    "/caja/cuenta-corriente/[parteId]/cobrar",
   ],
   titulo: "cuenta_corriente.lista.titulo",
   acceso: "cuenta_corriente.ver",
@@ -104,6 +114,18 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
       id: "habilitar",
       texto: "cuenta_corriente.habilitar.habilitar",
       hace: { envia: "cuenta_corriente.administrar" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "cobrar-un-ticket",
+      texto: "cuenta_corriente.cobro.boton_de_la_ficha",
+      hace: { navega: "/caja/cuenta-corriente/[parteId]/cobrar" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "cobrar",
+      texto: "cuenta_corriente.cobro.cobrar",
+      hace: { envia: "tickets.cobrar" },
       sinPermiso: "APAGADO",
     },
     {
@@ -289,6 +311,8 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
       fuente: A2,
     },
     "cuenta_corriente.ficha.reactivar": { usos: ["botón de reactivar la cuenta"], fuente: A2 },
+
+    ...TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA,
     "cuenta_corriente.vender.titulo": {
       usos: ["título de la hoja «Vender a cuenta corriente» y botón del cobro que la abre"],
       fuente: VENDER,
@@ -335,6 +359,8 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "catalogo.accion.guardar",
     "catalogo.accion.cancelar",
     "compras.exportacion.exportar",
+    "fiscal.pantalla.imprimir_formato_ticket",
+    "ventas.cobro.cobrado",
     "cuenta_corriente.credito_disponible",
     "ventas.cobro.volver_al_cobro",
   ],

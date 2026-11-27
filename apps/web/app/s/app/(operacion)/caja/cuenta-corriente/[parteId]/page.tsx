@@ -10,6 +10,7 @@ import { PantallaDeLaFichaDeCuenta } from "../../../../../../../ui/plantillas/cu
 import { armarLaFichaDeLaCuenta } from "../../../../../../../ui/plantillas/cuenta-corriente/modelo-de-cuenta-corriente";
 import {
   direccionDeExportarCuentaCorriente,
+  rutaDeCobrarACuenta,
   rutaDeLasCondicionesDeCuenta,
 } from "../../../../../../../ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
 import { textosDeCuentaCorriente } from "../../../../../../../ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente";
@@ -22,7 +23,7 @@ type PropsDePagina = Readonly<{ params: Promise<{ parteId: string }> }>;
 
 // `/caja/cuenta-corriente/[parteId]`: la ficha de un cliente con su estado de cuenta (maqueta `cuenta-corriente-ficha-listado-y-cobro.html`, «Ficha y estado de cuenta» y «Ficha suspendida»). El id de la dirección
 // es lo único que viene del navegador: el servidor lo busca entre las cuentas de la empresa; uno que no está (ajeno, inexistente, mal escrito) sale como el genérico y no dice cuál de los casos es. Las acciones
-// que escriben («Cambiar plazo o límite», «Suspender cuenta» y «Reactivar cuenta») salen apagadas sin `cuenta_corriente.administrar` (ayuda: el servidor igual decide) y llevan la ficha y la versión que se vio.
+// que escriben («Cobrar un ticket», «Cambiar plazo o límite», «Suspender cuenta» y «Reactivar cuenta») salen apagadas sin `cuenta_corriente.administrar` (ayuda: el servidor igual decide) y llevan la ficha y la versión que se vio.
 export default async function PaginaDeLaFichaDeCuenta({ params }: PropsDePagina) {
   const { parteId } = await params;
   const textos = textosDeCuentaCorriente();
@@ -40,6 +41,9 @@ export default async function PaginaDeLaFichaDeCuenta({ params }: PropsDePagina)
           <>
             <EnlaceDeAccion href={direccionDeExportarCuentaCorriente()} variante="secundaria">
               {textos.exportar}
+            </EnlaceDeAccion>
+            <EnlaceDeAccion href={rutaDeCobrarACuenta(ficha.parteId)} variante="secundaria">
+              {textos.cobrarUnTicket}
             </EnlaceDeAccion>
             {puede ? (
               <EnlaceDeAccion

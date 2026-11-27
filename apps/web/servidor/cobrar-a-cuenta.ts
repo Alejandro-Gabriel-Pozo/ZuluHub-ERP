@@ -7,8 +7,10 @@ import {
   type TicketACobrarParaLaPantalla,
   type TicketCobradoACuentaParaLaPantalla,
 } from "../../../src/composicion/cobrar-a-cuenta-web";
+import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
+import { puedeLaAccion } from "./permisos-de-la-persona";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
@@ -16,6 +18,8 @@ import { dependenciasDeSesion } from "./sesion";
  * sucursal es la del ticket y la validan la lectura y el cobro contra el alcance de quien cobra; no viaja. Permisos: `ventas.ver` y `tickets.cobrar`; el saldo de después pide además `cuenta_corriente.ver`.
  * Escribe dinero: la clave de idempotencia y el ejemplar los genera la pantalla al abrir la hoja y los repite en cada reintento. Chequeo: `test/integracion/cobrar-a-cuenta-web.test.ts`.
  */
+
+export type { TicketACobrarParaLaPantalla, TicketCobradoACuentaParaLaPantalla };
 
 const dependencias: DependenciasDeCobrarACuentaWeb = {
   cobro: () => web.cobroACuenta(),
@@ -36,4 +40,9 @@ export function cobrarElTicketACuenta(
   pedido: unknown,
 ): Promise<Respuesta<TicketCobradoACuentaParaLaPantalla>> {
   return conLaEmpresa((contexto) => cobrarUnTicketACuenta(dependencias, contexto, pedido));
+}
+
+/** ¿La persona puede cobrar tickets (`tickets.cobrar`)? Solo apaga «Cobrar» en la pantalla: el caso de uso vuelve a exigirlo. Sin poder leer los permisos, `false`. */
+export function puedeCobrarTickets(contexto: ContextoOperativo): Promise<boolean> {
+  return puedeLaAccion(contexto, "tickets.cobrar");
 }

@@ -11,6 +11,7 @@ import {
   movimientosDeLasPartes,
   saldoDeParte,
 } from "../modulos/saldos_de_partes/publico";
+import { sucursalId } from "../primitivas/identificadores/marca";
 import { importeAJson, type ImporteJson } from "../primitivas/dinero/importe";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import { hoyEnArgentina } from "../primitivas/tiempo/fecha-civil-hasta-hoy";
@@ -51,6 +52,7 @@ export type DependenciasDeCobroACuenta = Readonly<{
 export const DECLARACIONES_DE_COBRO_A_CUENTA = {
   cargoACobrarDelCliente: { accion: "cuenta_corriente.ver" },
   saldoDelClienteACuenta: { accion: "cuenta_corriente.ver" },
+  nombreDeLaSucursal: { accion: "cuenta_corriente.ver" },
   ticketACobrar: { accion: "ventas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;
 
@@ -132,6 +134,21 @@ export function crearCobroACuenta(d: DependenciasDeCobroACuenta) {
           pendiente: importeAJson(cargo.pendiente),
           cliente: { id: cliente.valor.id, nombre: nombres.get(cliente.valor.id) ?? null },
         });
+      });
+    },
+
+    /** El nombre de una sucursal de la empresa (para rotular la caja en la hoja de cobro); `null` si no existe o es de otra empresa. */
+    nombreDeLaSucursal(
+      contexto: ContextoOperativo,
+      entrada: Readonly<{ sucursalId: string }>,
+    ): Promise<Resultado<string | null, ErrorDeCobroACuenta>> {
+      if (!UUID.test(entrada.sucursalId)) return Promise.resolve(err("IDENTIFICADOR_INVALIDO"));
+      return leer(contexto, async (tx) => {
+        const sucursal = await tx.sucursales.obtener(
+          contexto.empresaId,
+          sucursalId(entrada.sucursalId),
+        );
+        return ok(sucursal === null ? null : sucursal.nombre);
       });
     },
 
