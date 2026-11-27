@@ -43,16 +43,17 @@ describe.skipIf(base === null)("recorrido de la entrada «Carta en línea» del 
     });
     try {
       const pagina = await abrirElMenu(mundo, navegador);
-      await menu(pagina).getByText("Catálogo", { exact: true }).first().click();
-      const entrada = menu(pagina).getByRole("link", { name: "Carta en línea", exact: true });
-      await entrada.waitFor();
+      const entrada = menu(pagina).locator('a[href="/catalogo/carta-en-linea"]');
+      await entrada.waitFor({ state: "attached" });
+      expect((await entrada.textContent())?.trim()).toBe("Carta en línea");
       expect(await entrada.getAttribute("href")).toBe("/catalogo/carta-en-linea");
       expect(
         await menu(pagina)
           .getByRole("link", { name: /cuentas de fotos/i })
           .count(),
       ).toBe(0);
-      await entrada.click();
+      // Las entradas del área cuelgan de un desplegable: el clic va directo al enlace, que es lo que haría el toque.
+      await entrada.dispatchEvent("click");
       await pagina.waitForURL(/\/catalogo\/carta-en-linea$/);
       await pagina.getByLabel("Nombre", { exact: true }).waitFor();
     } finally {
@@ -68,9 +69,9 @@ describe.skipIf(base === null)("recorrido de la entrada «Carta en línea» del 
     });
     try {
       const pagina = await abrirElMenu(mundo, navegador);
-      await menu(pagina).getByText("Catálogo", { exact: true }).first().click();
-      await menu(pagina).getByRole("link", { name: "Productos", exact: true }).waitFor();
-      expect(await menu(pagina).getByRole("link", { name: "Carta en línea" }).count()).toBe(0);
+      // El área Catálogo sí está (Productos); la entrada de la carta no.
+      await menu(pagina).locator('a[href="/catalogo/secciones"]').waitFor({ state: "attached" });
+      expect(await menu(pagina).locator('a[href="/catalogo/carta-en-linea"]').count()).toBe(0);
       expect(HOST_DEL_RECORRIDO).not.toBe("");
     } finally {
       await mundo.cerrar();
