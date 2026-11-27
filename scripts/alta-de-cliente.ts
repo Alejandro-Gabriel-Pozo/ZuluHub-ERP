@@ -37,8 +37,10 @@ try {
     ambiente: process.argv[2],
     entorno: process.env,
     soloValidar,
-    leerDatosDelCliente: (codigo) =>
-      JSON.parse(readFileSync(join(import.meta.dirname, "clientes", `${codigo}.json`), "utf8")),
+    leerDatosDelCliente: (codigo): unknown =>
+      JSON.parse(
+        readFileSync(join(import.meta.dirname, "clientes", `${codigo}.json`), "utf8"),
+      ) as unknown,
     sembrarAdmin: (email, salida) =>
       ejecutarCreacionDelPrimerAdmin({
         argumentos: [email],

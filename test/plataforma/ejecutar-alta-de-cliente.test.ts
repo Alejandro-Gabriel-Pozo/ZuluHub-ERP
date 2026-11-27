@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   VARIABLES_OBLIGATORIAS_DE_CLIENTE,
@@ -435,14 +437,13 @@ describe("alta de un cliente: el secreto solo trae lo personal y el archivo lo d
       ],
     };
     expect(problemas(SECRETO, conVerificado)).toContain("verificadoEn: no se esperaba este campo");
-    const { moneda: _quitado, ...sinMoneda } = ARCHIVO;
+    const sinMoneda: Record<string, unknown> = { ...ARCHIVO };
+    delete sinMoneda["moneda"];
     expect(problemas(SECRETO, sinMoneda)).toContain("moneda: falta");
     expect(problemas(SECRETO, "no es un objeto")).toContain("archivo del cliente");
   });
 
-  it("el archivo real de hdn (scripts/clientes/hdn.json) es válido con un secreto de relleno", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { join } = await import("node:path");
+  it("el archivo real de hdn (scripts/clientes/hdn.json) es válido con un secreto de relleno", () => {
     const archivo: unknown = JSON.parse(
       readFileSync(join(import.meta.dirname, "../../scripts/clientes/hdn.json"), "utf8"),
     );
