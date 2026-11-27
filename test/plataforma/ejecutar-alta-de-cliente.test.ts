@@ -165,7 +165,6 @@ function armar(
     ambiente?: string | undefined;
     secreto?: unknown;
     archivo?: unknown;
-    resuelve?: boolean;
     entorno?: Record<string, string | undefined>;
     casos?: Partial<Record<string, Respuesta>>;
     admin?: number;
@@ -211,7 +210,6 @@ function armar(
       return lecturas.length > 1 ? (lecturas.shift() as Date) : (lecturas[0] as Date);
     },
     leerDatosDelCliente: () => opciones.archivo ?? ARCHIVO,
-    resolverHost: () => Promise.resolve(opciones.resuelve ?? true),
     esperar: (ms) => {
       esperas.push(ms);
       return Promise.resolve();
@@ -380,16 +378,6 @@ describe("alta de un cliente: el camino feliz", () => {
   it("pero CLAVE_REUTILIZADA en un paso que NO depende del instante sigue cortando", async () => {
     const t = armar({ casos: { crearMarca: err("CLAVE_REUTILIZADA") } });
     expect(await altaDeCliente(t.entrada)).toBe(1);
-  });
-
-  it("los dominios tienen que resolver en el DNS: si no, corta antes de sembrar nada (y la validación no consulta el DNS)", async () => {
-    const t = armar({ resuelve: false });
-    expect(await altaDeCliente(t.entrada)).toBe(2);
-    expect(t.sembrar).not.toHaveBeenCalled();
-    expect(t.llamadas).toEqual([]);
-    expect(t.texto()).toContain(".centinela.test no resuelve");
-    const solo = armar({ resuelve: false, soloValidar: true });
-    expect(await altaDeCliente(solo.entrada)).toBe(0);
   });
 });
 

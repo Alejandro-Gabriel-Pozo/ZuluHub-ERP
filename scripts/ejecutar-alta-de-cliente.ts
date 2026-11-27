@@ -596,8 +596,6 @@ export type EntradaDeAltaDeCliente = Readonly<{
   esperar?: (milisegundos: number) => Promise<void>;
   /** Los datos NO personales del cliente: el contenido de `scripts/clientes/<codigo>.json`. */
   leerDatosDelCliente: (codigo: string) => unknown;
-  /** ¿El host resuelve en el DNS? (`dns.lookup`; solo en la corrida completa). */
-  resolverHost: (host: string) => Promise<boolean>;
 }>;
 
 /** El código corto del cliente (`hdn` de `cliente-hdn`), solo si el ambiente está en la lista cerrada de clientes con base propia. */
@@ -728,16 +726,6 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
   if (entrada.soloValidar === true) {
     info("VALIDADO: variables y datos de los pasos están bien. No se tocó ninguna base.");
     return 0;
-  }
-
-  // Los dominios tienen que resolver ya: el orden del hotel exige el DNS cortado ANTES del alta (la invitación apunta a esos hosts). Comprobación barata y débil (resolver no prueba que apunte a Vercel).
-  for (const dominio of paquete.dominios) {
-    if (!(await entrada.resolverHost(dominio.host))) {
-      error(
-        `ERROR: el host ${dominio.host} no resuelve en el DNS todavía (¿ya cambiaste el DNS?). No se hizo nada.`,
-      );
-      return 2;
-    }
   }
 
   const total = pasos.length + 1;
