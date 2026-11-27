@@ -4,6 +4,8 @@ import {
 } from "../src/adaptadores/postgres/describir-falla-de-base";
 import { armarPlataforma } from "../src/composicion/plataforma";
 import { PEDERNAL_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { altaDeCliente } from "./ejecutar-alta-de-cliente";
 import { armarCasosDeLaLista } from "./ejecutar-caso-desde-archivo";
 import { ejecutarCreacionDelPrimerAdmin } from "./ejecutar-crear-primer-admin";
@@ -35,6 +37,10 @@ try {
     ambiente: process.argv[2],
     entorno: process.env,
     soloValidar,
+    leerDatosDelCliente: (codigo): unknown =>
+      JSON.parse(
+        readFileSync(join(import.meta.dirname, "clientes", `${codigo}.json`), "utf8"),
+      ) as unknown,
     sembrarAdmin: (email, salida) =>
       ejecutarCreacionDelPrimerAdmin({
         argumentos: [email],

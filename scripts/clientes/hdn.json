@@ -1,0 +1,18 @@
+{
+  "marca": { "codigo": "hdn", "nombreVisible": "Hoteles del Neuquén" },
+  "plan": {
+    "codigo": "hdn-completo",
+    "nombreComercial": "Plan Hoteles del Neuquén",
+    "perillas": {
+      "vidriera_por_qr": { "tipo": "INTERRUPTOR", "encendida": true },
+      "vidriera_modelo_libro": { "tipo": "INTERRUPTOR", "encendida": true },
+      "facturar_antes_de_cobrar": { "tipo": "INTERRUPTOR", "encendida": false }
+    }
+  },
+  "dominios": [
+    { "host": "app.hotelesdelneuquen.com.ar", "superficie": "APP", "titular": "OPERADOR" },
+    { "host": "carta.hotelesdelneuquen.com.ar", "superficie": "CARTA", "titular": "OPERADOR" }
+  ],
+  "zonaHoraria": "America/Argentina/Buenos_Aires",
+  "moneda": "ARS"
+}

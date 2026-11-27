@@ -14,7 +14,10 @@ import {
 } from "../src/adaptadores/vercel/plan-de-variables";
 import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
 import { VARIABLE_DEL_HOST_DE_LA_BASE, hostDeLaBaseCoincide } from "./host-de-la-base";
-import { VARIABLE_DEL_PAQUETE_DE_CLIENTE, leerPaqueteDeCliente } from "./ejecutar-alta-de-cliente";
+import {
+  VARIABLE_DEL_PAQUETE_DE_CLIENTE,
+  problemasDelSecretoPersonal,
+} from "./ejecutar-alta-de-cliente";
 
 /**
  * El secreto de invitaciones de la web de un CLIENTE (workflow `alta-de-cliente.yml`). El token de una invitación se guarda como HMAC con `PEDERNAL_SECRETO_INVITACIONES`, y ese valor tiene que
@@ -78,8 +81,7 @@ export async function prepararSecretoDeInvitaciones(
     return 2;
   }
   tapados.push(token.token);
-  const leido = leerPaqueteDeCliente(entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE]);
-  if (!leido.ok) {
+  if (problemasDelSecretoPersonal(entorno[VARIABLE_DEL_PAQUETE_DE_CLIENTE]).length > 0) {
     error(
       "ERROR: los datos del alta no sirven (los revisa el paso de validación). No se hizo nada.",
     );
