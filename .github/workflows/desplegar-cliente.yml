@@ -1,0 +1,142 @@
+name: Desplegar la web de un cliente (producción)
+
+# Despliega la web de un cliente con proyecto de Vercel propio y SIN Git (hoy `pedernal-hdn`, Hoteles del Neuquén; PRIMER-DESPLIEGUE.md, H.5):
+# Actions → «Desplegar la web de un cliente» → Run workflow. Solo a mano, solo desde main, solo para un cliente de la lista cerrada, con su frase y con la aprobación
+# del dueño (Environment del cliente).
+#
+#  - Sube el código de ESTE commit de main con la CLI de Vercel (versión fija, de más de dos semanas) al proyecto del cliente, a producción. El proyecto sale de la
+#    lista cerrada del código (`PROYECTOS_DE_VERCEL_DE_CLIENTES`), nunca de una entrada: un ambiente que no está en la lista no resuelve a ningún proyecto.
+#  - Antes de desplegar exige que la base del cliente esté al día (la web nueva no arranca contra un esquema viejo) y que Vercel confirme el proyecto.
+#  - Después consulta `/api/salud` de la dirección técnica del despliegue (con reintentos). Si Vercel protege esa dirección (401/403) el resultado es «NO VERIFICADO»
+#    con aviso y la corrida termina en ROJO a propósito: no se da por bueno lo que no se pudo mirar.
+#  - Las variables de la web del cliente NO se tocan acá (las carga `cargar-entorno.yml`; el secreto de invitaciones lo escribe `alta-de-cliente.yml`). Si una variable
+#    cambió, se vuelve a desplegar para que la web la tome.
+#  - Los dominios (`app.` y `carta.`) los sirve este proyecto recién cuando el dueño cambia el DNS (H.9); este flujo no lo hace.
+#  - Concurrencia: el grupo `desplegar-<ambiente>`; una corrida que ya está desplegando nunca se cancela.
+#  - Secretos del Environment del cliente (nunca en el repositorio): PEDERNAL_DB_DUENO_DIRECTA y PEDERNAL_VERCEL_TOKEN (alcance al proyecto del cliente). Ningún paso los imprime.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Qué cliente"
+        type: choice
+        required: true
+        options:
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>`, la misma de `migrar.yml`.
+          - cliente-hdn
+      confirmacion:
+        description: "Escribir DESPLEGAR CLIENTE-HDN"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desplegar-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se despliega un cliente desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            # Un cliente con base propia (lista cerrada), con su frase: `cliente-<codigo>) esperado="DESPLEGAR CLIENTE-<CODIGO>" ;;`
+            cliente-hdn) esperado="DESPLEGAR CLIENTE-HDN" ;;
+            *) echo "::error::Ambiente no permitido."; exit 1 ;;
+          esac
+          if [ "$CONFIRMACION" != "$esperado" ]; then
+            echo "::error::Para desplegar $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+            exit 1
+          fi
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  desplegar:
+    name: Desplegar ${{ needs.validar.outputs.ambiente }}
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: ${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos en el Environment del cliente (Settings → Environments → Secrets):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: La base tiene que estar al día
+        # La web nueva no arranca contra un esquema viejo: este flujo no migra (eso es de `migrar.yml`). `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::Hay migraciones pendientes. Corré antes «Migrar» para este cliente y volvé a desplegar."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Confirmar el proyecto del cliente en Vercel (sale de la lista cerrada)
+        run: npm run desplegar-cliente -- datos "$AMBIENTE"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - name: Desplegar a producción (CLI de Vercel, versión fija)
+        id: desplegar
+        shell: bash
+        run: |
+          set -eu
+          # La CLI imprime la dirección del despliegue por la salida estándar y su registro por la de error.
+          direccion="$(npx --yes vercel@65.15.0 deploy --prod --yes 2>"$RUNNER_TEMP/vercel.log")" || {
+            echo "::error::El despliegue falló. Últimas líneas del registro de la CLI:"
+            tail -n 20 "$RUNNER_TEMP/vercel.log"
+            exit 1
+          }
+          echo "direccion=$direccion" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+
+      - name: Verificar el despliegue (/api/salud)
+        run: npm run desplegar-cliente -- verificar "$DIRECCION"
+        env:
+          DIRECCION: ${{ steps.desplegar.outputs.direccion }}
