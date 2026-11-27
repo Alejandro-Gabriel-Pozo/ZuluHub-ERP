@@ -71,6 +71,12 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   lista exacta usa `NEON_API_KEY` o `PEDERNAL_DB_DUENO_DIRECTA`, o si alguno llama a borrar, resetear o restaurar de la API de Neon, con
   violación inyectada por cada caso. Lo que **no** puede chequear: el uso del MCP por una sesión (es regla de proceso; la cerradura real es la
   rama protegida de Neon, que bloquea borrar y resetear pero no el SQL ni la restauración).
+  **Excepción (dueño, 27/11/2026, «SI a tus recomendaciones»):** `alta-de-cliente.yml` (que escribe en la base del hotel: administrador de plataforma, plan, marca, dominios, empresa y módulos) y
+  `desplegar-cliente.yml` (que usa la cadena solo para mirar que la base esté al día y despliega la web del cliente) pueden usar `PEDERNAL_DB_DUENO_DIRECTA` de **un solo** ambiente: `cliente-hdn`, la base
+  del cliente dedicado Hoteles del Neuquen (`withered-mode-13099736`), **nunca** `flat-flower-36030007` ni `frosty-pond-14815728`. Solo a mano, desde `main`, con su frase y **con la aprobación del dueño en cada
+  corrida** (revisores obligatorios del Environment). No migran (eso sigue siendo solo de `migrar.yml`), no tienen `NEON_API_KEY` y por eso no crean, borran, resetean ni restauran ramas o snapshots; el alta
+  no toma snapshot previo (vale para una base recién migrada y sin datos reales). Mismo chequeo: la lista `CON_CADENA_DEL_DUENO` de `workflows-y-neon.test.ts` sigue siendo exacta (con estos dos nombres y
+  ninguno más) y `workflow-alta-y-despliegue-de-cliente.test.ts` fija sus cerraduras. Un cliente nuevo con base propia no hereda esta excepción: se pide al dueño.
 - **Todo nace cerrado (denegar por defecto).** Nada se habilita sin declararlo, autorizarlo y dejar rastro; ante un error o una duda el
   sistema cierra (fail closed). Las capacidades son opt-in, con el mínimo privilegio y lista blanca: solo pasa lo declarado. Ejemplos: un
   módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
