@@ -65,6 +65,11 @@ export {
   type RepositorioDeDeclaraciones,
 } from "../persistencia/repositorio-de-declaraciones";
 export {
+  crearRepositorioDeDevolucionesDeLaJornada,
+  type ImportePorPar,
+  type RepositorioDeDevolucionesDeLaJornada,
+} from "../persistencia/repositorio-de-devoluciones-de-la-jornada";
+export {
   crearRepositorioDeLaJornada,
   type AjusteConEnlace,
   type ArqueoDeLaJornada,

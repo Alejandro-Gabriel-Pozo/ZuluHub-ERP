@@ -29,6 +29,8 @@ export type PropsDePantallaDeCuenta = Readonly<{
   usuarios?: Readonly<{ texto: string; href: string }>;
   /** El renglón «Roles» y adónde lleva; solo para quien puede ver los roles (el gerente; lo decide el servidor). Sin él, no se muestra. */
   roles?: Readonly<{ texto: string; href: string }>;
+  /** El renglón «Sucursales» y adónde lleva; solo para quien puede ver las sucursales (lo decide el servidor). Sin él, no se muestra. */
+  sucursalesDeLaEmpresa?: Readonly<{ texto: string; href: string }>;
   accionDeCerrarSesion: AccionDeFormulario;
   diccionario?: DiccionarioResuelto;
 }>;
@@ -41,6 +43,7 @@ export function PantallaDeCuenta({
   contactoDeLaSucursal,
   usuarios,
   roles,
+  sucursalesDeLaEmpresa,
   accionDeCerrarSesion,
   diccionario = {},
 }: PropsDePantallaDeCuenta) {
@@ -86,6 +89,13 @@ export function PantallaDeCuenta({
         <Texto>
           <a className={estilos["enlace"]} href={roles.href}>
             {roles.texto}
+          </a>
+        </Texto>
+      )}
+      {sucursalesDeLaEmpresa === undefined ? null : (
+        <Texto>
+          <a className={estilos["enlace"]} href={sucursalesDeLaEmpresa.href}>
+            {sucursalesDeLaEmpresa.texto}
           </a>
         </Texto>
       )}

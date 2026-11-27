@@ -6,6 +6,8 @@ export const RUTAS_DE_CUENTA = {
   invitarUsuario: "/cuenta/usuarios/invitar",
   roles: "/cuenta/roles",
   nuevoRol: "/cuenta/roles/nuevo",
+  sucursales: "/cuenta/sucursales",
+  nuevaSucursal: "/cuenta/sucursales/nueva",
 } as const;
 
 /** La ficha de una persona de la empresa: `/cuenta/usuarios/<personaId>`. */
