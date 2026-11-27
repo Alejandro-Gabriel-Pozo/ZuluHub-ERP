@@ -28,18 +28,20 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
 - **CI liviano en los pull requests hacia `integracion/modulos-v2` (dueño, 25/11/2026).** Un PR hacia la rama de integración corre solo tipos, lint, formato, arquitectura,
   guardián de contratos, código muerto, seguridad (gitleaks, zizmor, dependencias) y las pruebas completas con Postgres; la compilación de la web, los componentes y el
-  recorrido, solo si el cambio toca la web (el plan lo decide por el grafo y, ante lo que no sabe clasificar, corren). NO corren mutación, Estabilidad ni CodeQL. La corrida
-  NOCTURNA sobre la rama de integración (`nocturna-de-integracion.yml`) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes, recorrido y CodeQL) y el PR final de
-  integración hacia `main` corre el gate completo. Previene: unos 60 chequeos y 30 a 60 minutos por PR con muchas sesiones en paralelo. Chequeo:
+  recorrido, solo si el cambio toca la web (el plan lo decide por el grafo y, ante lo que no sabe clasificar, corren). NO corren mutación, Estabilidad ni CodeQL. La rama de
+  integración se RETIRA tras el PR final (26/11/2026, decisión del orquestador): los PR nuevos van a `main` con su mutación por grafo, la corrida NOCTURNA de `main` (el `schedule` de
+  `ci.yml`, 06:17 UTC) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes y recorrido; CodeQL, semanal) y el PR final corre el gate completo. Previene: unos 60 chequeos y 30 a 60 minutos por PR con muchas sesiones en paralelo. Chequeo:
   `test/arquitectura/evaluar-gate.test.ts` y `planificar-ci-liviano.test.ts` (el salto solo vale hacia la rama de integración; cualquier otro caso queda en rojo).
-- **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026).** Si la nocturna (mutación completa, incluido el guardián; la de `main` y la de la rama de integración) está
-  roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana. Si aparecen dos fallas de la nocturna en una semana se restaura el gate
+- **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026; reescrita el 26/11/2026 al retirar la integración).** Si la nocturna de `main` (`ci.yml`, `schedule` 06:17 UTC: mutación
+  completa, incluido el guardián, y 12 copias de Estabilidad) está roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana
+  (`gh run list --workflow ci.yml --event schedule --branch main --limit 1`). Si aparecen dos fallas de la nocturna en una semana se restaura el gate
   completo por PR (condición del registro de relajaciones). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
-  merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la mire es proceso, no un test.
+  merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo) y `test/arquitectura/parar-la-linea.test.ts` (que `ci.yml` tenga el `schedule` diario y que no haya una nocturna de integración que
+  se dispare sola sobre una rama que ya no existe); que el orquestador la mire es proceso, no un test.
 - **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
   podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, umbrales de mutación
   menores que 100 %, sin pruebas de carga ni volumen, concurrencia con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición
-  para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR.
+  para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna de `main` corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda lo que un PR recorta.
   Previene: recortes del CI que nadie recuerda ni revisa cuando cambia la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
 - **Mutación por nivel (dueño, 25/11/2026).** Todo grupo de `arquitectura/mutacion/*.json` declara su `nivel` y el umbral de mutación sale de `arquitectura/niveles-de-mutacion.json`:
   DINERO_EXACTO 100 % (solo el cálculo puro de dinero: importes, redondeo, prorrateo y moneda; rutas `dinero_exacto` de `arquitectura/rutas-sensibles-de-mutacion.json`), CRITICO 95 % (permisos y

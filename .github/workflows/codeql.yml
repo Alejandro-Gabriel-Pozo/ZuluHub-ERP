@@ -3,8 +3,8 @@ name: CodeQL
 on:
   push:
     branches: [main]
-  # Solo los pull requests hacia `main` (el final desde la rama de integración y los urgentes): los de la rama de integración corren el CI liviano y CodeQL corre de noche
-  # sobre ella (`nocturna-de-integracion.yml` lo dispara con `workflow_dispatch`). Registrado en `arquitectura/deuda/relajaciones-de-pruebas.json`.
+  # Solo los pull requests hacia `main` (el final desde la rama de integración y los urgentes): los de la rama de integración (retirada tras el pull request final, 26/11/2026) corrían el CI liviano y CodeQL corre
+  # cada semana sobre `main` (`schedule` de abajo). Registrado en `arquitectura/deuda/relajaciones-de-pruebas.json`.
   pull_request:
     branches: [main]
   schedule:

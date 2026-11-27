@@ -28,7 +28,7 @@ permissions:
 #
 # CI liviano (dueño, 25/11/2026): un pull request hacia `integracion/modulos-v2` NO corre mutación, Estabilidad ni la web (compilación, componentes y recorrido) salvo que el cambio
 # toque la web; lo decide `mutacion-plan` (`perfilDelPullRequest` y `tocaLaWeb`, con la rama base que llega por el entorno) y el Gate acepta esos saltos solo así (`evaluar-gate.cjs`).
-# La corrida nocturna (`nocturna-de-integracion.yml`) corre todo sobre esa rama y el pull request final hacia `main` corre el gate completo. Registrado en
+# La rama de integración se retira tras el pull request final (26/11/2026): los pull requests nuevos van a `main` con su mutación por grafo; la corrida nocturna de `main` (el `schedule` de este archivo) corre todo y el pull request final corre el gate completo. Registrado en
 # `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`). Previene: unos 60 chequeos y 30 a 60 minutos por pull request con muchas sesiones en paralelo.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
