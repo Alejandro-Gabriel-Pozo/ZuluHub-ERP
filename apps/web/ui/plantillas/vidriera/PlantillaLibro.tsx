@@ -71,11 +71,29 @@ export function PlantillaLibro({
     tituloPorEnfocar.current = null;
   });
 
+  // La página a la que se desliza por mando propio (botones, teclado, índice): mientras dura el deslizamiento,
+  // las posiciones de paso no cambian la página, o el contador y los botones parpadearían.
+  const rumbo = useRef<number | null>(null);
+  const soltarElRumbo = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const paginaActual = useRef(PAGINA_PORTADA);
+  const fijarPagina = useCallback((destino: number) => {
+    paginaActual.current = destino;
+    setPagina(destino);
+  }, []);
+
   const irA = useCallback(
     (destino: number, opciones: { enfocarElTitulo?: boolean; instantaneo?: boolean } = {}) => {
       const elemento = pista.current;
       if (elemento === null) return;
-      setPagina(destino);
+      fijarPagina(destino);
+      if (opciones.instantaneo !== true) {
+        rumbo.current = destino;
+        // Si el deslizamiento se interrumpe (un toque en el medio) la página vuelve a seguir al dedo.
+        if (soltarElRumbo.current !== null) clearTimeout(soltarElRumbo.current);
+        soltarElRumbo.current = setTimeout(() => {
+          rumbo.current = null;
+        }, 800);
+      }
       // Sin `scrollTo` (entornos sin layout) no hay a dónde deslizar: queda la página elegida.
       elemento.scrollTo?.({
         left: destino * elemento.clientWidth,
@@ -84,7 +102,7 @@ export function PlantillaLibro({
       if (opciones.enfocarElTitulo !== true) return;
       tituloPorEnfocar.current = secciones[destino - PAGINA_INDICE - 1]?.id ?? null;
     },
-    [secciones],
+    [secciones, fijarPagina],
   );
 
   // `#<slug>` abre esa sección y deja el foco en su título.
@@ -103,22 +121,18 @@ export function PlantillaLibro({
       if (evento.key !== "ArrowLeft" && evento.key !== "ArrowRight") return;
       if (laTeclaEsDeOtro(evento.target)) return;
       evento.preventDefault();
-      setPagina((actual) => {
-        const siguiente = paginaVecina(actual, evento.key === "ArrowRight" ? 1 : -1, total);
-        const elemento = pista.current;
-        elemento?.scrollTo?.({ left: siguiente * elemento.clientWidth, behavior: "smooth" });
-        return siguiente;
-      });
+      irA(paginaVecina(paginaActual.current, evento.key === "ArrowRight" ? 1 : -1, total));
     }
     window.addEventListener("keydown", alTocarUnaTecla);
     return () => {
       window.removeEventListener("keydown", alTocarUnaTecla);
     };
-  }, [total]);
+  }, [total, irA]);
 
   useEffect(
     () => () => {
       if (cuadro.current !== null) cancelAnimationFrame(cuadro.current);
+      if (soltarElRumbo.current !== null) clearTimeout(soltarElRumbo.current);
     },
     [],
   );
@@ -129,7 +143,12 @@ export function PlantillaLibro({
       cuadro.current = null;
       const elemento = pista.current;
       if (elemento === null) return;
-      setPagina(paginaVisible(elemento.scrollLeft, elemento.clientWidth, total));
+      const visible = paginaVisible(elemento.scrollLeft, elemento.clientWidth, total);
+      if (rumbo.current !== null) {
+        if (visible === rumbo.current) rumbo.current = null;
+        return;
+      }
+      fijarPagina(visible);
     });
   }
 
