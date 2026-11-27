@@ -65,7 +65,7 @@ describe("decidirReemision", () => {
     ],
     ["sin administrador", { ...BUENO, administradores: [] }],
   ])("se rechaza: %s", (_nombre, estado) => {
-    const d = decidirReemision(estado as EstadoDelAlta);
+    const d = decidirReemision(estado);
     expect(d.ok).toBe(false);
     if (!d.ok) expect(d.motivo).not.toContain(ADMIN);
   });
