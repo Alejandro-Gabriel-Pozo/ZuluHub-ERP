@@ -307,10 +307,11 @@ const todos: Entrada[] = [...casos, ...consultas];
 describe("P7: el guard va primero en cada caso de uso y consulta de caja", () => {
   it("hay casos de uso y consultas con acción que probar, uno por cada declarado", () => {
     expect(casos).toHaveLength(Object.keys(DECLARACIONES).length);
-    expect(casos).toHaveLength(25);
+    expect(casos).toHaveLength(27);
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "cobradoPorOrigenDeLaJornada",
       "cobrosDeLaJornada",
+      "cobrosDevolublesDeUnOrigen",
       "conciliacionDeLaJornada",
       "estadoDeLaCaja",
       "fichaDeSesion",
