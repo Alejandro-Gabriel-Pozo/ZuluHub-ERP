@@ -6,8 +6,9 @@ import { problemasDeSellos, type ArchivosDeMigraciones } from "./migraciones-sel
 
 /**
  * Sellos de migraciones (T8 de H4b): `migraciones/selladas.json` fija el checksum de cada migración ya aplicada; esta prueba falla si el
- * archivo cambia, si falta o si una migración nueva se cuela con un número que ya quedó atrás. La 0094 queda SIN sellar hasta su primer
- * apply en cualquier base (`npm run sellar:migraciones -- 0094_permisos_configurables.sql`, el mismo día; ver PRIMER-DESPLIEGUE.md).
+ * archivo cambia, si falta o si una migración nueva se cuela con un número que ya quedó atrás. Están selladas todas las existentes hasta la 0113
+ * (los números 0099 a 0101 no existen); las posteriores quedan SIN sellar hasta su primer apply en cualquier base
+ * (`npm run sellar:migraciones -- <archivo>`, el mismo día; ver PRIMER-DESPLIEGUE.md).
  * Cada regla trae su violación inyectada.
  */
 const CARPETA = join(import.meta.dirname, "../../migraciones");
@@ -27,13 +28,13 @@ describe("sellos de migraciones", () => {
     expect(problemasDeSellos(sellos, hoy)).toEqual([]);
   });
 
-  it("están selladas de la 0001 a la 0093 y la 0094 sigue sin sellar hasta su primer apply", () => {
+  it("están selladas de la 0001 a la 0113 (las que existen) y las posteriores siguen sin sellar hasta su primer apply", () => {
     const nombres = Object.keys(sellos).sort();
     expect(nombres[0]).toBe("0001_base.sql");
-    expect(nombres.at(-1)).toBe("0093_correccion_de_compra_ampliada.sql");
-    expect(nombres).not.toContain("0094_permisos_configurables.sql");
-    const hasta0093 = [...hoy.keys()].filter((n) => n.slice(0, 4) <= "0093");
-    expect(nombres).toEqual(hasta0093.sort());
+    expect(nombres.at(-1)).toBe("0113_soporte_lee_los_roles_propios.sql");
+    expect(nombres).toContain("0094_permisos_configurables.sql");
+    const hasta0113 = [...hoy.keys()].filter((n) => n.slice(0, 4) <= "0113");
+    expect(nombres).toEqual(hasta0113.sort());
   });
 
   it("violación inyectada: un hash distinto (se editó después de sellada)", () => {
@@ -76,8 +77,8 @@ describe("sellos de migraciones", () => {
     ]);
   });
 
-  it("una migración nueva con número mayor que todas las selladas es válida (la 0094 de hoy)", () => {
-    const conNueva = new Map(hoy).set("0095_nueva.sql", HASH);
+  it("una migración nueva con número mayor que todas las selladas es válida (la próxima sin sellar)", () => {
+    const conNueva = new Map(hoy).set("0116_nueva.sql", HASH);
     expect(problemasDeSellos(sellos, conNueva)).toEqual([]);
   });
 
