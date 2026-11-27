@@ -4,6 +4,7 @@ import {
   MODELO_DE_RESERVA,
   esModeloDeVidriera,
   modeloEfectivo,
+  pideAhorroDeDatos,
   type EntradaDelModeloEfectivo,
 } from "./modelos";
 
@@ -100,6 +101,20 @@ describe("modeloEfectivo (§4.4, servidor)", () => {
   it("con Save-Data cae a Lista, sea cual sea la elección", () => {
     for (const elegido of ["LISTA", "CUADRICULA", "LIBRO"]) {
       expect(modeloEfectivo(entrada({ elegido, ahorroDeDatos: true }))).toBe("LISTA");
+    }
+  });
+});
+
+describe("pideAhorroDeDatos (encabezado Save-Data)", () => {
+  it("«on» lo pide, sin distinguir mayúsculas ni blancos de los costados", () => {
+    for (const valor of ["on", "ON", "On", " on ", "\ton"]) {
+      expect(pideAhorroDeDatos(valor), JSON.stringify(valor)).toBe(true);
+    }
+  });
+
+  it("ausente o cualquier otro valor no lo pide", () => {
+    for (const valor of [null, "", "off", "true", "1", "on,off", "no", " "]) {
+      expect(pideAhorroDeDatos(valor), JSON.stringify(valor)).toBe(false);
     }
   });
 });

@@ -76,6 +76,11 @@ export type VidrieraPublicada = Readonly<{
    */
   mensajeDePortada: string | null;
   identidad: IdentidadPublicada;
+  /**
+   * Las perillas de MODELO de carta (`vidriera_modelo_libro`…) que el plan de la empresa tiene encendidas HOY (mismos derechos de uso que `vidriera_por_qr`, leídos en la misma foto de cada visita).
+   * Con `identidad.modelo` y la foto de las fotos visibles, es lo que necesita `modeloEfectivo`. El dominio que arma la carta no conoce planes: lo deja vacío y lo completa el adaptador.
+   */
+  perillasDeModelo: readonly string[];
   /** Las cuentas del proveedor de imágenes que la empresa de la carta declaró y tiene activas (0102): con ellas se valida el logo al traerlo. */
   cuentasDeImagen: readonly string[];
   /**

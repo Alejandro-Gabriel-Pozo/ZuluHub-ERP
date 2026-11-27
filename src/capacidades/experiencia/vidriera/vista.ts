@@ -7,6 +7,7 @@ import type {
 import { CARA_POR_DEFECTO, type CaraDeVidriera } from "./caras";
 import { COLOR_POR_DEFECTO_DE_LA_CARTA } from "./color-de-la-carta";
 import { direccionesDeVidriera, slugDeNombre } from "./direccion";
+import { modeloEfectivo, type ModeloDeVidriera } from "./modelos";
 import { rutaDelLogoServido } from "./logo-publico";
 import { temaDeLaCarta, type TemaDeLaCarta } from "./tema-de-la-carta";
 import { unirConO } from "./unir-con-o";
@@ -75,6 +76,8 @@ export type VistaDeIdentidad = Readonly<{
 }>;
 
 export type VistaDeVidriera = Readonly<{
+  /** El modelo con el que se dibuja HOY esta visita (`modeloEfectivo`): el elegido solo si su perilla está encendida y el pedido no pide ahorrar datos; si no, Lista. */
+  modelo: ModeloDeVidriera;
   nombre: string;
   rubro: string | null;
   lugar: string | null;
@@ -220,6 +223,8 @@ function identidadParaLaVista(vidriera: VidrieraPublicada, rutaPublica: string):
 export function armarVistaDeVidriera(
   vidriera: VidrieraPublicada,
   rutaPublica: string,
+  /** El pedido trae `Save-Data: on`: la carta se dibuja como Lista (§4.4). */
+  ahorroDeDatos = false,
 ): VistaDeVidriera {
   const todos = vidriera.secciones.flatMap((s) => s.productos);
   const direcciones = direccionesDeVidriera(
@@ -239,6 +244,12 @@ export function armarVistaDeVidriera(
     return productos.length === 0 ? [] : [{ id: ancla, nombre: seccion.nombre, productos }];
   });
   return {
+    modelo: modeloEfectivo({
+      elegido: vidriera.identidad.modelo,
+      perillasEncendidas: vidriera.perillasDeModelo,
+      fotosVisibles: todos.filter((p) => p.foto?.estado === "VISIBLE").length,
+      ahorroDeDatos,
+    }),
     nombre: vidriera.nombre,
     rubro: vidriera.rubro,
     lugar: vidriera.lugar,

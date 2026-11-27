@@ -1,6 +1,9 @@
 import { codigoDeCartaDesdeTexto } from "../../primitivas/texto/datos-de-carta-publica";
 import type { ClaveModulo, DefinicionDeModulo } from "../../capacidades/modulos/catalogo";
+import { CATALOGO_DE_MODELOS_DE_VIDRIERA } from "../../capacidades/experiencia/vidriera/modelos";
+import { valorDePerilla } from "../../capacidades/planes/derechos";
 import { elPlanDejaServirLaCarta } from "../../capacidades/planes/derechos-de-la-carta";
+import { estaEncendida } from "../../capacidades/planes/valores";
 import type { ClavePerilla, DefinicionDePerilla } from "../../capacidades/planes/perillas";
 import {
   armarVidrieraPublicada,
@@ -93,7 +96,18 @@ export function crearVidrieraPublica(
         derechos,
         modulosActivados: await tx.modulos.deLaEmpresa(carta.empresaId),
       });
-      return permite ? vidriera : null;
+      if (!permite) return null;
+      // Las perillas de modelo encendidas, de los MISMOS derechos de esta visita (una baja de plan deja la carta en Lista: `modeloEfectivo`). Una perilla de modelo que el catálogo de perillas todavía no
+      // declara (la Cuadrícula) no puede estar encendida: los derechos son totales sobre lo declarado, y un modelo sin perilla declarada cae a Lista.
+      const perillasDeModelo = Object.values(CATALOGO_DE_MODELOS_DE_VIDRIERA).flatMap(
+        ({ perilla }) =>
+          perilla !== null &&
+          Object.hasOwn(catalogos.catalogoDePerillas, perilla) &&
+          estaEncendida(valorDePerilla(derechos, perilla as ClavePerilla))
+            ? [perilla]
+            : [],
+      );
+      return { ...vidriera, perillasDeModelo };
     });
     if (!leida.ok) throw new Error(`no se pudo leer la carta pública: ${leida.error.tipo}`);
     return leida.valor;

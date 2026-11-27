@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { esIndexable, esNonceValido } from "../../../src/capacidades/experiencia/cabeceras";
+import { pideAhorroDeDatos } from "../../../src/capacidades/experiencia/vidriera/modelos";
 import {
   ENCABEZADO_DE_NONCE,
   hostDelPedido,
@@ -37,6 +38,11 @@ export async function puertaOpcional(
 export async function nonceDelPedido(): Promise<string | null> {
   const nonce = (await headers()).get(ENCABEZADO_DE_NONCE);
   return nonce !== null && esNonceValido(nonce) ? nonce : null;
+}
+
+/** ¿El pedido trae `Save-Data: on`? La carta se dibuja entonces como Lista (§4.4). */
+export async function ahorroDeDatosDelPedido(): Promise<boolean> {
+  return pideAhorroDeDatos((await headers()).get("save-data"));
 }
 
 /** ¿Se deja indexar lo que sirve esta puerta? La misma función que decide el encabezado `X-Robots-Tag` (`cabeceras.ts`): una sola regla. */

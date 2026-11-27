@@ -31,6 +31,11 @@ export function esModeloDeVidriera(valor: string): valor is ModeloDeVidriera {
   return Object.hasOwn(CATALOGO_DE_MODELOS_DE_VIDRIERA, valor);
 }
 
+/** El encabezado `Save-Data` del pedido: «on» (sin distinguir mayúsculas ni blancos de los costados) pide ahorrar datos; ausente o cualquier otro valor, no. Pura: el servidor le pasa el texto del encabezado. */
+export function pideAhorroDeDatos(encabezado: string | null): boolean {
+  return encabezado !== null && encabezado.trim().toLowerCase() === "on";
+}
+
 /** Todo lo que decide el modelo efectivo, como dato: sin reloj, sin azar y sin leer el pedido. */
 export type EntradaDelModeloEfectivo = Readonly<{
   /** Lo que guardó el gerente para esta carta; vacío si nunca eligió. Puede ser un texto viejo o desconocido. */
