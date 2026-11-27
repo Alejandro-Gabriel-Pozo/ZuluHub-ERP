@@ -73,5 +73,22 @@
   "0090_datos_que_se_piden.sql": "119d3b239cc182dac8bdca0a64fdbcdc9a3089da3bb414361599555436aec3dc",
   "0091_movimiento_de_dinero.sql": "1477422fefe455a1b422e624bcd9a0d0049ccb8fb6947a0d47072ed504639e65",
   "0092_libro_de_saldos.sql": "a752ed62946676d7896df9c4eeafb7256f5020024d0942b944ef40a4ee735754",
-  "0093_correccion_de_compra_ampliada.sql": "eba05f014597054f4552672fd5da9464cec82b9ee151bf8904cbba13bd69dd6f"
+  "0093_correccion_de_compra_ampliada.sql": "eba05f014597054f4552672fd5da9464cec82b9ee151bf8904cbba13bd69dd6f",
+  "0094_permisos_configurables.sql": "ed0dd8fa91bef81620b5536cb210a115a1db94a7d32a7f21cf3dfb65ff1971e0",
+  "0095_dominios_de_empresa_lectura_propia_y_unico_por_superficie.sql": "4f1dc36b2dc12066c74f09644cc4fe17fb63b69dffee1ab5c22df080e8e78896",
+  "0096_lectura_publica_de_las_cartas_de_la_empresa_del_host.sql": "65b3470e73f49384de4500390f633c8c5b9891d6f60f6eb8c6061dea5512c7c7",
+  "0097_roles_propios_de_la_empresa.sql": "257e06a6c77808ab3b3e4be8df1a16534788f7ca1c013e591455a9116d042477",
+  "0098_correccion_de_lo_recibido.sql": "139556bceee2203e88ceeacc5112f26d8b32cf5fdbf14871f61ffca34084c69d",
+  "0102_cuentas_de_imagen_declaradas.sql": "2f666fde1e51b9c727c74ddfa47a53160d9a24b523b2a058f2f46cec9435d6c5",
+  "0103_pago_compuesto.sql": "4f339e9283719ed6355af36951329f9c218bf5cbed8a14d0ddc83581da5cb707",
+  "0104_nota_libre_en_la_linea_de_comanda.sql": "114895b3314729d2779dca964625903e82f774f059fb94da335f4aa9ba05a698",
+  "0105_anonimizacion_de_partes.sql": "03d567dac8b8b08bec0efe1df08d7153f8439fb8390c848bf95a7ef90ff95416",
+  "0106_cuenta_del_cliente.sql": "61006bbb44bc1f9e077627065025e27796133d7ed95a9deab0267889982a47d1",
+  "0107_cliente_en_el_ticket.sql": "504ddbf9b635eb01054e7f369778b6951df03e8cc99dc8949c2af15dc81ae277",
+  "0108_facturar_antes_de_cobrar.sql": "ee52b46bf5ea1e4d6acd79bb38b60887947fb4822338b9d363f79c7eb4ae74f8",
+  "0109_pago_compuesto_exigir_medios.sql": "4874dccf8058d8a55bd651c546ea374d42b041a845d6523cb4e7f755cfd1bb78",
+  "0110_clase_de_asiento_nota_de_debito_de_compra.sql": "308df19b2c51fbfe35f3d33ed1f91ca561a9ca2d22ef25fcf9c2a945a13dc750",
+  "0111_compras_notas_de_debito.sql": "3505d462d715f4415000304f3f4748ddf7852a00b6c0b25a26f8961c5cfc5112",
+  "0112_compras_reemplazo_de_factura.sql": "efec225243be84cf73f5938a6d14b46601066a9007de0be0fbb45574b8f8060e",
+  "0113_soporte_lee_los_roles_propios.sql": "0a6a6164b991730b6b56bf5de87cb54ce1e5a928f1fe9d530f285481225b39f6"
 }
