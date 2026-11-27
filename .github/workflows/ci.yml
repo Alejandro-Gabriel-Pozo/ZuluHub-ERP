@@ -26,10 +26,10 @@ permissions:
 # al minuto del merge (queda a ≤ 24 h, en la nocturna); lo que NO se pierde: las pruebas, el estático y el recorrido sí corren en cada push.
 # El Gate acepta saltados `mutacion-plan`, `mutacion` y `estabilidad` solo en `push` (ver `arquitectura/evaluar-gate.cjs`).
 #
-# CI liviano (dueño, 25/11/2026): un pull request hacia `integracion/modulos-v2` NO corre mutación, Estabilidad ni la web (compilación, componentes y recorrido) salvo que el cambio
-# toque la web; lo decide `mutacion-plan` (`perfilDelPullRequest` y `tocaLaWeb`, con la rama base que llega por el entorno) y el Gate acepta esos saltos solo así (`evaluar-gate.cjs`).
-# La rama de integración se retira tras el pull request final (26/11/2026): los pull requests nuevos van a `main` con su mutación por grafo; la corrida nocturna de `main` (el `schedule` de este archivo) corre todo y el pull request final corre el gate completo. Registrado en
-# `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`). Previene: unos 60 chequeos y 30 a 60 minutos por pull request con muchas sesiones en paralelo.
+# El CI liviano (dueño, 25/11/2026: un pull request hacia `integracion/modulos-v2` sin mutación, Estabilidad ni la web salvo que el cambio la tocara) se RETIRÓ el 27/11/2026 con la rama de
+# integración: los pull requests van a `main` con su mutación por grafo, la corrida nocturna de `main` (el `schedule` de este archivo) corre todo y el pull request final corría el gate completo.
+# `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`, RESTAURADA). El Gate conserva, inertes, las salidas `liviano` y `toca_web` del plan (siempre `false` y
+# `true`): su limpieza es un cambio aparte.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
@@ -323,7 +323,7 @@ jobs:
       - id: plan
         run: node arquitectura/planificar-mutacion.cjs
         env:
-          # La rama base y la de origen del pull request deciden el perfil (liviano hacia la rama de integración; ver `perfilDelPullRequest`). Van por el entorno, nunca dentro del comando.
+          # La rama de origen del pull request decide el perfil (completo si viene de la rama de integración; ver `perfilDelPullRequest`). Va por el entorno, nunca dentro del comando.
           BASE_DEL_PR: ${{ github.base_ref }}
           ORIGEN_DEL_PR: ${{ github.head_ref }}
       # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
@@ -409,7 +409,7 @@ jobs:
           # Estabilidad saltada por el plan solo vale en un pull request; en push a main se aceptan saltados el plan, la mutación y Estabilidad (y solo
           # ahí); en la nocturna y a pedido, ninguno.
           EVENTO: ${{ github.event_name }}
-          # La rama base del pull request: el CI liviano (jobs saltados) solo se acepta hacia la rama de integración.
+          # La rama base del pull request: el Gate todavía conserva, inerte, la aceptación del CI liviano (retirado) hacia la rama de integración.
           BASE_DEL_PR: ${{ github.base_ref }}
           # Con la cabeza actual y la de esta corrida, el Gate distingue «reemplazada por un push nuevo» de una falla real.
           CABEZA_ACTUAL: ${{ steps.cabeza.outputs.actual }}
