@@ -52,8 +52,8 @@ const SUPERFICIES_DEL_CLIENTE = ["APP", "CARTA"] as const;
 /** El texto que queda en la auditoría de plataforma como motivo de los pasos que lo piden. */
 const MOTIVO = "Alta de un cliente con base propia";
 
-/** El módulo que queda activo de entrada en la marca (como en preview); los demás se activan por paso. */
-const MODULOS_INICIALES_DE_LA_MARCA = ["administracion"] as const;
+/** Módulos iniciales de la marca: ninguno. `validarModulosIniciales` solo admite claves disponibles y NO obligatorias (los obligatorios están siempre; `[]` es válido); los demás se activan por paso en la empresa. */
+export const MODULOS_INICIALES_DE_LA_MARCA: readonly string[] = [];
 
 /** Las variables que se exigen antes de abrir el login temporal (la corrida de validación solo las revisa). */
 export const VARIABLES_ANTES_DEL_LOGIN_DE_CLIENTE = [
@@ -113,6 +113,12 @@ export function modulosDisponibles(): readonly string[] {
   return (Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]).filter(
     (clave) => CATALOGO_DE_MODULOS[clave].estado === "disponible",
   );
+}
+
+/** Los módulos del plan que se ACTIVAN por paso: los obligatorios (administración, clientes) están siempre y activarlos se rechaza (`MODULO_OBLIGATORIO`). */
+export function modulosParaActivar(modulos: readonly string[]): readonly string[] {
+  const catalogo = CATALOGO_DE_MODULOS as Readonly<Record<string, { obligatorio?: boolean }>>;
+  return modulos.filter((m) => catalogo[m]?.obligatorio !== true);
 }
 
 /**
@@ -560,7 +566,7 @@ export function pasosDeAltaDeCliente(p: PaqueteDeCliente, codigo: string): reado
       return true;
     },
   });
-  for (const modulo of ordenarPorRequisitos(p.plan.modulos)) {
+  for (const modulo of ordenarPorRequisitos(modulosParaActivar(p.plan.modulos))) {
     pasos.push({
       nombre: `activar-modulo-${modulo}`,
       caso: "activarModuloDeEmpresa",
