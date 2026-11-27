@@ -26,21 +26,19 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
   sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
-- **CI liviano en los pull requests hacia `integracion/modulos-v2` (dueño, 25/11/2026).** Un PR hacia la rama de integración corre solo tipos, lint, formato, arquitectura,
-  guardián de contratos, código muerto, seguridad (gitleaks, zizmor, dependencias) y las pruebas completas con Postgres; la compilación de la web, los componentes y el
-  recorrido, solo si el cambio toca la web (el plan lo decide por el grafo y, ante lo que no sabe clasificar, corren). NO corren mutación, Estabilidad ni CodeQL. La rama de
-  integración se RETIRA tras el PR final (26/11/2026, decisión del orquestador): los PR nuevos van a `main` con su mutación por grafo, la corrida NOCTURNA de `main` (el `schedule` de
-  `ci.yml`, 06:17 UTC) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes y recorrido; CodeQL, semanal) y el PR final corre el gate completo. Previene: unos 60 chequeos y 30 a 60 minutos por PR con muchas sesiones en paralelo. Chequeo:
-  `test/arquitectura/evaluar-gate.test.ts` y `planificar-ci-liviano.test.ts` (el salto solo vale hacia la rama de integración; cualquier otro caso queda en rojo).
+- **CI liviano RETIRADO (dueño, 25/11/2026; retirado el 27/11/2026).** El CI liviano (un PR hacia `integracion/modulos-v2` sin mutación, Estabilidad ni CodeQL, y con la web solo si el cambio la tocaba) existió mientras
+  la rama de integración recibía PR de muchas sesiones en paralelo. La rama se RETIRÓ con el PR final (#641, 26/11/2026): los PR van a `main` con su mutación por grafo, la web siempre y CodeQL en todos; la corrida
+  NOCTURNA de `main` (el `schedule` de `ci.yml`, 06:17 UTC) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes y recorrido; CodeQL, semanal). Su relajación quedó RESTAURADA en
+  `arquitectura/deuda/relajaciones-de-pruebas.json` (`ci-liviano-en-pr-a-integracion`). Previene: que el recorte vuelva sin que nadie lo decida. Chequeo: `test/arquitectura/planificar-ci-liviano.test.ts` (nunca sale el perfil
+  `liviano`) y `relajaciones-de-pruebas.test.ts` (el registro dice lo que hace el código y `codeql.yml` corre en todos los PR).
 - **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026; reescrita el 26/11/2026 al retirar la integración).** Si la nocturna de `main` (`ci.yml`, `schedule` 06:17 UTC: mutación
   completa, incluido el guardián, y 12 copias de Estabilidad) está roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana
   (`gh run list --workflow ci.yml --event schedule --branch main --limit 1`). GitHub dispara ese `schedule` con 8 a 12 horas de demora: las corridas del 22 al 26/11/2026 salieron entre las 14:35 y las
-  18:09 UTC (media tarde), no a las 06:17; la corrida que cuenta cada mañana es la de la tarde anterior, y por eso se mira la más reciente que haya terminado. Si aparecen dos fallas de la nocturna en una semana se restaura el gate
-  completo por PR (condición del registro de relajaciones). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
+  18:09 UTC (media tarde), no a las 06:17; la corrida que cuenta cada mañana es la de la tarde anterior, y por eso se mira la más reciente que haya terminado. Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
   merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo) y `test/arquitectura/parar-la-linea.test.ts` (que `ci.yml` tenga el `schedule` diario y que no haya una nocturna de integración que
   se dispare sola sobre una rama que ya no existe); que el orquestador la mire es proceso, no un test.
 - **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
-  podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, umbrales de mutación
+  podría correr, con un contador: todo recorte de pruebas (copias de Estabilidad en un PR, umbrales de mutación
   menores que 100 %, sin pruebas de carga ni volumen, concurrencia con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición
   para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna de `main` corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda lo que un PR recorta.
   Previene: recortes del CI que nadie recuerda ni revisa cuando cambia la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).

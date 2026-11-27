@@ -15,7 +15,7 @@
  *    (el grafo lo ve) o lo lee como texto (`LECTURAS_DE_APPS`);
  *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja de correr todo, y aun así alcanza al guardián.
  *
- * CI liviano (dueño, 25/11/2026): ver `perfil-del-ci.cjs` (un pull request hacia la rama de integración no corre mutación ni Estabilidad, y la web solo si el cambio la toca).
+ * Perfiles del CI: ver `perfil-del-ci.cjs` (el perfil liviano se retiró el 27/11/2026 con la rama de integración).
  *
  * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
  * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
@@ -502,7 +502,6 @@ function principal() {
   const evento = process.env["GITHUB_EVENT_NAME"] ?? "";
   const { plan, estabilidad, web, perfil } = decidirElPlan({
     evento,
-    base: process.env["BASE_DEL_PR"] ?? "",
     origen: process.env["ORIGEN_DEL_PR"] ?? "",
     raiz,
     grupos,
