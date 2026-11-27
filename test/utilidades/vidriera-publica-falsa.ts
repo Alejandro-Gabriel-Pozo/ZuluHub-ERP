@@ -72,6 +72,7 @@ function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
     nombre: vidriera.nombre,
     rubro: RUBROS[vidriera.rubro],
     mensajeDePortada: null,
+    perillasDeModelo: [],
     identidad: {
       modelo: "LISTA",
       cara: null,

@@ -8,6 +8,7 @@ import { formatearImporte } from "../../patrones/formato-fiscal";
 import {
   CLAVE_DE_CLASE,
   RUTA_DEL_ALTA_DE_PRODUCTO,
+  RUTA_DE_PRODUCTOS,
   RUTA_DE_LOS_OCULTOS,
   direccionDeLaLista,
   type FiltrosDeProductos,
@@ -47,6 +48,8 @@ export type PaginaDeLaLista = Readonly<{
 type FilaDeProducto = Readonly<{
   id: string;
   nombre: string;
+  /** La dirección de la ficha del producto (`/catalogo/productos/[id]`): el nombre de la tarjeta enlaza a ella. */
+  href: string;
   /** La marca de estado; `null` si el producto está activo y completo. */
   marca: Readonly<{ texto: string; tono: TonoDeEstado }> | null;
   clase: string;
@@ -147,6 +150,7 @@ export function armarLaLista(
       return {
         id: p.id,
         nombre: p.nombre,
+        href: `${RUTA_DE_PRODUCTOS}/${p.id}`,
         marca: marcaDe(p.estado, d),
         clase: claveDeClase === null ? p.claseDeUso : texto(d, claveDeClase),
         seccion: p.seccion,

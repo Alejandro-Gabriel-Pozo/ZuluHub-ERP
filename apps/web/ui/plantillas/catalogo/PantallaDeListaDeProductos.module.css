@@ -32,6 +32,19 @@
   gap: var(--espacio-3);
 }
 
+.enlaceDelNombre {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: var(--objetivo-minimo);
+  color: inherit;
+  text-decoration: none;
+}
+
+.enlaceDelNombre:hover .nombre {
+  text-decoration: underline;
+}
+
 .nombre {
   font-weight: var(--tipo-peso-fuerte);
   overflow-wrap: anywhere;

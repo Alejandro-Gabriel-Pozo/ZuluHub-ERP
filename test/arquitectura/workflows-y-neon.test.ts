@@ -25,10 +25,15 @@ import { describe, expect, it } from "vitest";
 
 /** Los únicos workflows con la cadena DIRECTA del dueño de la base (cada uno con su prueba propia `workflow-<nombre>.test.ts`). */
 const CON_CADENA_DEL_DUENO: readonly string[] = [
+  // Los dos de un cliente con base propia (dueño, 27/11/2026, eligió workflow para el alta del hotel): el alta escribe con el login temporal del rol de plataforma
+  // (la cadena del dueño solo siembra al primer administrador y lee) y el despliegue solo la usa para mirar que la base esté al día (`migrar --ver`).
+  "alta-de-cliente.yml",
   "cargar-entorno-consola.yml",
   "cargar-entorno.yml",
+  "desplegar-cliente.yml",
   "migrar.yml",
   "preparar-empresa-de-pruebas.yml",
+  "reemitir-invitacion-de-cliente.yml",
 ];
 
 /** Los únicos workflows con la clave de la API de Neon y el identificador del proyecto: crean la rama de respaldo antes de migrar. */

@@ -276,6 +276,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "catalogo.seccion.titulo",
       ],
       [
+        "carta-en-linea",
+        "catalogo",
+        "carta",
+        "vidriera",
+        "vidrieras.ver",
+        "/catalogo/carta-en-linea",
+        "catalogo.carta.titulo",
+      ],
+      [
         "stock",
         "catalogo",
         "stock",
@@ -606,6 +615,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "productos",
     "clasificacion",
     "secciones",
+    "carta-en-linea",
     "stock",
     "produccion",
     "recetas",

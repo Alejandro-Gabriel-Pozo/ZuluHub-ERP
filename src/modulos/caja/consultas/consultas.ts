@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeCaja } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
+import { armarCobrosDevolublesDeUnOrigen } from "./cobros-devolubles-de-un-origen";
 import { armarCobradoPorOrigenDeLaJornada } from "./cobrado-por-origen-de-la-jornada";
 import { armarCobrosDeLaJornada } from "./cobros-de-la-jornada";
 import { armarConciliacionDeLaJornada } from "./conciliacion-de-la-jornada";
@@ -42,6 +43,7 @@ export function crearConsultasDeCaja(dependencias: DependenciasDeConsultasDeCaja
     conciliacionDeLaJornada: armarConciliacionDeLaJornada(dependencias),
     cobradoPorOrigenDeLaJornada: armarCobradoPorOrigenDeLaJornada(dependencias),
     informeDeCajaDelDia: armarInformeDeCajaDelDia(dependencias),
+    cobrosDevolublesDeUnOrigen: armarCobrosDevolublesDeUnOrigen(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 

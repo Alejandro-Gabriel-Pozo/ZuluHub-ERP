@@ -174,6 +174,20 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeCaja) => Promise<unknown>>
       motivo: "Flete",
       tercero: { nombre: "Pérez" },
     }),
+  devolverDinero: (c) =>
+    c.devolverDinero(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0023",
+      cajaId: UUID,
+      cobranzaId: UUID,
+      lineas: [{ medioDePagoId: UUID, cuentaDeCobroId: null, importe: PESOS_CERO }],
+      motivo: "Producto en mal estado",
+    }),
+  anularDevolucion: (c) =>
+    c.anularDevolucion(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0024",
+      devolucionId: UUID,
+      motivo: "Se devolvió por error",
+    }),
   registrarAjuste: (c) =>
     c.registrarAjuste(contexto, {
       claveDeIdempotencia: "clave-de-prueba-0003",
@@ -244,6 +258,7 @@ const LLAMADAS_DE_CONSULTAS: Record<
     c.cobradoPorOrigenDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
   informeDeCajaDelDia: (c) =>
     c.informeDeCajaDelDia(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
+  cobrosDevolublesDeUnOrigen: (c) => c.cobrosDevolublesDeUnOrigen(contexto, { cobranzaId: UUID }),
 };
 
 /** Pasar el guard = tocar algo que no es la autorización (la transacción vigilada corta ahí). */
@@ -292,10 +307,11 @@ const todos: Entrada[] = [...casos, ...consultas];
 describe("P7: el guard va primero en cada caso de uso y consulta de caja", () => {
   it("hay casos de uso y consultas con acción que probar, uno por cada declarado", () => {
     expect(casos).toHaveLength(Object.keys(DECLARACIONES).length);
-    expect(casos).toHaveLength(25);
+    expect(casos).toHaveLength(27);
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "cobradoPorOrigenDeLaJornada",
       "cobrosDeLaJornada",
+      "cobrosDevolublesDeUnOrigen",
       "conciliacionDeLaJornada",
       "estadoDeLaCaja",
       "fichaDeSesion",
@@ -386,7 +402,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
   it("cada caso de uso exige una acción distinta, del módulo caja, y cada consulta cajas.ver", () => {
     const delCatalogo = Object.keys(CATALOGO_DE_MODULOS.caja.acciones);
     for (const { accion } of todos) expect(delCatalogo).toContain(accion);
-    // Tres excepciones: la salida de dinero comparte con el movimiento manual la acción de PISO (`movimientos_caja.registrar_manual`; por un medio que
+    // Cuatro excepciones: anular una devolución comparte `devoluciones.registrar` con devolver (DEC-VEN-004: un solo permiso para devolver y deshacer la devolución), la salida de dinero comparte con el movimiento manual la acción de PISO (`movimientos_caja.registrar_manual`; por un medio que
     // no es efectivo pide además `salidas_de_dinero.registrar`, lo prueba `caja-salida-de-dinero.test.ts`), el disparador de la «Caja 1» comparte `sesiones_caja.abrir` con `abrirSesion` (e3 §3.2.1: «los tres roles con
     // alcance»; abrir la caja y asegurar que exista son lo mismo para la persona) y «declarar un total» y «dar el conforme general»
     // comparten `declaraciones_de_total.registrar` (e3b §4.4 y §4.7: una sola acción para los dos). Previene que dos casos distintos
@@ -395,7 +411,8 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       (c) =>
         c.nombre !== "asegurarCajaPorDefecto" &&
         c.nombre !== "darConformeGeneral" &&
-        c.nombre !== "registrarSalidaDeDinero",
+        c.nombre !== "registrarSalidaDeDinero" &&
+        c.nombre !== "anularDevolucion",
     );
     expect(new Set(sinLosCompartidos.map((c) => c.accion)).size).toBe(sinLosCompartidos.length);
     expect(casos.find((c) => c.nombre === "darConformeGeneral")?.accion).toBe(
@@ -430,6 +447,8 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       registrarMovimientoManual: "movimientos_caja.registrar_manual",
       registrarSalidaDeDinero: "movimientos_caja.registrar_manual",
       registrarSalidaDeDineroPorOtroMedio: "salidas_de_dinero.registrar",
+      devolverDinero: "devoluciones.registrar",
+      anularDevolucion: "devoluciones.registrar",
       registrarAjuste: "movimientos_caja.ajustar",
       anularMovimientoDeCaja: "movimientos_caja.anular",
       corregirMedioDeCobro: "cobros.corregir_medio",
@@ -478,6 +497,7 @@ describe("los demás motivos del guard salen tal cual", () => {
       "sesiones_caja.abrir",
       "movimientos_caja.registrar_manual",
       "salidas_de_dinero.registrar",
+      "devoluciones.registrar",
       "movimientos_caja.ajustar",
       "cajas.crear",
       "cajas.editar",

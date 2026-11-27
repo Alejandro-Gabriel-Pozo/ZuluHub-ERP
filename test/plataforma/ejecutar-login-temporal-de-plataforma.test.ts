@@ -149,3 +149,84 @@ describe("login temporal: cerrar", () => {
     expect(t.texto()).not.toContain("clave-dueno-centinela");
   });
 });
+
+describe("login temporal: abrir sin-clave-propia (alta de un cliente con base propia)", () => {
+  const CLAVE_DEL_CLIENTE = `1:${"cd".repeat(32)}`;
+  const delCliente = (
+    cambios: Partial<EntradaDeLoginTemporal> = {},
+    leida: () => Promise<string | null> = () => Promise.resolve(CLAVE_DEL_CLIENTE),
+  ) =>
+    armar({
+      modo: "sin-clave-propia",
+      // El entorno NO trae la clave de contexto: la lee de la base el propio paso.
+      entorno: { PEDERNAL_DB_MIGRACIONES: DUENO, GITHUB_ACTIONS: "true", GITHUB_ENV: "/ruta/env" },
+      leerClaveVigente: leida,
+      ...cambios,
+    });
+
+  it("NO instala ninguna clave de contexto: lee la vigente de la base, abre el login y entrega la cadena del rol y esa clave, enmascaradas", async () => {
+    const t = delCliente();
+    expect(await ejecutarLoginTemporal(t.entrada)).toBe(0);
+    expect(t.llamadas).toEqual(["abrir"]);
+    expect(t.entorno).toEqual([
+      `/ruta/env|PEDERNAL_DB_PLATAFORMA=${CADENA_ROL}\nPEDERNAL_CLAVE_CONTEXTO=${CLAVE_DEL_CLIENTE}\n`,
+    ]);
+    expect(t.comandos).toEqual(
+      expect.arrayContaining([
+        `::add-mask::${CLAVE_DEL_CLIENTE}`,
+        `::add-mask::${"cd".repeat(32)}`,
+        `::add-mask::clave-rol-centinela`,
+        `::add-mask::${CADENA_ROL}`,
+      ]),
+    );
+  });
+
+  it("sin clave vigente en la base, ilegible o mal formada falla ANTES de abrir nada y sin repetir ningún valor", async () => {
+    const casos: Array<() => Promise<string | null>> = [
+      () => Promise.resolve(null),
+      () => Promise.reject(new Error(`fallo con ${DUENO}`)),
+      () => Promise.resolve("no-es-una-clave"),
+      () => Promise.resolve(`0:${"cd".repeat(32)}`),
+    ];
+    for (const leida of casos) {
+      const t = delCliente({}, leida);
+      expect(await ejecutarLoginTemporal(t.entrada)).toBe(1);
+      expect(t.llamadas).toEqual([]);
+      expect(t.entorno).toEqual([]);
+      expect(t.texto()).toContain("clave de contexto vigente");
+      expect(t.texto()).not.toContain("clave-dueno-centinela");
+    }
+  });
+
+  it("ningún secreto sale por la salida (ni la clave del cliente ni la del rol ni la del dueño)", async () => {
+    const t = delCliente();
+    await ejecutarLoginTemporal(t.entrada);
+    for (const prohibido of [
+      "clave-dueno-centinela",
+      "clave-rol-centinela",
+      CADENA_ROL,
+      CLAVE_DEL_CLIENTE,
+      "cd".repeat(32),
+    ]) {
+      expect(t.texto()).not.toContain(prohibido);
+    }
+  });
+
+  it("un modo que no es ese, o un modo con «cerrar», es un error de uso y no toca nada", async () => {
+    for (const [accion, modo] of [
+      ["abrir", "otro"],
+      ["abrir", ""],
+      ["cerrar", "sin-clave-propia"],
+    ] as const) {
+      const t = delCliente({ accion, modo });
+      expect(await ejecutarLoginTemporal(t.entrada)).toBe(1);
+      expect(t.llamadas).toEqual([]);
+    }
+  });
+
+  it("cerrar sigue siendo el mismo para los dos modos", async () => {
+    const t = armar({ accion: "cerrar" });
+    expect(await ejecutarLoginTemporal(t.entrada)).toBe(0);
+    expect(t.llamadas).toEqual(["cerrar"]);
+  });
+});

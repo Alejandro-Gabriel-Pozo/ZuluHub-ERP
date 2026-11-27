@@ -20,4 +20,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   conciliacionDeLaJornada: { accion: "cajas.ver" },
   cobradoPorOrigenDeLaJornada: { accion: "cajas.ver" },
   informeDeCajaDelDia: { accion: "cajas.ver" },
+  // La devolución con medio (DM-2): lo cobrado de un ticket por medio y lo que queda por devolver.
+  cobrosDevolublesDeUnOrigen: { accion: "cajas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

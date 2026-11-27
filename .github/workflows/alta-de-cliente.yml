@@ -1,0 +1,182 @@
+name: Alta de un cliente (administrador de plataforma, empresa, marca, plan y dominios)
+
+# Deja lista, en la base PROPIA de un cliente, su alta inicial: Actions → «Alta de un cliente» → Run workflow. Hoy, solo `cliente-hdn` (Hoteles del Neuquén).
+# Solo se dispara a mano, solo desde main, solo para un cliente de la lista cerrada, con su frase, y con la aprobación del dueño (Environment del cliente).
+#
+#  - Ejecuta en orden lo que YA existe, sin reescribirlo (`npm run plataforma:alta-de-cliente`, que llama a los mismos casos que `plataforma:primer-admin` y
+#    `plataforma:caso`): primer administrador de plataforma, plan (crear, borrador, publicar), marca (crear, borrador, confirmar), cada dominio (agregar, verificar,
+#    activar), alta de la empresa con la invitación a su primer gerente y cada módulo del plan. Cada paso lleva una clave de idempotencia fija: repetir el flujo con
+#    los MISMOS datos no duplica nada; con datos distintos el paso rechaza (CLAVE_REUTILIZADA) y no cambia nada. Cambiar el plan o los módulos DESPUÉS del alta no
+#    pasa por este flujo.
+#  - Lo PERSONAL (emails, CUIT, razón social, nombre del tenant) NO se escribe en el formulario (las entradas se ven en la página de la corrida): va en el secreto `PEDERNAL_ALTA_DE_CLIENTE` del Environment del cliente,
+#    un JSON en UNA línea con esos cinco campos. Lo demás (marca, plan, perillas, módulos, dominios, zona horaria, moneda) está en `scripts/clientes/<codigo>.json`, versionado y sin secretos; `vigenteDesde` y `verificadoEn`
+#    los calcula el flujo con el reloj de la corrida. Cada dato personal se tapa en lo que sale y se entrega al runner con `::add-mask::`. Nada personal vive en el repositorio.
+#  - SECRETO DE INVITACIONES: el token de una invitación es un HMAC con `PEDERNAL_SECRETO_INVITACIONES`, y tiene que ser el MISMO valor acá y en la web del cliente. El
+#    paso «Secreto de invitaciones» lo genera al azar en el runner (enmascarado), lo escribe en el proyecto de Vercel del cliente (lista cerrada de proyectos, nunca
+#    una entrada) y lo pasa al alta, SOLO si la empresa no existe todavía. Si ya existe, no toca nada. Si el proyecto ya estaba desplegado, hay que volver a
+#    desplegarlo después (`desplegar-cliente.yml`) para que tome el valor.
+#  - LOGIN TEMPORAL del rol `pedernal_plataforma`: se abre con una clave al azar que vive solo en el runner (enmascarada) y vence solo a los 30 minutos (`VALID UNTIL`).
+#    En este flujo NO se instala ninguna clave de contexto nueva: se firma con la que ya tiene la base (la instaló `cargar-entorno`), que el paso «Abrir» LEE con la cadena del dueño, tapa y entrega al alta. No hay ninguna copia en GitHub. El paso
+#    «Cerrar» corre SIEMPRE (`if: always()`), deja el rol `NOLOGIN` y sin clave, VERIFICA el estado final y falla fuerte si no quedó cerrado.
+#  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`).
+#  - Concurrencia: comparte el grupo `migrar-<ambiente>` con `migrar.yml` (misma base).
+#  - El Environment del cliente exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, H.2). Secretos del Environment:
+#      PEDERNAL_DB_DUENO_DIRECTA     cadena DIRECTA del dueño de la base del cliente (la de `migrar.yml`).
+#      PEDERNAL_VERCEL_TOKEN         token de Vercel con alcance al proyecto del cliente (el mismo del despliegue).
+#      PEDERNAL_ALTA_DE_CLIENTE      los datos del alta (JSON en una línea).
+#    VARIABLES (no secretas) del Environment: PEDERNAL_HOSTS_PROTEGIDOS (los hosts de los proyectos de la plataforma, separados por comas y sin `https://`) y PEDERNAL_HOST_DE_LA_BASE (el host EXACTO de
+#    la base de este cliente: candado, la cadena del dueño solo se usa si su host coincide; se carga a mano una vez).
+#  - El alta NO toma snapshot: vale solo en una base recién migrada y sin datos reales.
+#
+# Ningún paso imprime una cadena, una clave ni un dato del paquete.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Qué cliente"
+        type: choice
+        required: true
+        options:
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>`, la misma de `migrar.yml`.
+          - cliente-hdn
+      confirmacion:
+        description: "Escribir ALTA CLIENTE-HDN"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  # El MISMO grupo que `migrar.yml` para ese cliente: uno a la vez sobre la misma base. Lo que ya corre nunca se cancela: el nuevo espera.
+  group: migrar-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin los secretos se rechaza ACÁ, antes del Environment.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      ambiente: ${{ steps.validar.outputs.ambiente }}
+    steps:
+      - id: validar
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se da de alta un cliente desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          case "$AMBIENTE" in
+            # Un cliente con base propia (lista cerrada), con su frase: `cliente-<codigo>) esperado="ALTA CLIENTE-<CODIGO>" ;;`
+            cliente-hdn) esperado="ALTA CLIENTE-HDN" ;;
+            *) echo "::error::Ambiente no permitido."; exit 1 ;;
+          esac
+          if [ "$CONFIRMACION" != "$esperado" ]; then
+            echo "::error::Para dar de alta a $AMBIENTE hay que escribir exactamente «$esperado» en el campo de confirmación."
+            exit 1
+          fi
+          echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ github.ref }}
+          AMBIENTE: ${{ inputs.ambiente }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  alta:
+    name: Alta de ${{ needs.validar.outputs.ambiente }}
+    needs: validar
+    runs-on: ubuntu-latest
+    # Hasta 10 minutos de espera a que la marca empiece a regir (vigenteDesde) más los pasos.
+    timeout-minutes: 25
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: ${{ needs.validar.outputs.ambiente }}
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_HOST_DE_LA_BASE:-}" ] || faltan="$faltan PEDERNAL_HOST_DE_LA_BASE"
+          [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
+          [ -n "${PEDERNAL_ALTA_DE_CLIENTE:-}" ] || faltan="$faltan PEDERNAL_ALTA_DE_CLIENTE"
+          [ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan="$faltan PEDERNAL_HOSTS_PROTEGIDOS"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos o variables en el Environment del cliente (Settings → Environments → Secrets y Variables):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
+          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Validar los datos y los secretos (no toca la base)
+        # Antes de abrir nada: la forma de los secretos y de los datos de TODOS los pasos. Un dato mal escrito corta acá.
+        run: npm run plataforma:alta-de-cliente -- "$AMBIENTE" --validar
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
+          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: La base tiene que estar al día
+        # Este flujo no migra: eso es de `migrar.yml`. `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          # Fail closed (igual que `migrar.yml`): solo pasa con el texto «la base está al día». Cualquier otra salida (faltan migraciones, redacción distinta, salida cortada) corta.
+          if ! grep -q "la base está al día" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::No se pudo confirmar que la base esté al día (hay migraciones pendientes o la salida de «ver» no tiene un resultado conocido). Corré antes «Migrar» para este cliente y volvé a correr este flujo."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Secreto de invitaciones (se genera en el runner y se escribe en Vercel solo si la empresa no existe)
+        run: npm run plataforma:secreto-de-invitaciones -- "$AMBIENTE"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: Abrir el login temporal del rol de plataforma (clave al azar de esta corrida)
+        id: abrir
+        run: npm run plataforma:login-temporal -- abrir sin-clave-propia
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Dar el alta (sin mostrar secretos ni datos personales)
+        run: npm run plataforma:alta-de-cliente -- "$AMBIENTE"
+        env:
+          AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
+          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
+
+      - name: Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)
+        # Corre aunque un paso anterior haya fallado o la corrida se cancele. Solo se saltea si «Abrir» nunca llegó a correr.
+        if: always() && steps.abrir.conclusion != 'skipped'
+        run: npm run plataforma:login-temporal -- cerrar
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}

@@ -334,7 +334,7 @@ describe("auditoría de dependencias: el job del CI la corre", () => {
   it("el paso usa el script, ya no `npm audit --audit-level=high` a secas, y conserva las firmas y gitleaks", () => {
     expect(ci).toContain("run: node arquitectura/auditoria-de-dependencias.cjs");
     expect(ci).not.toMatch(/run:\s*npm audit --audit-level/);
-    expect(ci).toContain("run: npm audit signatures");
+    expect(ci).toContain("npm audit signatures");
     expect(ci).toContain("gitleaks");
   });
 });

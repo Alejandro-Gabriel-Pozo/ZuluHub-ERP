@@ -147,6 +147,8 @@ export const TEXTOS_DE_ACCIONES_DE_ROLES = {
     "Registrar salidas de dinero por otros medios (transferencia, tarjeta, QR u otro)",
     120,
   ),
+  // «Devolver dinero de un cobro»: nombre aprobado con la maqueta de la devolución con medio (DT-26, dueño 26/11/2026; DEC-VEN-004).
+  "roles.accion.devoluciones.registrar": nombre("Devolver dinero de un cobro"),
   "roles.accion.jornadas.ver": nombre("Ver las jornadas"),
   "roles.accion.jornadas.iniciar_auditoria": nombre("Iniciar la auditoría del día"),
   "roles.accion.jornadas.cancelar_auditoria": nombre("Cancelar la auditoría del día"),

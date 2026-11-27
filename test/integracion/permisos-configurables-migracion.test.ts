@@ -16,6 +16,7 @@ import {
   crearEmpresaActiva,
   crearEntornoDePrueba,
 } from "./entorno";
+import { AUTOR_DE_LA_SINCRONIZACION } from "../../src/adaptadores/postgres/sincronizar-plantillas";
 import { crearPersonaDeBase } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 import { esperarBloqueo, SesionDePrueba } from "./sesiones";
@@ -418,7 +419,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       expect([...oper].sort()).toEqual([...tabla.OPERADOR]);
     });
 
-    it("las tres plantillas existen, el gerente no tiene lista y cada otra plantilla tiene la versión 1 de la migración", async () => {
+    it("las tres plantillas existen, el gerente no tiene lista y cada otra plantilla tiene la versión 1 de la migración (y, si el código declara acciones posteriores al sello de la semilla, las versiones siguientes son de la sincronización, consecutivas)", async () => {
       const p = await dueno.query<{ clave: string }>(
         "select clave from plantilla_de_rol order by clave",
       );
@@ -426,10 +427,16 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       const v = await dueno.query<{ clave: string; numero: number; autor: string }>(
         "select clave, numero, autor from version_de_plantilla order by clave, numero",
       );
-      expect(v.rows).toEqual([
-        { clave: "ADMINISTRADOR", numero: 1, autor: "migracion:0094" },
-        { clave: "OPERADOR", numero: 1, autor: "migracion:0094" },
-      ]);
+      // El gerente no tiene versiones; la versión 1 de cada otra plantilla es de la migración; toda versión posterior es de la sincronización (la semilla sellada no se toca: lo declarado después llega por ahí).
+      expect([...new Set(v.rows.map((r) => r.clave))]).toEqual(["ADMINISTRADOR", "OPERADOR"]);
+      for (const clave of ["ADMINISTRADOR", "OPERADOR"]) {
+        const propias = v.rows.filter((r) => r.clave === clave);
+        expect(propias.map((r) => r.numero)).toEqual(propias.map((_, i) => i + 1));
+        expect(propias[0]?.autor).toBe("migracion:0094");
+        for (const posterior of propias.slice(1)) {
+          expect(posterior.autor).toBe(AUTOR_DE_LA_SINCRONIZACION);
+        }
+      }
     });
 
     it("los pisos son los del Anexo A: 19 solo-gerente (los que hoy tiene únicamente el gerente) y 4 de todos los roles", async () => {
@@ -444,11 +451,18 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       );
       expect(rows).toHaveLength(29);
       // El piso solo-gerente es exactamente «lo que hoy solo tiene el gerente»; los de todos están entre los que hoy tienen los tres.
+      // Una acción solo del gerente declarada DESPUÉS del sello de la semilla y todavía sin su piso no está introducida (la sincronización la avisa): no cuenta acá hasta que tenga su piso.
+      const introducidas = new Set(
+        (await dueno.query<{ accion: string }>("select accion from accion_introducida")).rows.map(
+          (r) => r.accion,
+        ),
+      );
       expect([...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0105].sort()).toEqual(
         TODAS.filter(
           (a) =>
             (PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]?.length === 1 &&
-            !SOLO_GERENTE_DE_0097.includes(a),
+            !SOLO_GERENTE_DE_0097.includes(a) &&
+            introducidas.has(a),
         ).sort(),
       );
       for (const a of TODOS_ANEXO_A)
@@ -464,11 +478,19 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       for (const a of SOLO_GERENTE_ANEXO_A) expect([a, admin.has(a)]).toEqual([a, false]);
     });
 
-    it("las acciones introducidas son todas las del catálogo de hoy, ni una más ni una menos", async () => {
+    it("las acciones introducidas son todas las del catálogo de hoy, salvo la que el código declara solo para el gerente y todavía no tiene su piso (esa se avisa y no se marca)", async () => {
       const { rows } = await dueno.query<{ accion: string }>(
         "select accion from accion_introducida order by accion",
       );
-      expect(rows.map((r) => r.accion)).toEqual(TODAS);
+      const pisos = await dueno.query<{ accion: string }>(
+        "select accion from piso_de_plataforma where tipo = 'SOLO_GERENTE'",
+      );
+      const conPiso = new Set(pisos.rows.map((r) => r.accion));
+      const sinSincronizar = TODAS.filter((a) => {
+        const roles = (PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a] ?? [];
+        return roles.length === 1 && roles[0] === "GERENTE" && !conPiso.has(a);
+      });
+      expect(rows.map((r) => r.accion)).toEqual(TODAS.filter((a) => !sinSincronizar.includes(a)));
     });
 
     it("el bloque de la semilla del archivo de la migración es el que se genera hoy desde la constante (mientras la 0094 no esté sellada)", async () => {
@@ -842,8 +864,13 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       try {
         const p = await s.directo("select count(*)::int as n from piso_de_plataforma");
         expect(p.ok && p.rows[0]).toEqual({ n: 29 });
+        // Las versiones que ve la aplicación son TODAS las de la plataforma (iguales para todas las empresas): las mismas que ve el dueño de la base, con la semilla y las de la sincronización.
         const v = await s.directo("select count(*)::int as n from version_de_plantilla");
-        expect(v.ok && v.rows[0]).toEqual({ n: 2 });
+        const delDueno = await dueno.query<{ n: number }>(
+          "select count(*)::int as n from version_de_plantilla",
+        );
+        expect(v.ok && v.rows[0]).toEqual({ n: delDueno.rows[0]?.n });
+        expect(delDueno.rows[0]?.n).toBeGreaterThanOrEqual(2);
       } finally {
         await s.cerrar();
       }
@@ -1003,10 +1030,12 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
     });
 
     it("la reversión frena con roles propios, o con una plantilla o un piso cambiados; con la semilla intacta borra todo; repetirla no cambia nada; volver a migrar la deja como estaba", async () => {
-      const aparte = await crearBaseAparte(base as BaseDePruebas);
+      // Sin sincronizar: la base tiene SOLO la semilla de la migración. La reversión de la 0094 deshace lo que ella creó; las versiones de la sincronización son de la plataforma y la frenan (lo prueba el bloque de abajo).
+      const aparte = await crearBaseAparte(base as BaseDePruebas, { sincronizarPlantillas: false });
       const c = new pg.Client({ connectionString: aparte.base.dueno });
       await c.connect();
       try {
+        const marcadasDeLaSemilla = (await c.query("select 1 from accion_introducida")).rowCount;
         // 0097 (T4) se apoya en 0094: su reversión va ANTES (lo dice la de 0094). Esta prueba es de 0094 sola.
         await c.query("begin");
         await c.query(await readFile(REVERSION_0097, "utf8"));
@@ -1095,7 +1124,9 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         await c.query(await readFile(MIGRACION, "utf8"));
         await c.query("commit");
         expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(29);
-        expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(TODAS.length);
+        expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(
+          marcadasDeLaSemilla,
+        );
       } finally {
         await c.end();
         await aparte.destruir();

@@ -11,6 +11,7 @@ import type { RepositorioDeCobrosDeLaJornada } from "../persistencia/repositorio
 import type { RepositorioDeFotos } from "../persistencia/repositorio-de-fotos";
 import type { RepositorioDeLaJornada } from "../persistencia/repositorio-de-la-jornada";
 import type { RepositorioDeMovimientos } from "../persistencia/repositorio-de-movimientos";
+import type { RepositorioDeMovimientosDeDinero } from "../persistencia/repositorio-de-movimientos-de-dinero";
 import type { RepositorioDeSesiones } from "../persistencia/repositorio-de-sesiones";
 
 /**
@@ -23,6 +24,11 @@ export type TxDeConsultasDeCaja = TxDeLecturaDeLaJornada &
     cajas: Pick<RepositorioDeCajas, "listarDeLaSucursal" | "obtener">;
     sesiones: Pick<RepositorioDeSesiones, "obtener" | "listar" | "ultimaCerradaDeLaCaja">;
     movimientos: Pick<RepositorioDeMovimientos, "esperadoPorLinea" | "pagina">;
+    /** Lo devuelto y lo devolvible de una cobranza (la devolución con medio): solo lectura. */
+    movimientosDeDinero: Pick<
+      RepositorioDeMovimientosDeDinero,
+      "devolvibleDeOrigen" | "devueltoDeOrigen"
+    >;
     arqueos: Pick<RepositorioDeArqueos, "deLaSesion" | "ultimoEfectivoContadoDeLaCaja">;
     mediosDePago: Pick<RepositorioDeMediosDePago, "listar">;
     cuentasDeCobro: Pick<RepositorioDeCuentasDeCobro, "listar">;

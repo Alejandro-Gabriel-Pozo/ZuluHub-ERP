@@ -28,6 +28,7 @@ function publicada(c: VidrieraDeEjemplo, lugar: string | null = null): VidrieraP
     rubro: c.rubro,
     lugar,
     mensajeDePortada: null,
+    perillasDeModelo: [],
     identidad: {
       modelo: "LISTA",
       cara: null,
@@ -587,5 +588,42 @@ describe("armarVistaDeVidriera: identidad (V1b)", () => {
     expect(con({}, "😀 Fiesta").inicial).toBe("😀");
     expect(con({}, "").inicial).toBe("");
     expect(con({}, "   ").inicial).toBe("");
+  });
+});
+
+describe("armarVistaDeVidriera: el modelo efectivo (L1 del Libro)", () => {
+  const con = (
+    modelo: "LISTA" | "CUADRICULA" | "LIBRO",
+    perillasDeModelo: readonly string[],
+    ahorroDeDatos?: boolean,
+  ) =>
+    armarVistaDeVidriera(
+      {
+        ...publicada(CAFETERIA),
+        identidad: { ...publicada(CAFETERIA).identidad, modelo },
+        perillasDeModelo,
+      },
+      "/c",
+      ahorroDeDatos,
+    ).modelo;
+
+  it("Lista se dibuja como Lista, con o sin perillas, y por omisión el pedido no ahorra datos", () => {
+    expect(con("LISTA", [])).toBe("LISTA");
+    expect(con("LISTA", ["vidriera_modelo_libro"])).toBe("LISTA");
+  });
+
+  it("Libro solo se dibuja con su perilla encendida; apagada, Lista", () => {
+    expect(con("LIBRO", ["vidriera_modelo_libro"])).toBe("LIBRO");
+    expect(con("LIBRO", [])).toBe("LISTA");
+    expect(con("LIBRO", ["vidriera_modelo_cuadricula"])).toBe("LISTA");
+  });
+
+  it("con `Save-Data: on` se dibuja Lista aunque la perilla esté encendida; sin él, Libro", () => {
+    expect(con("LIBRO", ["vidriera_modelo_libro"], true)).toBe("LISTA");
+    expect(con("LIBRO", ["vidriera_modelo_libro"], false)).toBe("LIBRO");
+  });
+
+  it("Cuadrícula sin ninguna foto visible cae a Lista aunque su perilla esté encendida", () => {
+    expect(con("CUADRICULA", ["vidriera_modelo_cuadricula"])).toBe("LISTA");
   });
 });

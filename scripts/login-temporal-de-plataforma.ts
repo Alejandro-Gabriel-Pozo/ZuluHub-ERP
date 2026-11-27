@@ -2,8 +2,8 @@ import { appendFile } from "node:fs/promises";
 import { ejecutarLoginTemporal } from "./ejecutar-login-temporal-de-plataforma";
 
 /**
- * Abre o cierra el login temporal del rol de plataforma: `npm run plataforma:login-temporal -- <abrir|cerrar>`. Lo corre el
- * workflow `preparar-empresa-de-pruebas.yml`; el detalle está en `ejecutar-login-temporal-de-plataforma.ts`.
+ * Abre o cierra el login temporal del rol de plataforma: `npm run plataforma:login-temporal -- <abrir [sin-clave-propia]|cerrar>`. Lo corren los
+ * workflows `preparar-empresa-de-pruebas.yml` (preview) y `alta-de-cliente.yml` (con `sin-clave-propia`); el detalle está en `ejecutar-login-temporal-de-plataforma.ts`.
  */
 
 // Una falla que se escape no puede volcar la pila ni su mensaje al registro: solo el tipo.
@@ -16,6 +16,7 @@ process.on("unhandledRejection", fallaInesperada);
 
 process.exitCode = await ejecutarLoginTemporal({
   accion: process.argv[2],
+  modo: process.argv[3],
   entorno: process.env,
   info: (linea) => console.log(linea),
   error: (linea) => console.error(linea),

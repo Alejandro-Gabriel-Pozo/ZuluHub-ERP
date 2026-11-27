@@ -387,6 +387,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
       c.personasParaMostrar(contexto, { ids: ["00000000-0000-4000-8000-000000000001"] }),
     listarRoles: (c) => c.listarRoles(contexto),
     verRol: (c) => c.verRol(contexto, { rolId: "r-1" }),
+    historialDelRol: (c) => c.historialDelRol(contexto, { rolId: "r-1" }),
     rolesAsignables: (c) => c.rolesAsignables(contexto),
     accionesParaElegir: (c) => c.accionesParaElegir(contexto),
   };
@@ -400,6 +401,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
   it("las consultas con acción que hay que probar", () => {
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "accionesParaElegir",
+      "historialDelRol",
       "listarInvitacionesPendientes",
       "listarMiembros",
       "listarRoles",

@@ -31,6 +31,14 @@ export type TextosDeVidriera = Readonly<{
   enlaceNoCopiado: string;
   productoNoEsta: string;
   precioConIva: string;
+  libroDesliza: string;
+  libroIndice: string;
+  /** Con los marcadores `{n}` y `{m}`. */
+  libroSeccionNDeM: string;
+  libroAnterior: string;
+  libroSiguiente: string;
+  libroVerComoLista: string;
+  libroVerComoLibro: string;
 }>;
 
 export function textosDeVidriera(diccionario: DiccionarioResuelto): TextosDeVidriera {
@@ -59,5 +67,12 @@ export function textosDeVidriera(diccionario: DiccionarioResuelto): TextosDeVidr
     enlaceNoCopiado: t("vidriera.producto.enlace_no_copiado"),
     productoNoEsta: t("vidriera.producto.no_esta"),
     precioConIva: t("vidriera.pie.iva"),
+    libroDesliza: t("vidriera.libro.desliza"),
+    libroIndice: t("vidriera.libro.indice"),
+    libroSeccionNDeM: t("vidriera.libro.seccion_n_de_m"),
+    libroAnterior: t("vidriera.libro.anterior"),
+    libroSiguiente: t("vidriera.libro.siguiente"),
+    libroVerComoLista: t("vidriera.libro.ver_como_lista"),
+    libroVerComoLibro: t("vidriera.libro.ver_como_libro"),
   };
 }

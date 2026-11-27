@@ -304,8 +304,14 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     );
   }
 
-  // (h) `pruebas` en tres fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
+  // (h) `pruebas` en cuatro fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
   problemas.push(...problemasDeLosFragmentos(texto, "ci.yml"));
+  // (h3) Los locks del Postgres de las pruebas (ver `PIEZAS_DE_LOS_LOCKS`).
+  problemas.push(...problemasDeLosLocks(texto, "ci.yml", ["pruebas", "estabilidad"]));
+  // (h2) `recorrido` en tres fragmentos (ver `RECORRIDO_EN_FRAGMENTOS`).
+  problemas.push(
+    ...problemasDeLosFragmentos(texto, "ci.yml", "recorrido", RECORRIDO_EN_FRAGMENTOS),
+  );
 
   // (g) Las copias de Estabilidad por evento: 3 en un pull request, 12 en la nocturna y a pedido.
   const matriz = leerMatrizDeEstabilidad(texto);
@@ -382,39 +388,63 @@ const COPIAS_DE_ESTABILIDAD: Readonly<Record<string, number>> = {
   workflow_dispatch: 12,
 };
 /**
- * `pruebas` corre en TRES fragmentos de la suite (`vitest --shard`; decisión del dueño, 17/11/2026, opción B). Previene: el timeout de un job monolítico al borde del límite
+ * `pruebas` corre en CUATRO fragmentos de la suite (`vitest --shard`; tres desde la decisión del dueño del 17/11/2026, opción B; cuatro desde el 27/11/2026, cuando partir `recorrido` dejó a `pruebas` como camino crítico: 10,6 min de mediana con tres). Previene: el timeout de un job monolítico al borde del límite
  * (run 43989591478: 20 min 16 s y 20 min 5 s cancelados) y que un fragmento se pierda sin que nadie lo note: la matriz es EXACTAMENTE [1, 2, 3], el total sale de `strategy.job-total`
  * (nunca un número escrito a mano que se desfase de la matriz), el fragmento llega por `PEDERNAL_FRAGMENTO` (lo lee `vitest.config.ts`; el paso sigue siendo `npm test`, que es lo que el guardián de contratos exige) y `fail-fast: false` deja correr y ver a todos. El resultado del job que ve el Gate (`needs.pruebas.result`) es
  * el agregado de la matriz: success solo si TODOS los fragmentos dieron success; cualquiera fallido o cancelado lo deja en failure o cancelled (fail-closed).
  */
 const PRUEBAS_EN_FRAGMENTOS = {
-  matriz: "[1, 2, 3]",
+  matriz: "[1, 2, 3, 4]",
   comando: "- run: npm test",
   entorno: ["PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}"],
   topePorFragmento: 20,
 } as const;
 
-/** Las líneas de `strategy` del job `pruebas` y su comando de pruebas, o un motivo si no cumple. */
-function problemasDeLosFragmentos(texto: string, archivo: string): string[] {
-  const cuerpo = leerJobs(texto).get("pruebas")?.texto ?? "";
+/** Lo que fija cada job que corre en fragmentos de `vitest --shard`. */
+interface FragmentosEsperados {
+  matriz: string;
+  comando: string;
+  entorno: readonly string[];
+  topePorFragmento: number;
+}
+
+/**
+ * `recorrido` corre en TRES fragmentos de los recorridos (la app real con Chromium y Postgres; 26/11/2026). Previene: el timeout de un job serial al borde del límite (mediana 13,7 min, máximo 15,0; dos
+ * cancelaciones seguidas en c03db61a con 40 de 42 archivos en verde). Por fragmento ~6-7 min (reparto real medido: 252, 228 y 249 s de pruebas); el tope de 15 es más del doble.
+ */
+const RECORRIDO_EN_FRAGMENTOS: FragmentosEsperados = {
+  matriz: "[1, 2, 3]",
+  comando: "- run: npm run test:recorrido",
+  entorno: ["PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}"],
+  topePorFragmento: 15,
+};
+
+/** Las líneas de `strategy` de un job en fragmentos y su comando de pruebas, o un motivo si no cumple. */
+function problemasDeLosFragmentos(
+  texto: string,
+  archivo: string,
+  job = "pruebas",
+  fijado: FragmentosEsperados = PRUEBAS_EN_FRAGMENTOS,
+): string[] {
+  const cuerpo = leerJobs(texto).get(job)?.texto ?? "";
   const problemas: string[] = [];
   const esperado = (condicion: boolean, motivo: string) => {
-    if (!condicion) problemas.push(`${archivo}: pruebas: ${motivo}`);
+    if (!condicion) problemas.push(`${archivo}: ${job}: ${motivo}`);
   };
   const lineas = cuerpo.split("\n").map((l) => l.replace(/\s+#.*$/, "").trimEnd());
   esperado(
-    lineas.includes(`        shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}`),
-    `la matriz de fragmentos tiene que ser \`shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}\` (tres fragmentos, ninguno de menos)`,
+    lineas.includes(`        shard: ${fijado.matriz}`),
+    `la matriz de fragmentos tiene que ser \`shard: ${fijado.matriz}\` (${fijado.matriz.split(",").length} fragmentos, ninguno de menos)`,
   );
   esperado(
     lineas.includes("      fail-fast: false"),
     "falta `fail-fast: false` (un fragmento caído no puede cancelar a los otros)",
   );
   esperado(
-    lineas.some((l) => l.trim() === PRUEBAS_EN_FRAGMENTOS.comando),
-    `el comando de pruebas tiene que ser \`${PRUEBAS_EN_FRAGMENTOS.comando.slice(2)}\` (cada fragmento corre solo el suyo y el total sale de la matriz)`,
+    lineas.some((l) => l.trim() === fijado.comando),
+    `el comando de pruebas tiene que ser \`${fijado.comando.slice(2)}\` (cada fragmento corre solo el suyo y el total sale de la matriz)`,
   );
-  for (const variable of PRUEBAS_EN_FRAGMENTOS.entorno) {
+  for (const variable of fijado.entorno) {
     esperado(
       lineas.some((l) => l.trim() === variable),
       `falta \`${variable}\` en el paso de las pruebas`,
@@ -425,13 +455,49 @@ function problemasDeLosFragmentos(texto: string, archivo: string): string[] {
     "falta `PEDERNAL_FRAGMENTO` con el total de la matriz: el total escrito a mano se desfasa de la matriz",
   );
   esperado(
-    lineas.includes(`    timeout-minutes: ${PRUEBAS_EN_FRAGMENTOS.topePorFragmento}`),
-    `el tope por fragmento tiene que ser ${PRUEBAS_EN_FRAGMENTOS.topePorFragmento} min (casi 3 veces los ~7 min esperados por fragmento)`,
+    lineas.includes(`    timeout-minutes: ${fijado.topePorFragmento}`),
+    `el tope por fragmento tiene que ser ${fijado.topePorFragmento} min (el decidido para este job)`,
   );
   esperado(
     lineas.some((l) => l.trim() === "image: postgres:18"),
     "cada fragmento tiene su propio Postgres 18 (service container del job)",
   );
+  return problemas;
+}
+
+/**
+ * El Postgres de las pruebas de integración sube `max_locks_per_transaction` a 256 (el valor por defecto, 64, agotó la tabla de locks compartida: `53200 out of shared memory`, #648, 27/11/2026,
+ * cuando la prueba de 500 cobros contra el cierre coincidió en el mismo servidor con otras). Solo se aplica al arrancar: el paso reinicia el contenedor del servicio y comprueba el valor.
+ * Con solo `max_locks_per_transaction` el 53200 siguió (#651): las transacciones SERIALIZABLE usan otra tabla, la de locks de predicado (`max_pred_locks_per_transaction`, 512).
+ * Falla si un job que corre las pruebas de integración (`pruebas`, `estabilidad`) pierde alguna de esas cuatro piezas: el ajuste, el reinicio, la espera o la comprobación.
+ */
+const PIEZAS_DE_LOS_LOCKS: readonly (readonly [string, string])[] = [
+  ["ALTER SYSTEM SET max_locks_per_transaction = 256", "el ajuste a 256"],
+  [
+    "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+    "el ajuste de los locks de predicado a 512 (transacciones SERIALIZABLE)",
+  ],
+  [
+    'docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")',
+    "el reinicio del contenedor",
+  ],
+  ['pg_isready -d "$PRUEBAS_DATABASE_URL"', "la espera a que vuelva a aceptar conexiones"],
+  [
+    'SHOW max_locks_per_transaction")" = "256"',
+    "la comprobación del valor (sin ella el job correría con la tabla chica sin saberlo)",
+  ],
+  ['SHOW max_pred_locks_per_transaction")" = "512"', "la comprobación de los locks de predicado"],
+];
+
+function problemasDeLosLocks(texto: string, archivo: string, jobs: readonly string[]): string[] {
+  const problemas: string[] = [];
+  for (const job of jobs) {
+    const cuerpo = leerJobs(texto).get(job)?.texto ?? "";
+    for (const [pieza, que] of PIEZAS_DE_LOS_LOCKS) {
+      if (!cuerpo.includes(pieza))
+        problemas.push(`${archivo}: ${job}: falta ${que} (max_locks_per_transaction)`);
+    }
+  }
   return problemas;
 }
 
@@ -676,15 +742,17 @@ const CASOS: Caso[] = [
     esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
-    nombre: "«pruebas» pierde un fragmento (la matriz queda en [1, 2])",
+    nombre: "«pruebas» pierde un fragmento (la matriz queda en [1, 2, 3])",
     alterar: (t) =>
-      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2]")),
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3, 4]", "shard: [1, 2, 3]")),
     esperado: ["pruebas", "la matriz de fragmentos"],
   },
   {
-    nombre: "«pruebas» suma un fragmento sin decidirlo (la matriz queda en [1, 2, 3, 4])",
+    nombre: "«pruebas» suma un fragmento sin decidirlo (la matriz queda en [1, 2, 3, 4, 5])",
     alterar: (t) =>
-      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2, 3, 4]")),
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(b, "shard: [1, 2, 3, 4]", "shard: [1, 2, 3, 4, 5]"),
+      ),
     esperado: ["pruebas", "la matriz de fragmentos"],
   },
   {
@@ -730,6 +798,105 @@ const CASOS: Caso[] = [
     alterar: (t) =>
       enJob(t, "pruebas", (b) => reemplazarUnico(b, "timeout-minutes: 20", "timeout-minutes: 25")),
     esperado: ["pruebas", "el tope por fragmento"],
+  },
+  {
+    nombre: "«recorrido» pierde un fragmento (la matriz queda en [1, 2])",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2]")),
+    esperado: ["recorrido", "la matriz de fragmentos"],
+  },
+  {
+    nombre: "«recorrido» pierde `fail-fast: false` (un fragmento caído cancelaría a los otros)",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) => reemplazarUnico(b, "      fail-fast: false\n", "")),
+    esperado: ["recorrido", "fail-fast"],
+  },
+  {
+    nombre: "«recorrido» pierde la variable del fragmento (cada job correría todos los recorridos)",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) =>
+        reemplazarUnico(
+          b,
+          "          PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}\n",
+          "",
+        ),
+      ),
+    esperado: ["recorrido", "falta `PEDERNAL_FRAGMENTO"],
+  },
+  {
+    nombre: "«recorrido» escribe el total de fragmentos a mano (${{ matrix.shard }}/3)",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) =>
+        reemplazarUnico(
+          b,
+          "${{ matrix.shard }}/${{ strategy.job-total }}",
+          "${{ matrix.shard }}/3",
+        ),
+      ),
+    esperado: ["recorrido", "falta `PEDERNAL_FRAGMENTO"],
+  },
+  {
+    nombre: "«recorrido» vuelve al tope de 20 min (ya no es el decidido por fragmento)",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) =>
+        reemplazarUnico(b, "timeout-minutes: 15", "timeout-minutes: 20"),
+      ),
+    esperado: ["recorrido", "el tope por fragmento"],
+  },
+  {
+    nombre: "«recorrido» deja de correr `npm run test:recorrido`",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) =>
+        reemplazarUnico(b, "- run: npm run test:recorrido\n", "- run: npm run otra-cosa\n"),
+      ),
+    esperado: ["recorrido", "el comando de pruebas"],
+  },
+  {
+    nombre:
+      "«pruebas» pierde el ajuste de max_locks_per_transaction (volvería la tabla de locks chica)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "ALTER SYSTEM SET max_locks_per_transaction = 256",
+          "ALTER SYSTEM SET max_locks_per_transaction = 64",
+        ),
+      ),
+    esperado: ["pruebas", "el ajuste a 256"],
+  },
+  {
+    nombre:
+      "«pruebas» pierde el ajuste de los locks de predicado (el 53200 de las transacciones SERIALIZABLE volvería)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 64",
+        ),
+      ),
+    esperado: ["pruebas", "locks de predicado a 512"],
+  },
+  {
+    nombre:
+      "«estabilidad» ajusta los locks pero no reinicia el contenedor (el ajuste no se aplicaría)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) => reemplazarUnico(b, /^ +docker restart .*\n/m, "")),
+    esperado: ["estabilidad", "el reinicio del contenedor"],
+  },
+  {
+    nombre: "«pruebas» no comprueba que el valor quedó (correría con la tabla chica sin saberlo)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(b, /^ +test "\$\(psql .*SHOW max_locks_per_transaction.*\n/m, ""),
+      ),
+    esperado: ["pruebas", "la comprobación del valor"],
+  },
+  {
+    nombre: "«pruebas» no espera a que el Postgres vuelva a aceptar conexiones tras el reinicio",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, /^ +for i in \$\(seq 1 60\).*\n/m, "")),
+    esperado: ["pruebas", "la espera"],
   },
   {
     nombre: "«pruebas» cambia de Postgres (la versión de Neon es la 18)",
@@ -1073,9 +1240,22 @@ describe("gate-rapido.yml: sus pruebas se reparten igual que las de ci.yml", () 
   it("cumple la misma estructura de fragmentos", () => {
     expect(problemasDeLosFragmentos(RAPIDO, "gate-rapido.yml")).toEqual([]);
   });
+  it("su job `pruebas` también sube los locks del Postgres (misma mecánica que ci.yml)", () => {
+    expect(problemasDeLosLocks(RAPIDO, "gate-rapido.yml", ["pruebas"])).toEqual([]);
+    expect(
+      problemasDeLosLocks(
+        RAPIDO.replace("ALTER SYSTEM SET max_locks_per_transaction = 256", "SELECT 1"),
+        "gate-rapido.yml",
+        ["pruebas"],
+      ),
+    ).toHaveLength(1);
+  });
   it("sin la matriz o con otro tope, falla", () => {
     expect(
-      problemasDeLosFragmentos(RAPIDO.replace("shard: [1, 2, 3]", "shard: [1]"), "gate-rapido.yml"),
+      problemasDeLosFragmentos(
+        RAPIDO.replace("shard: [1, 2, 3, 4]", "shard: [1]"),
+        "gate-rapido.yml",
+      ),
     ).toHaveLength(1);
     expect(
       problemasDeLosFragmentos(
@@ -1095,6 +1275,20 @@ describe("el Gate ve el agregado de los fragmentos de `pruebas` (fail-closed)", 
     for (const result of ["failure", "cancelled", "skipped"]) {
       expect(gate.evaluarGate({ ...verde, pruebas: { result } }), result).toContain(
         `pruebas: ${result}`,
+      );
+    }
+  });
+});
+
+describe("el Gate ve el agregado de los fragmentos de `recorrido` (fail-closed)", () => {
+  it("un fragmento fallido o cancelado deja `recorrido` en rojo para el Gate", () => {
+    const verde: Record<string, { result: string; outputs?: Record<string, string> }> =
+      Object.fromEntries(SIN_GATE.map((id) => [id, { result: "success" }]));
+    verde["mutacion-plan"] = { result: "success", outputs: { hay: "true", reloj: "true" } };
+    expect(gate.evaluarGate(verde)).toEqual([]);
+    for (const result of ["failure", "cancelled"]) {
+      expect(gate.evaluarGate({ ...verde, recorrido: { result } }), result).toContain(
+        `recorrido: ${result}`,
       );
     }
   });

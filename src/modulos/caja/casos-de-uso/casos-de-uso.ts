@@ -9,6 +9,7 @@ import {
 } from "./cambiar-estado-de-medio-de-pago";
 import type { DependenciasDeCaja } from "./contrato";
 import { armarAbrirSesion } from "./abrir-sesion";
+import { armarAnularDevolucion } from "./anular-devolucion";
 import { armarAnularMovimientoDeCaja } from "./anular-movimiento";
 import { armarCancelarCierre } from "./cancelar-cierre";
 import { armarCerrarSesion } from "./cerrar-sesion";
@@ -18,6 +19,7 @@ import { armarCrearMedioDePago } from "./crear-medio-de-pago";
 import { armarCorregirMedioDeCobro } from "./corregir-medio-de-cobro";
 import { armarDarConformeGeneral } from "./dar-conforme-general";
 import { armarDeclararTotal } from "./declarar-total";
+import { armarDevolverDinero } from "./devolver-dinero";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarAsegurarCajaPorDefecto } from "./caja-por-defecto";
 import { armarEditarCaja } from "./editar-caja";
@@ -59,6 +61,8 @@ export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
     registrarMovimientoManual: armarRegistrarMovimientoManual(dependencias),
     registrarSalidaDeDinero: armarRegistrarSalidaDeDinero(dependencias),
     registrarSalidaDeDineroPorOtroMedio: armarRegistrarSalidaDeDineroPorOtroMedio(dependencias),
+    devolverDinero: armarDevolverDinero(dependencias),
+    anularDevolucion: armarAnularDevolucion(dependencias),
     registrarAjuste: armarRegistrarAjuste(dependencias),
     anularMovimientoDeCaja: armarAnularMovimientoDeCaja(dependencias),
     corregirMedioDeCobro: armarCorregirMedioDeCobro(dependencias),

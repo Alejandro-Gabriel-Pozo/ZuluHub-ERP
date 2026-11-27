@@ -3,8 +3,11 @@ import type {
   CategoriaDeSalida,
   SentidoDeMovimientoDeDinero,
 } from "../dominio/movimiento-de-dinero";
+import type { OrigenDevoluble } from "../dominio/devolucion";
 import type { ClaseDeMovimiento, EstadoDeSesion, TipoDeCuenta, TipoDeMedio } from "../estados";
 import { COLUMNAS_DEL_CIERRE_DE_CAJA, type TablasDelCierreDeCaja } from "./esquema-del-cierre";
+
+export type { OrigenDevoluble };
 
 /**
  * Tablas de caja (0027): la configuración (`caja`, `medio_de_pago`, `cuenta_de_cobro`) y la operación (`sesion_caja`, `movimiento_caja`,
@@ -108,6 +111,10 @@ export type CajaDb = TablasDelCierreDeCaja & {
     tercero_persona_id: string | null;
     referencia: string | null;
     devuelve_a: string | null;
+    /** La cobranza que devuelve (0114): su tipo y su id; con `devolucion_id`, el pedido que agrupa las líneas por medio. Solo la salida de categoría devolución. */
+    devuelve_origen_tipo: OrigenDevoluble | null;
+    devuelve_origen_id: string | null;
+    devolucion_id: string | null;
     movimiento_id: string | null;
     clave: string;
     huella: string;

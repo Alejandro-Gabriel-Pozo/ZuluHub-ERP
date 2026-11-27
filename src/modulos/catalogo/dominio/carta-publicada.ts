@@ -217,6 +217,7 @@ export function armarVidrieraPublicada(
           ? leida.carta.logo
           : null,
     },
+    perillasDeModelo: [],
     cuentasDeImagen: leida.cuentasDeImagen,
     letraBase: "NORMAL",
     secciones,

@@ -3,6 +3,7 @@ import type { PisosDeAcciones, TipoDePiso } from "../../../capacidades/roles/pis
 import { TIPOS_DE_PISO } from "../../../capacidades/roles/pisos";
 import {
   empresaId,
+  personaId,
   type EmpresaId,
   type PersonaId,
 } from "../../../primitivas/identificadores/marca";
@@ -26,6 +27,24 @@ export type RolPropio = Readonly<{
 }>;
 
 export type RolPropioDeLista = RolPropio & Readonly<{ personasActivas: number }>;
+
+/** Un evento de la auditoría de un rol propio, tal como está guardado (`antes` y `despues` sin interpretar: los valida la consulta). */
+export type EventoDeAuditoriaDeRol = Readonly<{
+  id: string;
+  accion: string;
+  actor: PersonaId | null;
+  creadoEn: Date;
+  antes: unknown;
+  despues: unknown;
+}>;
+
+/** Las acciones auditadas que cuentan la vida de un rol propio (lo que muestra su historial). */
+export const ACCIONES_DEL_HISTORIAL_DE_UN_ROL = [
+  "ROL_CREADO",
+  "ROL_EDITADO",
+  "ROL_ARCHIVADO",
+  "ROL_REACTIVADO",
+] as const;
 
 export type AltaDeRol = Readonly<{
   id: string;
@@ -76,6 +95,15 @@ export interface RepositorioDeRoles {
     activo: boolean,
     versionEsperada: number,
   ): Promise<boolean>;
+  /**
+   * Los últimos `limite` eventos de la auditoría de ESE rol de ESA empresa (solo los de `ACCIONES_DEL_HISTORIAL_DE_UN_ROL`), del más nuevo al más viejo (fecha y, a igual instante, el id: el orden es estable).
+   * Solo lectura; la RLS y el filtro por empresa vuelven a acotar a la empresa del contexto.
+   */
+  historial(
+    empresa: EmpresaId,
+    rolId: string,
+    limite: number,
+  ): Promise<readonly EventoDeAuditoriaDeRol[]>;
   /** Los pisos que fijó la plataforma (una acción sin piso es libre dentro del plan). */
   pisos(): Promise<PisosDeAcciones>;
   /** Las acciones de la versión vigente de una plantilla base, o `null` si no hay ninguna. */
@@ -157,6 +185,28 @@ export function crearRepositorioDeRoles(db: Kysely<IdentidadDb>): RepositorioDeR
       const { rows } = await sql<{ n: number }>`select count(*)::int as n from membresia
         where empresa_id = ${empresa} and rol_propio_id = ${rolId} and activo`.execute(db);
       return rows[0]?.n ?? 0;
+    },
+
+    async historial(empresa, rolId, limite) {
+      const { rows } = await sql<{
+        id: string;
+        accion: string;
+        actor_persona_id: string | null;
+        creado_en: Date;
+        antes: unknown;
+        despues: unknown;
+      }>`select id::text as id, accion, actor_persona_id, creado_en, antes, despues from auditoria_empresa
+        where empresa_id = ${empresa} and entidad = 'rol_de_empresa' and entidad_id = ${rolId}
+          and accion = any(${[...ACCIONES_DEL_HISTORIAL_DE_UN_ROL]}::text[])
+        order by creado_en desc, id desc limit ${limite}`.execute(db);
+      return rows.map((f) => ({
+        id: f.id,
+        accion: f.accion,
+        actor: f.actor_persona_id === null ? null : personaId(f.actor_persona_id),
+        creadoEn: f.creado_en,
+        antes: f.antes,
+        despues: f.despues,
+      }));
     },
 
     async crear(alta) {
