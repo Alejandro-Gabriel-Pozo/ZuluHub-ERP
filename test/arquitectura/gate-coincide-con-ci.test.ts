@@ -468,10 +468,15 @@ function problemasDeLosFragmentos(
 /**
  * El Postgres de las pruebas de integración sube `max_locks_per_transaction` a 256 (el valor por defecto, 64, agotó la tabla de locks compartida: `53200 out of shared memory`, #648, 27/11/2026,
  * cuando la prueba de 500 cobros contra el cierre coincidió en el mismo servidor con otras). Solo se aplica al arrancar: el paso reinicia el contenedor del servicio y comprueba el valor.
+ * Con solo `max_locks_per_transaction` el 53200 siguió (#651): las transacciones SERIALIZABLE usan otra tabla, la de locks de predicado (`max_pred_locks_per_transaction`, 512).
  * Falla si un job que corre las pruebas de integración (`pruebas`, `estabilidad`) pierde alguna de esas cuatro piezas: el ajuste, el reinicio, la espera o la comprobación.
  */
 const PIEZAS_DE_LOS_LOCKS: readonly (readonly [string, string])[] = [
   ["ALTER SYSTEM SET max_locks_per_transaction = 256", "el ajuste a 256"],
+  [
+    "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+    "el ajuste de los locks de predicado a 512 (transacciones SERIALIZABLE)",
+  ],
   [
     'docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")',
     "el reinicio del contenedor",
@@ -481,6 +486,7 @@ const PIEZAS_DE_LOS_LOCKS: readonly (readonly [string, string])[] = [
     'SHOW max_locks_per_transaction")" = "256"',
     "la comprobación del valor (sin ella el job correría con la tabla chica sin saberlo)",
   ],
+  ['SHOW max_pred_locks_per_transaction")" = "512"', "la comprobación de los locks de predicado"],
 ];
 
 function problemasDeLosLocks(texto: string, archivo: string, jobs: readonly string[]): string[] {
@@ -857,6 +863,19 @@ const CASOS: Caso[] = [
         ),
       ),
     esperado: ["pruebas", "el ajuste a 256"],
+  },
+  {
+    nombre:
+      "«pruebas» pierde el ajuste de los locks de predicado (el 53200 de las transacciones SERIALIZABLE volvería)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 512",
+          "ALTER SYSTEM SET max_pred_locks_per_transaction = 64",
+        ),
+      ),
+    esperado: ["pruebas", "locks de predicado a 512"],
   },
   {
     nombre:

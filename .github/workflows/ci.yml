@@ -160,17 +160,19 @@ jobs:
         # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
         # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
         # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
-        # También sube `max_locks_per_transaction` (64 → 256): la tabla de locks compartida se agotaba (`53200 out of shared memory`) cuando coincidían en un mismo Postgres la prueba de 500
+        # También sube `max_locks_per_transaction` (64 → 256) y `max_pred_locks_per_transaction` (64 → 512, la tabla de locks de predicado de las transacciones SERIALIZABLE: con solo la primera el `53200 out of shared memory` siguió, #651): la tabla de locks compartida se agotaba cuando coincidían en un mismo Postgres la prueba de 500
         # cobros contra el cierre y otras (#648, 27/11/2026). Ese ajuste solo se aplica al arrancar el servidor: se reinicia el contenedor del servicio (la base y sus ajustes sobreviven) y se
         # comprueba que el valor quedó (si no, el paso falla y el job también: nunca se corre con la tabla chica sin saberlo).
         run: |
           psql "$PRUEBAS_DATABASE_URL" \
             -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
-            -c "ALTER SYSTEM SET max_locks_per_transaction = 256"
+            -c "ALTER SYSTEM SET max_locks_per_transaction = 256" \
+            -c "ALTER SYSTEM SET max_pred_locks_per_transaction = 512"
           docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")
           for i in $(seq 1 60); do pg_isready -d "$PRUEBAS_DATABASE_URL" && break; sleep 1; done
           test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_locks_per_transaction")" = "256"
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_pred_locks_per_transaction")" = "512"
       - run: npm test
         env:
           # El fragmento de este job (`i/n`): lo lee `vitest.config.ts` (`arquitectura/fragmento-de-pruebas.cjs`) y corre solo sus archivos; el total sale del tamaño de la matriz.
@@ -276,17 +278,19 @@ jobs:
         # Las pruebas provocan errores a propósito (conflictos, bloqueos, permisos). Con el registro
         # por defecto, el final del log del job son miles de líneas de Postgres y la salida de las
         # pruebas queda fuera de lo que se puede leer. Esto lo silencia; no cambia ninguna prueba.
-        # También sube `max_locks_per_transaction` (64 → 256): la tabla de locks compartida se agotaba (`53200 out of shared memory`) cuando coincidían en un mismo Postgres la prueba de 500
+        # También sube `max_locks_per_transaction` (64 → 256) y `max_pred_locks_per_transaction` (64 → 512, la tabla de locks de predicado de las transacciones SERIALIZABLE: con solo la primera el `53200 out of shared memory` siguió, #651): la tabla de locks compartida se agotaba cuando coincidían en un mismo Postgres la prueba de 500
         # cobros contra el cierre y otras (#648, 27/11/2026). Ese ajuste solo se aplica al arrancar el servidor: se reinicia el contenedor del servicio (la base y sus ajustes sobreviven) y se
         # comprueba que el valor quedó (si no, el paso falla y el job también: nunca se corre con la tabla chica sin saberlo).
         run: |
           psql "$PRUEBAS_DATABASE_URL" \
             -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
-            -c "ALTER SYSTEM SET max_locks_per_transaction = 256"
+            -c "ALTER SYSTEM SET max_locks_per_transaction = 256" \
+            -c "ALTER SYSTEM SET max_pred_locks_per_transaction = 512"
           docker restart $(docker ps --filter "ancestor=postgres:18" --format "{{.ID}}")
           for i in $(seq 1 60); do pg_isready -d "$PRUEBAS_DATABASE_URL" && break; sleep 1; done
           test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_locks_per_transaction")" = "256"
+          test "$(psql "$PRUEBAS_DATABASE_URL" -Atc "SHOW max_pred_locks_per_transaction")" = "512"
       - run: npx vitest run test/integracion
 
   mutacion-plan:
