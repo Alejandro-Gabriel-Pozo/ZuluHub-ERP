@@ -186,6 +186,7 @@ export function vidrieraDePrueba(
     return productos.length === 0 ? [] : [{ id, nombre, productos }];
   });
   return {
+    modelo: "LISTA",
     nombre: "La Esquina Café",
     rubro,
     mensajeDePortada: null,
