@@ -13,6 +13,7 @@ import {
   leerTokenDeVercel,
 } from "../src/adaptadores/vercel/plan-de-variables";
 import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
+import { VARIABLE_DEL_HOST_DE_LA_BASE, hostDeLaBaseCoincide } from "./host-de-la-base";
 import { VARIABLE_DEL_PAQUETE_DE_CLIENTE, leerPaqueteDeCliente } from "./ejecutar-alta-de-cliente";
 
 /**
@@ -20,7 +21,7 @@ import { VARIABLE_DEL_PAQUETE_DE_CLIENTE, leerPaqueteDeCliente } from "./ejecuta
  * ser EL MISMO en quien emite la invitación (este alta, con la base del cliente) y en la web del cliente que la valida. GitHub no conoce el de Vercel (se carga al azar como variable sensible y no
  * se lee de vuelta), así que el alta genera uno en el runner y lo escribe en el proyecto de Vercel del cliente, un solo origen y sin copias a mano.
  *
- * Solo si la empresa NO existe todavía (por CUIT): sin empresa no hay invitaciones firmadas con el valor anterior, así que cambiarlo no invalida nada, y repetir el flujo tras una falla a medias
+ * Solo si la empresa NO existe todavía (cualquier empresa no cancelada en esa base): sin empresa no hay invitaciones firmadas con el valor anterior, así que cambiarlo no invalida nada, y repetir el flujo tras una falla a medias
  * deja el valor nuevo en los dos lados. Con la empresa ya creada NO se toca nada (cambiarlo dejaría inválida la invitación del gerente): se entrega un valor de relleno con forma válida que
  * NO se escribe en ninguna parte, solo para que el alta, que repite sus pasos sin cambios, pueda armar su plataforma. Se escribe en Vercel ANTES de crear la empresa: si falla, no se crea nada.
  *
@@ -30,7 +31,7 @@ import { VARIABLE_DEL_PAQUETE_DE_CLIENTE, leerPaqueteDeCliente } from "./ejecuta
 export type EntradaDelSecretoDeInvitaciones = Readonly<{
   ambiente: string | undefined;
   entorno: Readonly<Record<string, string | undefined>>;
-  empresaExiste: (cadena: string, cuit: string) => Promise<boolean>;
+  empresaExiste: (cadena: string) => Promise<boolean>;
   /** Cliente de la API de Vercel ya armado para el proyecto del cliente. */
   clienteDeVercel: (token: string, proyecto: string) => ClienteDeVariables;
   /** Escribe `NOMBRE=valor` en el archivo de entorno del runner. */
@@ -65,6 +66,12 @@ export async function prepararSecretoDeInvitaciones(
     error(`ERROR: ${VARIABLE_DE_LA_CADENA} falta o apunta al pooler: se usa la cadena DIRECTA.`);
     return 2;
   }
+  if (!hostDeLaBaseCoincide(cadena, entorno[VARIABLE_DEL_HOST_DE_LA_BASE])) {
+    error(
+      `ERROR: el host de ${VARIABLE_DE_LA_CADENA} no es el declarado en ${VARIABLE_DEL_HOST_DE_LA_BASE}. No se hizo nada.`,
+    );
+    return 2;
+  }
   const token = leerTokenDeVercel(entorno);
   if ("problema" in token) {
     error(`ERROR: ${VARIABLE_DEL_TOKEN} falta o no tiene la forma pedida. No se hizo nada.`);
@@ -82,7 +89,7 @@ export async function prepararSecretoDeInvitaciones(
 
   let existe: boolean;
   try {
-    existe = await entrada.empresaExiste(cadena, leido.paquete.empresa.cuit);
+    existe = await entrada.empresaExiste(cadena);
   } catch (falla) {
     error(
       `ERROR: no se pudo consultar la base del cliente: ${describirFallaDeBase(falla, cadena)}`,

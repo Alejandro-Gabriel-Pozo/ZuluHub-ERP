@@ -110,6 +110,7 @@ function comunes(texto: string, job: string, frase: RegExp): string[] {
       ),
   );
   exigir("permisos-solo-lectura", /^permissions:\n {2}contents: read$/m.test(texto));
+  exigir("comparte-el-grupo-de-migrar", /group: migrar-\$\{\{ inputs\.ambiente \}\}/.test(limpio));
   exigir("no-se-cancela-lo-que-corre", /cancel-in-progress: false/.test(texto));
   // Ni una expresión `${{ … }}` dentro de un `run:` (un secreto o una entrada ahí se vuelve texto de la shell).
   exigir("sin-expresiones-en-run", !/\$\{\{/.test(textoDeLosRun(texto)));
@@ -122,10 +123,25 @@ function comunes(texto: string, job: string, frase: RegExp): string[] {
   );
   exigir("checkout-sin-credenciales", /persist-credentials: false/.test(limpio));
   exigir("npm-ci-sin-scripts", /npm ci --omit=dev --ignore-scripts/.test(limpio));
+  // Candado de host: la variable no secreta con el host esperado de la base llega a TODO paso que usa la cadena del dueño.
+  const pasosConCadena = [...limpio.split(/\n {6}- /)].filter(
+    (p) =>
+      p.includes("secrets.PEDERNAL_DB_DUENO_DIRECTA") &&
+      /npm run (plataforma:(alta|secreto)|desplegar-cliente -- datos)/.test(p),
+  );
+  exigir(
+    "candado-de-host-en-cada-paso-con-la-cadena",
+    pasosConCadena.length > 0 &&
+      pasosConCadena.every((p) =>
+        p.includes("PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}"),
+      ),
+  );
   exigir("no-migra", !/migrar -- --aplicar|migrar -- aplicar/.test(limpio));
   exigir(
     "exige-base-al-dia",
-    /npm run migrar -- --ver/.test(limpio) && /grep -q "faltan aplicar"/.test(limpio),
+    /npm run migrar -- --ver/.test(limpio) &&
+      /! grep -q "la base está al día"/.test(limpio) &&
+      !/faltan aplicar/.test(limpio),
   );
   return problemas;
 }
@@ -185,7 +201,7 @@ function problemasDelAlta(texto: string): string[] {
       ),
     ),
   );
-  exigir("comparte-el-grupo-de-migrar", /group: migrar-\$\{\{ inputs\.ambiente \}\}/.test(limpio));
+
   return problemas;
 }
 
@@ -240,12 +256,20 @@ function problemasDelDespliegue(texto: string): string[] {
       ["PEDERNAL_DB_DUENO_DIRECTA", "PEDERNAL_VERCEL_TOKEN", "PEDERNAL_VERCEL_BYPASS"].includes(s),
     ),
   );
-  exigir("grupo-propio-por-cliente", /group: desplegar-\$\{\{ inputs\.ambiente \}\}/.test(limpio));
+  exigir("cli-sin-scripts-de-instalacion", /NPM_CONFIG_IGNORE_SCRIPTS: "true"/.test(limpio));
   return problemas;
 }
 
 /** Cada violación inyectada: el texto roto tiene que marcar EXACTAMENTE ese código. */
 const VIOLACIONES_ALTA: Array<[string, (t: string) => string]> = [
+  [
+    "candado-de-host-en-cada-paso-con-la-cadena",
+    (t) =>
+      t.replaceAll(
+        "          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}\n",
+        "",
+      ),
+  ],
   [
     "solo-a-mano",
     (t) => t.replace("on:\n  workflow_dispatch:", "on:\n  push:\n  workflow_dispatch:"),
@@ -311,7 +335,10 @@ const VIOLACIONES_ALTA: Array<[string, (t: string) => string]> = [
   ],
   ["npm-ci-sin-scripts", (t) => t.replace("npm ci --omit=dev --ignore-scripts", "npm ci")],
   ["no-migra", (t) => t.replace("npm run migrar -- --ver |", "npm run migrar -- --aplicar |")],
-  ["exige-base-al-dia", (t) => t.replace('grep -q "faltan aplicar"', "true")],
+  [
+    "exige-base-al-dia",
+    (t) => t.replace('! grep -q "la base está al día"', 'grep -q "faltan aplicar"'),
+  ],
   [
     "cierra-siempre",
     (t) => t.replace("if: always() && steps.abrir.conclusion != 'skipped'", "if: success()"),
@@ -345,6 +372,22 @@ const VIOLACIONES_ALTA: Array<[string, (t: string) => string]> = [
 ];
 
 const VIOLACIONES_DESPLIEGUE: Array<[string, (t: string) => string]> = [
+  [
+    "cli-sin-scripts-de-instalacion",
+    (t) => t.replace('NPM_CONFIG_IGNORE_SCRIPTS: "true"', 'NPM_CONFIG_IGNORE_SCRIPTS: "false"'),
+  ],
+  [
+    "comparte-el-grupo-de-migrar",
+    (t) => t.replace("group: migrar-${{ inputs.ambiente }}", "group: desplegar"),
+  ],
+  [
+    "candado-de-host-en-cada-paso-con-la-cadena",
+    (t) =>
+      t.replaceAll(
+        "          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}\n",
+        "",
+      ),
+  ],
   [
     "solo-a-mano",
     (t) => t.replace("on:\n  workflow_dispatch:", "on:\n  push:\n  workflow_dispatch:"),
@@ -380,7 +423,10 @@ const VIOLACIONES_DESPLIEGUE: Array<[string, (t: string) => string]> = [
     "acciones-fijadas-por-sha",
     (t) => t.replace(/actions\/checkout@[0-9a-f]{40}/, "actions/checkout@main"),
   ],
-  ["exige-base-al-dia", (t) => t.replace('grep -q "faltan aplicar"', "true")],
+  [
+    "exige-base-al-dia",
+    (t) => t.replace('! grep -q "la base está al día"', 'grep -q "faltan aplicar"'),
+  ],
   ["version-fija-de-la-cli", (t) => t.replace("vercel@65.15.0", "vercel@latest")],
   [
     "sin-proyecto-ni-token-en-la-linea",
@@ -403,10 +449,6 @@ const VIOLACIONES_DESPLIEGUE: Array<[string, (t: string) => string]> = [
         "secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN",
         "secrets.NEON_API_KEY }}\n          PEDERNAL_VERCEL_TOKEN",
       ),
-  ],
-  [
-    "grupo-propio-por-cliente",
-    (t) => t.replace("group: desplegar-${{ inputs.ambiente }}", "group: x"),
   ],
   [
     "solo-produccion",

@@ -24,7 +24,9 @@ name: Alta de un cliente (administrador de plataforma, empresa, marca, plan y do
 #      PEDERNAL_DB_DUENO_DIRECTA     cadena DIRECTA del dueño de la base del cliente (la de `migrar.yml`).
 #      PEDERNAL_VERCEL_TOKEN         token de Vercel con alcance al proyecto del cliente (el mismo del despliegue).
 #      PEDERNAL_ALTA_DE_CLIENTE      los datos del alta (JSON en una línea).
-#    VARIABLE (no secreta) del Environment: PEDERNAL_HOSTS_PROTEGIDOS, los hosts de los proyectos de la plataforma, separados por comas y sin `https://`.
+#    VARIABLES (no secretas) del Environment: PEDERNAL_HOSTS_PROTEGIDOS (los hosts de los proyectos de la plataforma, separados por comas y sin `https://`) y PEDERNAL_HOST_DE_LA_BASE (el host EXACTO de
+#    la base de este cliente: candado, la cadena del dueño solo se usa si su host coincide; se carga a mano una vez).
+#  - El alta NO toma snapshot: vale solo en una base recién migrada y sin datos reales.
 #
 # Ningún paso imprime una cadena, una clave ni un dato del paquete.
 
@@ -99,6 +101,7 @@ jobs:
           set -eu
           faltan=""
           [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_HOST_DE_LA_BASE:-}" ] || faltan="$faltan PEDERNAL_HOST_DE_LA_BASE"
           [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
           [ -n "${PEDERNAL_ALTA_DE_CLIENTE:-}" ] || faltan="$faltan PEDERNAL_ALTA_DE_CLIENTE"
           [ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan="$faltan PEDERNAL_HOSTS_PROTEGIDOS"
@@ -111,6 +114,7 @@ jobs:
           PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
           PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -130,6 +134,7 @@ jobs:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
           PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
 
       - name: La base tiene que estar al día
         # Este flujo no migra: eso es de `migrar.yml`. `shell: bash` activa `pipefail`.
@@ -137,8 +142,9 @@ jobs:
         run: |
           set -eu
           npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
-          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
-            echo "::error::Hay migraciones pendientes. Corré antes «Migrar» para este cliente y volvé a dar el alta."
+          # Fail closed (igual que `migrar.yml`): solo pasa con el texto «la base está al día». Cualquier otra salida (faltan migraciones, redacción distinta, salida cortada) corta.
+          if ! grep -q "la base está al día" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::No se pudo confirmar que la base esté al día (hay migraciones pendientes o la salida de «ver» no tiene un resultado conocido). Corré antes «Migrar» para este cliente y volvé a correr este flujo."
             exit 1
           fi
         env:
@@ -151,6 +157,7 @@ jobs:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
           PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
 
       - name: Abrir el login temporal del rol de plataforma (clave al azar de esta corrida)
         id: abrir
@@ -165,6 +172,7 @@ jobs:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
           PEDERNAL_ALTA_DE_CLIENTE: ${{ secrets.PEDERNAL_ALTA_DE_CLIENTE }}
           PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
 
       - name: Cerrar el login temporal del rol de plataforma (siempre; falla si no queda cerrado)
         # Corre aunque un paso anterior haya fallado o la corrida se cancele. Solo se saltea si «Abrir» nunca llegó a correr.

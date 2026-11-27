@@ -14,6 +14,7 @@ import { emailDesdeTexto } from "../src/modulos/identidad/publico";
 import { leerHostsProtegidos } from "../src/modulos/marcas/publico";
 import { armarEntradaDelCaso, type NombreDeCaso } from "../src/plataforma/dominio/pedido-de-caso";
 import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
+import { VARIABLE_DEL_HOST_DE_LA_BASE, hostDeLaBaseCoincide } from "./host-de-la-base";
 import {
   ESPERA_MAXIMA_DE_VIGENCIA_EN_MS,
   ID_DE_RELLENO,
@@ -59,6 +60,7 @@ const MODULOS_INICIALES_DE_LA_MARCA = ["administracion"] as const;
 export const VARIABLES_ANTES_DEL_LOGIN_DE_CLIENTE = [
   VARIABLE_DEL_PAQUETE_DE_CLIENTE,
   VARIABLE_DE_LA_CADENA,
+  VARIABLE_DEL_HOST_DE_LA_BASE,
   PEDERNAL_HOSTS_PROTEGIDOS,
 ] as const;
 /** Las de la corrida completa: las dos que entrega el paso que abre el login y la que entrega el paso del secreto de invitaciones. */
@@ -533,6 +535,13 @@ export async function altaDeCliente(entrada: EntradaDeAltaDeCliente): Promise<nu
     } catch {
       malos.push(`${PEDERNAL_SECRETO_INVITACIONES}: tiene que ser hexadecimal de 64 o más dígitos`);
     }
+  }
+  if (
+    !hostDeLaBaseCoincide(entorno[VARIABLE_DE_LA_CADENA], entorno[VARIABLE_DEL_HOST_DE_LA_BASE])
+  ) {
+    malos.push(
+      `${VARIABLE_DE_LA_CADENA}: su host no es el declarado en ${VARIABLE_DEL_HOST_DE_LA_BASE} (no es la base de este cliente)`,
+    );
   }
   if (!leerHostsProtegidos(entorno[PEDERNAL_HOSTS_PROTEGIDOS] ?? "").ok) {
     malos.push(

@@ -1,3 +1,5 @@
+import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
+import { VARIABLE_DEL_HOST_DE_LA_BASE, hostDeLaBaseCoincide } from "./host-de-la-base";
 import { ocultarSecretos } from "../src/adaptadores/postgres/describir-falla-de-base";
 import {
   EQUIPO_DE_VERCEL,
@@ -44,6 +46,17 @@ export async function datosDelDespliegue(entrada: EntradaDeDatosDelDespliegue): 
   const pedido = leerPedidoDeVercel(entrada.ambiente);
   if (pedido === null || !entrada.ambiente?.startsWith("cliente-")) {
     error("ERROR: el ambiente no es un cliente de la lista cerrada. No se hizo nada.");
+    return 2;
+  }
+  if (
+    !hostDeLaBaseCoincide(
+      entrada.entorno[VARIABLE_DE_LA_CADENA],
+      entrada.entorno[VARIABLE_DEL_HOST_DE_LA_BASE],
+    )
+  ) {
+    error(
+      `ERROR: el host de ${VARIABLE_DE_LA_CADENA} no es el declarado en ${VARIABLE_DEL_HOST_DE_LA_BASE}. No se hizo nada.`,
+    );
     return 2;
   }
   if ("problema" in token) {

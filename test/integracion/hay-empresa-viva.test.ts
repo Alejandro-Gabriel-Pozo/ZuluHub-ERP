@@ -1,7 +1,7 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { leerClaveDeContextoVigente } from "../../src/adaptadores/postgres/contexto-firmado";
-import { empresaExistePorCuit } from "../../src/adaptadores/postgres/empresa-existe-por-cuit";
+import { hayEmpresaViva } from "../../src/adaptadores/postgres/hay-empresa-viva";
 import { crearMarcaLista, crearTenantConPlan } from "./altas-apoyo";
 import { crearBaseAparte, cuitUnico } from "./entorno";
 
@@ -12,7 +12,7 @@ import { crearBaseAparte, cuitUnico } from "./entorno";
 
 const base = inject("baseDePruebas");
 
-describe.skipIf(base === null)("empresa existe por CUIT", () => {
+describe.skipIf(base === null)("hay empresa viva", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
 
@@ -27,27 +27,19 @@ describe.skipIf(base === null)("empresa existe por CUIT", () => {
     await propia.destruir();
   });
 
-  it("una empresa activa cuenta; una cancelada o un CUIT sin empresa, no (y la consulta no escribe nada)", async () => {
+  it("sin empresas no hay alta; con una viva sí (con cualquier CUIT), y la consulta no escribe", async () => {
+    expect(await hayEmpresaViva(propia.base.dueno)).toBe(false);
     const marca = await crearMarcaLista(dueno);
     const mundo = await crearTenantConPlan(dueno, marca, { empresasPorTenant: "5" });
-    const viva = cuitUnico();
-    const cancelada = cuitUnico();
-    await dueno.query(
-      "insert into empresa (tenant_id, cuit, razon_social, estado) values ($1, $2, 'Viva S.A.', 'ACTIVE')",
-      [mundo.tenant, viva],
-    );
     await dueno.query(
       "insert into empresa (tenant_id, cuit, razon_social, estado, motivo_estado) values ($1, $2, 'Cancelada S.A.', 'CANCELLED', 'prueba')",
-      [mundo.tenant, cancelada],
+      [mundo.tenant, cuitUnico()],
     );
     const antes = (await dueno.query("select count(*)::int as n from empresa")).rows[0] as {
       n: number;
     };
-
-    expect(await empresaExistePorCuit(propia.base.dueno, viva)).toBe(true);
-    expect(await empresaExistePorCuit(propia.base.dueno, cancelada)).toBe(false);
-    expect(await empresaExistePorCuit(propia.base.dueno, cuitUnico())).toBe(false);
-
+    // La fixture del tenant ya trae una empresa activa: hay alta, y la cancelada de arriba no cambia eso.
+    expect(await hayEmpresaViva(propia.base.dueno)).toBe(true);
     const despues = (await dueno.query("select count(*)::int as n from empresa")).rows[0] as {
       n: number;
     };
@@ -55,9 +47,7 @@ describe.skipIf(base === null)("empresa existe por CUIT", () => {
   });
 
   it("una cadena que no conecta falla (no devuelve «no existe»)", async () => {
-    await expect(
-      empresaExistePorCuit("postgres://nadie:nada@127.0.0.1:1/ninguna", cuitUnico()),
-    ).rejects.toThrow();
+    await expect(hayEmpresaViva("postgres://nadie:nada@127.0.0.1:1/ninguna")).rejects.toThrow();
   });
 
   it("la clave de contexto vigente se lee con la cadena del dueño (la de mayor kid) y una revocada no cuenta", async () => {

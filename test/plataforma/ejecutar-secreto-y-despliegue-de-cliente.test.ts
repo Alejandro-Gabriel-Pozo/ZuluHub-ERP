@@ -65,6 +65,7 @@ function armarSecreto(
     entorno: {
       PEDERNAL_DB_MIGRACIONES: CADENA,
       PEDERNAL_VERCEL_TOKEN: TOKEN,
+      PEDERNAL_HOST_DE_LA_BASE: "host-centinela.test",
       [VARIABLE_DEL_PAQUETE_DE_CLIENTE]: PAQUETE,
       ...opciones.entorno,
     },
@@ -104,6 +105,14 @@ describe("secreto de invitaciones del cliente", () => {
     expect(t.comandos).toContain(`::add-mask::${GENERADO}`);
   });
 
+  it("«ya hay alta» no depende del CUIT del paquete: la consulta recibe solo la cadena", async () => {
+    const t = armarSecreto({ existe: true });
+    const consulta = vi.fn(() => Promise.resolve(true));
+    expect(await prepararSecretoDeInvitaciones({ ...t.entrada, empresaExiste: consulta })).toBe(0);
+    expect(consulta).toHaveBeenCalledWith(CADENA);
+    expect(t.escribir).not.toHaveBeenCalled();
+  });
+
   it("empresa ya creada: NO escribe nada en Vercel (la invitación emitida sigue válida) y entrega un valor de relleno", async () => {
     const t = armarSecreto({ existe: true });
     expect(await prepararSecretoDeInvitaciones(t.entrada)).toBe(0);
@@ -131,6 +140,11 @@ describe("secreto de invitaciones del cliente", () => {
     ["sin cadena", { entorno: { PEDERNAL_DB_MIGRACIONES: "" } }],
     ["cadena al pooler", { entorno: { PEDERNAL_DB_MIGRACIONES: "postgres://u:p@h-pooler.x/db" } }],
     ["sin token", { entorno: { PEDERNAL_VERCEL_TOKEN: undefined } }],
+    [
+      "cadena de otra base",
+      { entorno: { PEDERNAL_DB_MIGRACIONES: "postgres://u:p@otro.test/db" } },
+    ],
+    ["sin host declarado", { entorno: { PEDERNAL_HOST_DE_LA_BASE: undefined } }],
     ["paquete roto", { entorno: { [VARIABLE_DEL_PAQUETE_DE_CLIENTE]: "{" } }],
   ])("cierra ante la duda: %s", async (_n, cambios) => {
     const t = armarSecreto(cambios);
@@ -157,7 +171,11 @@ describe("secreto de invitaciones del cliente", () => {
   });
 });
 
-const TOKEN_DE_VERCEL = { PEDERNAL_VERCEL_TOKEN: TOKEN };
+const TOKEN_DE_VERCEL = {
+  PEDERNAL_VERCEL_TOKEN: TOKEN,
+  PEDERNAL_DB_MIGRACIONES: CADENA,
+  PEDERNAL_HOST_DE_LA_BASE: "host-centinela.test",
+};
 
 describe("datos del despliegue del cliente", () => {
   const armar = (
@@ -201,7 +219,19 @@ describe("datos del despliegue del cliente", () => {
   it.each([
     ["ambiente fuera de la lista", "preview", TOKEN_DE_VERCEL, 2],
     ["sin ambiente", undefined, TOKEN_DE_VERCEL, 2],
-    ["sin token", "cliente-hdn", {}, 2],
+    ["sin token", "cliente-hdn", { ...TOKEN_DE_VERCEL, PEDERNAL_VERCEL_TOKEN: undefined }, 2],
+    [
+      "cadena de otra base",
+      "cliente-hdn",
+      { ...TOKEN_DE_VERCEL, PEDERNAL_DB_MIGRACIONES: "postgres://u:p@otro.test/db" },
+      2,
+    ],
+    [
+      "sin host declarado",
+      "cliente-hdn",
+      { ...TOKEN_DE_VERCEL, PEDERNAL_HOST_DE_LA_BASE: undefined },
+      2,
+    ],
   ])("cierra ante la duda: %s (no consulta nada)", async (_n, ambiente, entorno, codigo) => {
     const t = armar({ estado: 200, cuerpo: "{}" }, ambiente, entorno);
     expect(await datosDelDespliegue(t.entrada)).toBe(codigo);

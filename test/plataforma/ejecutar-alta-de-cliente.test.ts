@@ -50,6 +50,7 @@ const SECRETOS = {
   PEDERNAL_CLAVE_CONTEXTO: "1:secreto-contexto-centinela",
   PEDERNAL_SECRETO_INVITACIONES: HEX_CENTINELA,
   PEDERNAL_HOSTS_PROTEGIDOS: "consola.centinela.test, web.centinela.test",
+  PEDERNAL_HOST_DE_LA_BASE: "host-centinela.test",
 };
 const PROHIBIDOS = [
   ...Object.values(PERSONALES),
@@ -346,7 +347,21 @@ describe("alta de un cliente: cierra ante la duda", () => {
     expect(t.errores.join("\n")).toContain("PEDERNAL_DB_PLATAFORMA, PEDERNAL_SECRETO_INVITACIONES");
     expect(t.sembrar).not.toHaveBeenCalled();
     expect(t.llamadas).toEqual([]);
-    expect(VARIABLES_OBLIGATORIAS_DE_CLIENTE).toHaveLength(6);
+    expect(VARIABLES_OBLIGATORIAS_DE_CLIENTE).toHaveLength(7);
+  });
+
+  it("candado de host: la cadena de otra base (o sin host declarado) no recibe nada", async () => {
+    for (const entorno of [
+      { PEDERNAL_DB_MIGRACIONES: "postgres://u:p@otro-host.test/base" },
+      { PEDERNAL_HOST_DE_LA_BASE: undefined },
+      { PEDERNAL_HOST_DE_LA_BASE: "otro-host.test" },
+    ]) {
+      const t = armar({ entorno });
+      expect(await altaDeCliente(t.entrada)).toBe(2);
+      expect(t.sembrar).not.toHaveBeenCalled();
+      expect(t.llamadas).toEqual([]);
+      expect(t.texto()).not.toContain("otro-host.test");
+    }
   });
 
   it("el administrador y el gerente con el mismo email: se rechaza antes de sembrar nada", async () => {

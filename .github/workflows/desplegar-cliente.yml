@@ -12,7 +12,7 @@ name: Desplegar la web de un cliente (producción)
 #  - Las variables de la web del cliente NO se tocan acá (las carga `cargar-entorno.yml`; el secreto de invitaciones lo escribe `alta-de-cliente.yml`). Si una variable
 #    cambió, se vuelve a desplegar para que la web la tome.
 #  - Los dominios (`app.` y `carta.`) los sirve este proyecto recién cuando el dueño cambia el DNS (H.9); este flujo no lo hace.
-#  - Concurrencia: el grupo `desplegar-<ambiente>`; una corrida que ya está desplegando nunca se cancela.
+#  - Concurrencia: el MISMO grupo que `migrar.yml` y el alta (`migrar-<ambiente>`): nunca se despliega mientras se migra o se da el alta; una corrida que ya corre nunca se cancela.
 #  - Secretos del Environment del cliente (nunca en el repositorio): PEDERNAL_DB_DUENO_DIRECTA y PEDERNAL_VERCEL_TOKEN (alcance al proyecto del cliente), y opcional PEDERNAL_VERCEL_BYPASS (el secreto de «Protection Bypass for Automation» del proyecto,
 #    para poder mirar /api/salud de la dirección técnica protegida sin aflojar la protección). Ningún paso los imprime.
 
@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: desplegar-${{ inputs.ambiente }}
+  group: migrar-${{ inputs.ambiente }}
   cancel-in-progress: false
 
 jobs:
@@ -84,14 +84,16 @@ jobs:
           set -eu
           faltan=""
           [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_HOST_DE_LA_BASE:-}" ] || faltan="$faltan PEDERNAL_HOST_DE_LA_BASE"
           [ -n "${PEDERNAL_VERCEL_TOKEN:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN"
           if [ -n "$faltan" ]; then
-            echo "::error::Faltan estos secretos en el Environment del cliente (Settings → Environments → Secrets):$faltan"
+            echo "::error::Faltan estos secretos o variables en el Environment del cliente (Settings → Environments → Secrets y Variables):$faltan"
             exit 1
           fi
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
           PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,8 +111,9 @@ jobs:
         run: |
           set -eu
           npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
-          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
-            echo "::error::Hay migraciones pendientes. Corré antes «Migrar» para este cliente y volvé a desplegar."
+          # Fail closed (igual que `migrar.yml`): solo pasa con el texto «la base está al día». Cualquier otra salida (faltan migraciones, redacción distinta, salida cortada) corta.
+          if ! grep -q "la base está al día" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::No se pudo confirmar que la base esté al día (hay migraciones pendientes o la salida de «ver» no tiene un resultado conocido). Corré antes «Migrar» para este cliente y volvé a correr este flujo."
             exit 1
           fi
         env:
@@ -120,6 +123,8 @@ jobs:
         run: npm run desplegar-cliente -- datos "$AMBIENTE"
         env:
           AMBIENTE: ${{ needs.validar.outputs.ambiente }}
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_HOST_DE_LA_BASE: ${{ vars.PEDERNAL_HOST_DE_LA_BASE }}
           PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
 
       - name: Desplegar a producción (CLI de Vercel, versión fija)
@@ -136,6 +141,8 @@ jobs:
           echo "direccion=$direccion" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}
+          # La CLI se baja con `npx` y no corre los scripts de instalación de sus dependencias. NO VERIFICADO que la CLI funcione así: si falla, el registro lo dice (H.5).
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
 
       - name: Verificar el despliegue (/api/salud)
         run: npm run desplegar-cliente -- verificar "$DIRECCION"

@@ -1,6 +1,6 @@
 import { appendFileSync } from "node:fs";
 import { crearClienteVercel } from "../src/adaptadores/vercel/cliente-vercel";
-import { empresaExistePorCuit } from "../src/adaptadores/postgres/empresa-existe-por-cuit";
+import { hayEmpresaViva } from "../src/adaptadores/postgres/hay-empresa-viva";
 import { prepararSecretoDeInvitaciones } from "./ejecutar-secreto-de-invitaciones-de-cliente";
 
 /** `npm run plataforma:secreto-de-invitaciones -- <ambiente>`; lo corre `alta-de-cliente.yml`. Ver `ejecutar-secreto-de-invitaciones-de-cliente.ts`. */
@@ -12,7 +12,7 @@ if (archivo === undefined || archivo === "") {
 process.exitCode = await prepararSecretoDeInvitaciones({
   ambiente: process.argv[2],
   entorno: process.env,
-  empresaExiste: empresaExistePorCuit,
+  empresaExiste: hayEmpresaViva,
   clienteDeVercel: (token, proyecto) => crearClienteVercel({ token, fetch, proyecto }),
   entregar: (linea) => appendFileSync(archivo, `${linea}\n`),
   info: (linea) => console.log(linea),
