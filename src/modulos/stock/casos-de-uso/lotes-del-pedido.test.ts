@@ -20,6 +20,9 @@ const lote = (cambios: Record<string, unknown> = {}) => ({
 const leer = (lotes: unknown, renglon = "5") => leerLotesDelRenglon(lotes, cant(renglon));
 const codigoDe = (r: { ok: boolean; error?: unknown }) => (r.ok ? "OK" : String(r.error));
 
+/** El JSON de la huella como lista de filas (cada fila, una lista de campos). */
+const desdeJson = (texto: string): unknown[][] => JSON.parse(texto) as unknown[][];
+
 describe("leerLotesDelRenglon", () => {
   it("lee los lotes con sus fechas y cantidades exactas cuando suman el renglón", () => {
     const r = leer([
@@ -278,7 +281,7 @@ describe("lotesParaLaHuella: el orden", () => {
     for (const orden of permutaciones(filas)) {
       expect(lotesParaLaHuella(leidos(orden))).toBe(esperado);
     }
-    expect(JSON.parse(esperado).map((f: unknown[]) => f[0])).toEqual(["A", "A", "A", "A", "B"]);
+    expect(desdeJson(esperado).map((f) => f[0])).toEqual(["A", "A", "A", "A", "B"]);
   });
 
   it("un campo ausente (null) ordena antes que uno con valor: se lee como texto vacío", () => {
@@ -297,19 +300,19 @@ describe("lotesParaLaHuella: el orden", () => {
 
   it("mayor y menor: el menor primero y nunca al revés", () => {
     expect(
-      JSON.parse(
+      desdeJson(
         lotesParaLaHuella(leidos([fila("B", null, null, "1"), fila("A", null, null, "1")])),
-      )[0][0],
+      )[0]?.[0],
     ).toBe("A");
     expect(
-      JSON.parse(
+      desdeJson(
         lotesParaLaHuella(leidos([fila("A", null, null, "1"), fila("B", null, null, "1")])),
-      )[0][0],
+      )[0]?.[0],
     ).toBe("A");
     expect(
-      JSON.parse(
+      desdeJson(
         lotesParaLaHuella(leidos([fila("a", null, null, "1"), fila("B", null, null, "1")])),
-      )[0][0],
+      )[0]?.[0],
     ).toBe("B");
   });
 

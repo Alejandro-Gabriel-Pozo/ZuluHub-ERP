@@ -590,7 +590,7 @@ describe("revisionDelConteo: lo que pide, cómo falla y qué campos existen", ()
     });
     const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
     expect(r).toMatchObject({ ok: true });
-    const dato = (r as { dato: { filas: unknown[]; aplicadas: unknown[] } }).dato;
+    const dato = (r as unknown as { dato: { filas: unknown[]; aplicadas: unknown[] } }).dato;
     expect(dato.filas).toStrictEqual([
       {
         articuloId: desconocido,
@@ -640,7 +640,7 @@ describe("revisionDelConteo: lo que pide, cómo falla y qué campos existen", ()
         }),
     });
     const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
-    const filas = (r as { dato: { filas: Record<string, unknown>[] } }).dato.filas;
+    const filas = (r as unknown as { dato: { filas: Record<string, unknown>[] } }).dato.filas;
     expect(Object.keys(filas[0] as object)).not.toContain("sistema");
     expect(Object.keys(filas[0] as object)).not.toContain("movido");
     expect(filas[1]).toMatchObject({ sistema: "7.0000" });
@@ -656,7 +656,8 @@ describe("revisionDelConteo: lo que pide, cómo falla y qué campos existen", ()
         }),
     });
     const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
-    const fila = (r as { dato: { filas: Record<string, unknown>[] } }).dato.filas[0] as object;
+    const fila = (r as unknown as { dato: { filas: Record<string, unknown>[] } }).dato
+      .filas[0] as object;
     expect(fila).toMatchObject({ movido: "3.0000" });
     expect(Object.keys(fila)).not.toContain("sistema");
   });
@@ -674,7 +675,7 @@ describe("revisionDelConteo: lo que pide, cómo falla y qué campos existen", ()
     });
     const r = await revisionDelConteo(d, contexto, { conteoId: CONTEO });
     const [faltante, sobrante] = (
-      r as { dato: { filas: { motivos: { codigo: string; pideDetalle: boolean }[] }[] } }
+      r as unknown as { dato: { filas: { motivos: { codigo: string; pideDetalle: boolean }[] }[] } }
     ).dato.filas;
     expect(faltante?.motivos).toStrictEqual([
       { codigo: "VENTA_NO_REGISTRADA", pideDetalle: false },
