@@ -44,6 +44,9 @@ function laTeclaEsDeOtro(destino: EventTarget | null): boolean {
  * desplaza hacia abajo dentro de su página. Es DOM común (nunca canvas): el lector de pantalla, el zoom y la
  * búsqueda del navegador siguen funcionando. Solo se monta después de hidratar y si el entorno lo permite
  * (`puedeMontarseElLibro`); si no, la carta es la Lista.
+ *
+ * Inventario de textos y pantalla: DEC-CAT-003 (siete textos `vidriera.libro.*`; el resto se reutiliza). SUPUESTO: dentro
+ * del Libro no hay búsqueda (para buscar, «Ver como lista»). La carta pública no tiene ficha de pantalla (hoy exige un permiso).
  */
 export function PlantillaLibro({
   vista,
