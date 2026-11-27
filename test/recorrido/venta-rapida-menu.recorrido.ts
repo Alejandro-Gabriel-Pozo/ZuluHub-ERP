@@ -48,7 +48,10 @@ describe.skipIf(base === null)("recorrido de Venta rápida en el celular", () =>
     expect(inferior).not.toBeNull();
     if (barra === null || inferior === null) return;
     // La barra de la venta termina donde empieza el menú: no se pisan.
-    expect(barra.y + barra.height).toBeLessThanOrEqual(inferior.y + 1);
+    const hueco = inferior.y - (barra.y + barra.height);
+    expect(hueco).toBeGreaterThanOrEqual(-1);
+    // ...y sin un hueco notorio entre las dos (el alto del menú del token coincide con el real).
+    expect(hueco).toBeLessThanOrEqual(8);
     // Y el menú se puede tocar (no hay nada encima): «Inicio» lleva a la raíz.
     await menu.getByRole("link", { name: "Inicio", exact: true }).click({ timeout: 10_000 });
     await pagina.waitForURL(`${mundo.url}/`);
