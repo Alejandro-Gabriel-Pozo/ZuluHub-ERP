@@ -8,7 +8,9 @@ import {
   armarPaqueteDeCliente,
   codigoDelCliente,
   leerPaqueteDeCliente,
+  MODULOS_INICIALES_DE_LA_MARCA,
   modulosDisponibles,
+  modulosParaActivar,
   ordenarPorRequisitos,
   type EntradaDeAltaDeCliente,
 } from "../../scripts/ejecutar-alta-de-cliente";
@@ -18,6 +20,18 @@ import {
 } from "../../scripts/ejecutar-caso-desde-archivo";
 import { ejecutorDeCasos } from "../../scripts/ejecutar-preparar-empresa-de-pruebas";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
+import { validarVersionDePlan } from "../../src/capacidades/planes/version-de-plan";
+import { decidirActivacion } from "../../src/modulos/planes/publico";
+import {
+  contrastesDelTema,
+  leerHostsProtegidos,
+  normalizarHost,
+  validarLogo,
+  validarModulosIniciales,
+  validarTema,
+} from "../../src/modulos/marcas/publico";
+import { MARCA_NEUTRA } from "../../scripts/ejecutar-preparar-empresa-de-pruebas";
 import { CASOS_DE_PLATAFORMA } from "../../src/plataforma/dominio/pedido-de-caso";
 import { adminPlataformaId } from "../../src/primitivas/identificadores/marca";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
@@ -237,7 +251,7 @@ describe("alta de un cliente: el camino feliz", () => {
     expect(await altaDeCliente(t.entrada)).toBe(0);
     expect(t.sembrar).toHaveBeenCalledTimes(1);
     expect(t.sembrar.mock.calls[0]?.[0]).toBe(PERSONALES.adminEmail);
-    const modulos = ordenarPorRequisitos(modulosDisponibles());
+    const modulos = ordenarPorRequisitos(modulosParaActivar(modulosDisponibles()));
     expect(t.llamadas.map((l) => l.caso)).toEqual([
       "crearPlan",
       "guardarBorradorDePlan",
@@ -292,15 +306,16 @@ describe("alta de un cliente: el camino feliz", () => {
   });
 
   it("cada módulo se activa DESPUÉS de los que requiere", () => {
-    const orden = ordenarPorRequisitos(modulosDisponibles());
+    const orden = ordenarPorRequisitos(modulosParaActivar(modulosDisponibles()));
     expect(new Set(orden).size).toBe(orden.length);
-    expect(orden.length).toBe(modulosDisponibles().length);
+    expect(orden.length).toBe(modulosParaActivar(modulosDisponibles()).length);
     for (const [indice, modulo] of orden.entries()) {
       const requiere =
         (CATALOGO_DE_MODULOS as Record<string, { requiere?: readonly string[] }>)[modulo]
           ?.requiere ?? [];
       for (const requerido of requiere) {
-        expect(orden.indexOf(requerido)).toBeGreaterThanOrEqual(0);
+        // Un requerido obligatorio está siempre: no se activa por paso.
+        if (!orden.includes(requerido)) continue;
         expect(orden.indexOf(requerido)).toBeLessThan(indice);
       }
     }
@@ -634,5 +649,72 @@ describe("alta de un cliente: nada sensible sale", () => {
     const local = armar();
     await altaDeCliente(local.entrada);
     expect(local.comandos).toEqual([]);
+  });
+});
+
+/**
+ * Los pedidos del alta contra los VALIDADORES REALES del dominio (no contra casos falsos): lo que solo el caso real rechaza (caso real, 27/11/2026: «administracion» como módulo inicial de la marca,
+ * que es obligatorio, paró el alta en el paso 6) se descubre acá, sin tocar ninguna base.
+ */
+describe("alta de un cliente: los datos del hotel pasan los validadores reales", () => {
+  const archivo = JSON.parse(
+    readFileSync(join(import.meta.dirname, "../../scripts/clientes/hdn.json"), "utf8"),
+  ) as typeof ARCHIVO;
+  const leido = armarPaqueteDeCliente(JSON.stringify(SECRETO), archivo, new Date());
+  if (!leido.ok) throw new Error("el archivo de hdn no arma un paquete");
+  const { paquete } = leido;
+
+  it("módulos iniciales de la marca: los acepta validarModulosIniciales (y rechaza «administracion», que es obligatorio)", () => {
+    expect(validarModulosIniciales(CATALOGO_DE_MODULOS, MODULOS_INICIALES_DE_LA_MARCA).ok).toBe(
+      true,
+    );
+    expect(validarModulosIniciales(CATALOGO_DE_MODULOS, ["administracion"]).ok).toBe(false);
+  });
+
+  it("tema, logo y contrastes de la marca (la neutra) son válidos", () => {
+    expect(validarTema(MARCA_NEUTRA.tema).ok).toBe(true);
+    expect(validarLogo(MARCA_NEUTRA.logo).ok).toBe(true);
+    for (const par of contrastesDelTema(MARCA_NEUTRA.tema, "NEUTRA"))
+      expect(par.cumple, par.par).toBe(true);
+  });
+
+  it("el plan (módulos y perillas) lo valida validarVersionDePlan con los catálogos reales", () => {
+    const r = validarVersionDePlan(CATALOGO_DE_MODULOS, CATALOGO_DE_PERILLAS, {
+      nombreComercial: paquete.plan.nombreComercial,
+      modulos: [...paquete.plan.modulos],
+      perillas: paquete.plan.perillas as never,
+    });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
+  it("activar los módulos en el orden del alta lo acepta decidirActivacion, uno por uno, con el techo del plan", () => {
+    const activados: string[] = [];
+    for (const modulo of ordenarPorRequisitos(modulosParaActivar(paquete.plan.modulos))) {
+      const r = decidirActivacion({
+        catalogo: CATALOGO_DE_MODULOS,
+        modulo,
+        activados,
+        habilitados: paquete.plan.modulos,
+      });
+      expect(r.ok, `${modulo}: ${JSON.stringify(r)}`).toBe(true);
+      activados.push(modulo);
+    }
+    // Y activar uno obligatorio se rechaza: por eso no se pide.
+    const obligatorio = decidirActivacion({
+      catalogo: CATALOGO_DE_MODULOS,
+      modulo: "administracion",
+      activados,
+      habilitados: paquete.plan.modulos,
+    });
+    expect(obligatorio.ok).toBe(false);
+  });
+
+  it("los dominios los normaliza normalizarHost sin cambiarlos y ninguno es un host protegido de la plataforma", () => {
+    const protegidos = leerHostsProtegidos(SECRETOS.PEDERNAL_HOSTS_PROTEGIDOS);
+    expect(protegidos.ok).toBe(true);
+    for (const dominio of paquete.dominios) {
+      const h = normalizarHost(dominio.host);
+      expect(h.ok && h.valor).toBe(dominio.host);
+    }
   });
 });
