@@ -1,5 +1,6 @@
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { TxDeLecturaDeCaja } from "../cobrar/contrato";
+import type { RepositorioDeDevolucionesDeLaJornada } from "../persistencia/repositorio-de-devoluciones-de-la-jornada";
 import type { RepositorioDeCorrecciones } from "../persistencia/repositorio-de-correcciones";
 import type { RepositorioDeDeclaraciones } from "../persistencia/repositorio-de-declaraciones";
 import type { RepositorioDeFotos } from "../persistencia/repositorio-de-fotos";
@@ -20,6 +21,8 @@ export type TxDeLecturaDeLaJornada = TxDeLecturaDeCaja &
       RepositorioDeDeclaraciones,
       "declaracionesDeLaJornada" | "conformeDeLaJornada"
     >;
+    /** Lo cobrado y lo devuelto (la devolución con medio): el control contra el ticket es neto de lo devuelto, y la conciliación lo muestra al lado. Solo lectura. */
+    devolucionesDeLaJornada: RepositorioDeDevolucionesDeLaJornada;
     laJornada: Pick<
       RepositorioDeLaJornada,
       "registradoPorPar" | "arqueosDeLaJornada" | "ajustesQueCorrigen" | "cobradoPorOrigen"

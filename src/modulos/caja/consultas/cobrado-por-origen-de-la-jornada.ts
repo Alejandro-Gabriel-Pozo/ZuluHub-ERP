@@ -1,5 +1,12 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
+import {
+  importeAJson,
+  importeCero,
+  restar,
+  type ImporteJson,
+} from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
+import type { OrigenDevoluble } from "../persistencia/esquema";
 import { esUuidCanonico } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
@@ -11,6 +18,9 @@ import {
   type EntradaDeJornadaDeCaja,
   type ErrorDeConsultaDeJornada,
 } from "./jornada-comun";
+
+/** El origen de las cobranzas que se devuelven (una consulta no importa el dominio: el tipo `OrigenDevoluble` obliga a que siga siendo uno de los orígenes devolubles). */
+const ORIGEN_DE_LA_COBRANZA: OrigenDevoluble = "ventas.cobranza_de_ticket";
 
 /** El último origen visto `(tipo, id)`: de dónde sigue la página siguiente. */
 export type CursorDeOrigenesVisto = Readonly<{ tipo: string; id: string }>;
@@ -30,6 +40,10 @@ export type CobradoDeUnOrigenVisto = Readonly<{
   origen: Readonly<{ tipo: string; id: string }>;
   /** Σ de los cobros de ese origen en la jornada: no cambia con una corrección de medio. */
   cobrado: ImporteJson;
+  /** Lo ya devuelto de esa cobranza (devoluciones vigentes que salieron EN ESA JORNADA); cero si no hay. Solo las cobranzas de ticket se devuelven. */
+  devuelto: ImporteJson;
+  /** `cobrado` − `devuelto`: lo que compara el control «cobrado contra el ticket». */
+  neto: ImporteJson;
   cobros: number;
 }>;
 
@@ -90,12 +104,29 @@ export function armarCobradoPorOrigenDeLaJornada({
         );
         const pagina = filas.slice(0, limite);
         const ultimo = pagina.at(-1);
+        const devueltos = new Map(
+          (
+            await tx.devolucionesDeLaJornada.devueltoPorOrigen(
+              contexto.empresaId,
+              jornada.valor.sucursal,
+              jornada.valor.fecha,
+              ORIGEN_DE_LA_COBRANZA,
+              pagina.filter((o) => o.origen.tipo === ORIGEN_DE_LA_COBRANZA).map((o) => o.origen.id),
+            )
+          ).map((d) => [d.origenId, d.devuelto]),
+        );
         return ok({
-          origenes: pagina.map((o) => ({
-            origen: o.origen,
-            cobrado: importeAJson(o.cobrado),
-            cobros: o.cobros,
-          })),
+          origenes: pagina.map((o) => {
+            const devuelto =
+              o.origen.tipo === ORIGEN_DE_LA_COBRANZA ? devueltos.get(o.origen.id) : undefined;
+            return {
+              origen: o.origen,
+              cobrado: importeAJson(o.cobrado),
+              devuelto: importeAJson(devuelto ?? importeCero(ARS)),
+              neto: importeAJson(devuelto === undefined ? o.cobrado : restar(o.cobrado, devuelto)),
+              cobros: o.cobros,
+            };
+          }),
           siguiente:
             filas.length > limite && ultimo !== undefined
               ? { tipo: ultimo.origen.tipo, id: ultimo.origen.id }
