@@ -37,6 +37,10 @@ export type AltaDeComposicion = Readonly<{
   componentes: readonly AltaDeComponente[];
 }>;
 
+/**
+ * Receta propia por sucursal (0116): estas lecturas son de la receta de la CENTRAL (la de la empresa: `sucursal_id` nulo) y lo filtran explícitamente; una receta propia no se ve acá. Leer la que rige
+ * para una sucursal es otro tramo (la regla vive en la base: `composicion_vigente_id`). Solo `obtener` (por id de versión: lo sellado en una venta o una orden) mira cualquier ámbito.
+ */
 export interface RepositorioDeComposiciones {
   /**
    * La ÚLTIMA versión (la de mayor número) del producto con sus componentes, o `null` si nunca tuvo. Una versión SIN componentes es la que
@@ -157,6 +161,7 @@ export function crearRepositorioDeComposiciones(db: Kysely<StockDb>): Repositori
         .select(columnasDeVersion)
         .where("empresa_id", "=", empresa)
         .where("producto_id", "=", productoId)
+        .where("sucursal_id", "is", null)
         .orderBy("numero", "desc")
         .limit(1)
         .executeTakeFirst();
@@ -171,7 +176,7 @@ export function crearRepositorioDeComposiciones(db: Kysely<StockDb>): Repositori
       const { rows } = await sql<FilaDeVersion>`
         select distinct on (producto_id) id, empresa_id, producto_id, numero, rinde::text as rinde, pasos, creada_por, creada_en
           from composicion
-         where empresa_id = ${empresa} and producto_id in (${sql.join(validos.map((p) => sql`${p}::uuid`))})
+         where empresa_id = ${empresa} and sucursal_id is null and producto_id in (${sql.join(validos.map((p) => sql`${p}::uuid`))})
          order by producto_id, numero desc`.execute(db);
       const componentes = await componentesDe(
         empresa,
@@ -199,7 +204,7 @@ export function crearRepositorioDeComposiciones(db: Kysely<StockDb>): Repositori
         with vigente as (
           select distinct on (producto_id) id, producto_id
             from composicion
-           where empresa_id = ${empresa}
+           where empresa_id = ${empresa} and sucursal_id is null
            order by producto_id, numero desc)
         select distinct v.producto_id
           from vigente v
@@ -215,6 +220,7 @@ export function crearRepositorioDeComposiciones(db: Kysely<StockDb>): Repositori
         .select(columnasDeVersion)
         .where("empresa_id", "=", empresa)
         .where("producto_id", "=", productoId)
+        .where("sucursal_id", "is", null)
         .where("numero", "=", numero)
         .executeTakeFirst();
       if (fila === undefined) return null;
@@ -228,6 +234,7 @@ export function crearRepositorioDeComposiciones(db: Kysely<StockDb>): Repositori
         .select(columnasDeVersion)
         .where("empresa_id", "=", empresa)
         .where("producto_id", "=", productoId)
+        .where("sucursal_id", "is", null)
         .orderBy("numero", "desc")
         .execute();
       return filas.map((f) => aVersion(f, []));
