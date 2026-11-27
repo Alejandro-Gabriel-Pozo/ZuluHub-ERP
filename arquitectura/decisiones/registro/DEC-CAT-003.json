@@ -4,7 +4,7 @@
   "quien": "padre",
   "tipo": "CLIENTE",
   "estado": "CONFIRMADA",
-  "decision": "Modelo Libro de la carta pública: perilla de empresa «vidriera_modelo_libro» (apagada, sin plan base) y 7 textos nuevos: Desliza para ver el menú, Índice, Sección {n} de {m}, Anterior, Siguiente, Ver como lista/libro.",
+  "decision": "Modelo Libro de la carta pública: perilla de empresa «vidriera_modelo_libro» (apagada, sin plan base) y 7 textos nuevos (Desliza, Índice, Sección n de m, Anterior, Siguiente, Ver como lista/libro).",
   "que_cambia": "Con la perilla encendida y modelo LIBRO, la carta se ve como libro si el navegador lo permite; si no, es la Lista. SUPUESTOS: ningún plan la incluye (revertir: sumarla a un plan); sin búsqueda dentro del Libro (revertir: sumar el campo a la portada).",
   "donde": "perillas.ts; catalogo-carta-publica.ts; PlantillaLibro.tsx; 03-experiencia-de-la-carta.md §4 (dueño 13/10/2026); textos aceptados por el orquestador por delegación (decisiones-del-dueno-2026-11.md, fila 173), 27/11/2026"
 }
