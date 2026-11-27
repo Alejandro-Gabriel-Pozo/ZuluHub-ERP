@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { leerEstadoDeMigraciones } from "../../src/adaptadores/postgres/estado-de-migraciones";
 import { ejecutarMigracion, VARIABLE_DE_LA_CADENA } from "../../scripts/ejecutar-migracion";
 import { crearBaseAparte } from "./entorno";
+import { esperadoDeLaSincronizacion } from "./oraculo-de-sincronizacion";
 
 /**
  * El comando que migra la base real (`scripts/migrar-base.ts`, lo que corre el workflow «Migrar (preview y producción)»),
@@ -75,14 +76,48 @@ async function correrAca(argumento: string, cadena: string | undefined, carpeta:
   };
 }
 
+/** Lo que la base tiene de las plantillas: lo introducido, los pisos solo-gerente, la versión vigente de cada plantilla y su número (lo que la sincronización lee antes de decidir). */
+async function estadoDeLasPlantillas(cadena: string) {
+  const claves = ["ADMINISTRADOR", "OPERADOR"] as const;
+  const introducidas = await consultar<{ accion: string }>(
+    cadena,
+    "SELECT accion FROM accion_introducida",
+  );
+  const pisos = await consultar<{ accion: string }>(
+    cadena,
+    "SELECT accion FROM piso_de_plataforma WHERE tipo = 'SOLO_GERENTE'",
+  );
+  const vigentes = { ADMINISTRADOR: [] as string[], OPERADOR: [] as string[] };
+  const numeros = { ADMINISTRADOR: 0, OPERADOR: 0 };
+  for (const clave of claves) {
+    const filas = await consultar<{ numero: number; acciones: string[] }>(
+      cadena,
+      "SELECT numero, acciones FROM version_de_plantilla WHERE clave = $1 ORDER BY numero DESC LIMIT 1",
+      [clave],
+    );
+    vigentes[clave] = filas[0]?.acciones ?? [];
+    numeros[clave] = filas[0]?.numero ?? 0;
+  }
+  return {
+    introducidas: new Set(introducidas.map((f) => f.accion)),
+    reservadasAlGerente: new Set(pisos.map((f) => f.accion)),
+    vigentes,
+    numeros,
+  };
+}
+
 const cuantasAplicadasAhora = (texto: string) =>
   Number(/Aplicadas ahora \((\d+)\)/.exec(texto)?.[1] ?? Number.NaN);
 
-async function consultar<T extends pg.QueryResultRow>(url: string, sql: string): Promise<T[]> {
+async function consultar<T extends pg.QueryResultRow>(
+  url: string,
+  sql: string,
+  parametros: unknown[] = [],
+): Promise<T[]> {
   const cliente = new pg.Client({ connectionString: url });
   await cliente.connect();
   try {
-    return (await cliente.query<T>(sql)).rows;
+    return (await cliente.query<T>(sql, parametros)).rows;
   } finally {
     await cliente.end();
   }
@@ -259,17 +294,33 @@ describe.skipIf(base === null)("migrar-base: el comando que migra la base real",
       const declarada = JSON.parse(original) as { acciones: Record<string, string[]> };
       declarada.acciones["prueba.para_admin"] = ["GERENTE", "ADMINISTRADOR"];
       declarada.acciones["prueba.solo_gerente"] = ["GERENTE"];
+      // Lo esperado se CALCULA desde lo que la base tiene antes de esta corrida (la semilla de la 0094, sellada, más lo que ya sincronizó la corrida de arriba) y lo que la declaración dice ahora:
+      // si el código declaró acciones después del sello, o si hay una solo-gerente sin piso, el resultado cambia solo y la prueba sigue valiendo.
+      const estado = await estadoDeLasPlantillas(url);
+      const esperado = esperadoDeLaSincronizacion(
+        declarada.acciones,
+        estado.introducidas,
+        estado.reservadasAlGerente,
+        estado.vigentes,
+      );
+      const marcadas = esperado.accionesIntroducidas;
+      expect(marcadas).toContain("prueba.para_admin");
       try {
         await writeFile(ruta, JSON.stringify(declarada));
         const aplicar = await correrAca("--aplicar", url, carpeta);
         expect(aplicar.codigo).toBe(0);
         expect(aplicar.texto).toContain(
-          "Plantillas de permisos: 1 acciones nuevas introducidas, 1 versiones nuevas",
+          `Plantillas de permisos: ${marcadas.length} acciones nuevas introducidas, ${esperado.versiones.length} versiones nuevas`,
         );
-        expect(aplicar.texto).toContain("ADMINISTRADOR versión 2 suma: prueba.para_admin");
-        expect(aplicar.texto).toContain("Introducidas: prueba.para_admin");
+        for (const v of esperado.versiones) {
+          expect(aplicar.texto).toContain(
+            `${v.clave} versión ${estado.numeros[v.clave] + 1} suma: ${v.agregadas.join(", ")}`,
+          );
+        }
+        expect(aplicar.texto).toContain(`Introducidas: ${marcadas.join(", ")}`);
+        expect(esperado.sinSincronizar).toContain("prueba.solo_gerente");
         expect(aplicar.texto).toContain(
-          "AVISO, sin sincronizar (declaradas solo para el gerente y sin piso SOLO_GERENTE en la base): prueba.solo_gerente",
+          `AVISO, sin sincronizar (declaradas solo para el gerente y sin piso SOLO_GERENTE en la base): ${esperado.sinSincronizar.join(", ")}`,
         );
         const otra = await correrAca("--aplicar", url, carpeta);
         expect(otra.texto).toContain("0 acciones nuevas introducidas, 0 versiones nuevas");
