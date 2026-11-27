@@ -193,8 +193,8 @@ export async function guardarLaCartaEnLinea(
       lugar: p.lugar,
       mensajeDePortada: vigente?.mensajeDePortada ?? null,
       estado: vigente?.estado ?? ("FUERA_DE_LINEA" as const),
-      // La identidad: lo que el pedido trae, o lo vigente si no la trae (el modelo siempre es el vigente: la pantalla no lo ofrece, VYP-3).
-      modelo: vigente?.modelo ?? null,
+      // La identidad: lo que el pedido trae, o lo vigente si no la trae (el modelo, igual: el elegido en la pantalla, DEC-CAT-004, o el vigente).
+      modelo: p.modelo ?? vigente?.modelo ?? null,
       cara: p.cara === undefined ? (vigente?.cara ?? null) : p.cara,
       colorPropio: p.colorPropio === undefined ? (vigente?.colorPropio ?? null) : p.colorPropio,
       logo: p.logo === undefined ? (vigente?.logo ?? null) : p.logo,

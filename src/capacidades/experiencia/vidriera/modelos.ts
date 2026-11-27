@@ -23,6 +23,12 @@ export const CATALOGO_DE_MODELOS_DE_VIDRIERA = {
 
 export type ModeloDeVidriera = keyof typeof CATALOGO_DE_MODELOS_DE_VIDRIERA;
 
+/** Los modelos que la pantalla «Carta en línea» ofrece elegir (DEC-CAT-004), en el orden en que se muestran. La Cuadrícula no está: su perilla todavía no existe. */
+export const MODELOS_ELEGIBLES_EN_LA_PANTALLA = [
+  "LISTA",
+  "LIBRO",
+] as const satisfies readonly ModeloDeVidriera[];
+
 /** La reserva de todos los demás: lo que se muestra cuando otro modelo no puede (§4.4). */
 export const MODELO_DE_RESERVA: ModeloDeVidriera = "LISTA";
 

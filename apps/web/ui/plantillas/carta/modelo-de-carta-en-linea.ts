@@ -3,6 +3,10 @@ import {
   CARAS_DE_VIDRIERA,
 } from "../../../../../src/capacidades/experiencia/vidriera/caras";
 import { PALETAS_DE_LA_CARTA } from "../../../../../src/capacidades/experiencia/vidriera/color-de-la-carta";
+import {
+  MODELO_DE_RESERVA,
+  MODELOS_ELEGIBLES_EN_LA_PANTALLA,
+} from "../../../../../src/capacidades/experiencia/vidriera/modelos";
 import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
 import {
   texto,
@@ -34,6 +38,8 @@ export type CartaEnLineaDeLaPantalla = Readonly<{
     lugar: string | null;
     estado: "EN_LINEA" | "FUERA_DE_LINEA";
     version: number;
+    /** El modelo guardado (Lista o Libro; DEC-CAT-004). */
+    modelo?: string | null;
     /** La identidad elegida: `null` es «sin elegir». El logo, como la dirección guardada. */
     cara: string | null;
     colorPropio: string | null;
@@ -71,6 +77,12 @@ export type CartaEnLineaArmada = Readonly<{
     /** Cara, color y logo: se ven apagados sin permiso de editar. */
     identidad: Readonly<{
       apagada: boolean;
+      /** El modelo de la carta (DEC-CAT-004): Lista o Libro; el servidor exige la función del plan al elegir Libro. */
+      modelo: Readonly<{
+        etiqueta: string;
+        valorInicial: string;
+        opciones: readonly Readonly<{ valor: string; etiqueta: string }>[];
+      }>;
       cara: Readonly<{
         etiqueta: string;
         valorInicial: string;
@@ -112,6 +124,10 @@ const puede = (valor: boolean | undefined): boolean => valor === true;
 
 /** El valor de «Otro color» en el desplegable (el de las paletas es su `#rrggbb`). */
 export const OTRO_COLOR = "otro";
+
+const TEXTO_DEL_MODELO: Readonly<
+  Record<(typeof MODELOS_ELEGIBLES_EN_LA_PANTALLA)[number], ClaveDeTexto>
+> = { LISTA: "catalogo.carta.modelo_lista", LIBRO: "catalogo.carta.modelo_libro" };
 
 const TEXTO_DE_LA_CARA: Readonly<Record<(typeof CARAS_DE_VIDRIERA)[number], ClaveDeTexto>> = {
   DIA: "catalogo.carta.cara_dia",
@@ -175,6 +191,15 @@ export function armarLaCartaEnLinea(
       lugar: { etiqueta: texto(d, "catalogo.carta.lugar"), valorInicial: carta?.lugar ?? "" },
       identidad: {
         apagada: !puede(oferta.guardar),
+        modelo: {
+          etiqueta: texto(d, "catalogo.carta.modelo"),
+          valorInicial:
+            MODELOS_ELEGIBLES_EN_LA_PANTALLA.find((m) => m === carta?.modelo) ?? MODELO_DE_RESERVA,
+          opciones: MODELOS_ELEGIBLES_EN_LA_PANTALLA.map((m) => ({
+            valor: m,
+            etiqueta: texto(d, TEXTO_DEL_MODELO[m]),
+          })),
+        },
         cara: {
           etiqueta: texto(d, "catalogo.carta.cara"),
           valorInicial: carta?.cara ?? CARA_POR_DEFECTO,

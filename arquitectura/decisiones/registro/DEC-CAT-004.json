@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CAT-004",
+  "fecha": "2026-11-27",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "«Carta en línea» ofrece elegir el modelo, Lista o Libro (el dueño ahora sí quiere el selector). Textos: «Modelo» (propuesta) y «Lista» y «Libro» (de portal-de-la-empresa.html).",
+  "que_cambia": "Gerente y administrador eligen el modelo al guardar; Libro exige la función del plan y, sin ella, sale el error genérico. Revertir: quitar el grupo del formulario y los 3 textos; el modelo vuelve a no viajar y queda el vigente.",
+  "donde": "FormularioDeCartaEnLinea.cliente.tsx; modelo-de-carta-en-linea.ts; catalogo-catalogo.ts; mensaje del dueño del 27/11/2026 vía el orquestador; textos aceptados por delegación (decisiones-del-dueno-2026-11.md, fila 173)"
+}

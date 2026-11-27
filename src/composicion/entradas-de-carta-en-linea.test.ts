@@ -178,11 +178,23 @@ describe("guardar la identidad (cara, color y logo)", () => {
       });
   });
 
-  it("el modelo y el estado no viajan: se descartan", () => {
-    expect(leerElPedidoDeGuardarLaCarta({ ...base, modelo: "LIBRO", estado: "EN_LINEA" })).toEqual({
-      ok: true,
-      valor: base,
-    });
+  it("el modelo viaja si es Lista o Libro; el estado no viaja: se descarta", () => {
+    for (const modelo of ["LISTA", "LIBRO"]) {
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, modelo, estado: "EN_LINEA" })).toEqual({
+        ok: true,
+        valor: { ...base, modelo },
+      });
+    }
+    expect(leerElPedidoDeGuardarLaCarta(base)).toEqual({ ok: true, valor: base });
+  });
+
+  it("un modelo que la pantalla no ofrece (Cuadrícula, vacío, inventado) es PEDIDO_INVALIDO", () => {
+    for (const modelo of ["CUADRICULA", "", "libro", "X", 3]) {
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, modelo })).toEqual({
+        ok: false,
+        error: "PEDIDO_INVALIDO",
+      });
+    }
   });
 });
 

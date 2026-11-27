@@ -76,7 +76,7 @@ describe("guardarLosTextosDeLaCarta: del formulario al pedido", () => {
     expect(crudo["logo"]).toBe("");
   });
 
-  it("no pasa nada más del formulario: ni la empresa, ni el estado, ni el modelo, ni el código", async () => {
+  it("del formulario pasa el modelo y la identidad, pero ni la empresa, ni el estado, ni el código", async () => {
     const datos = new FormData();
     datos.set("nombre", "Parador");
     datos.set("empresaId", "otra");
@@ -92,6 +92,7 @@ describe("guardarLosTextosDeLaCarta: del formulario al pedido", () => {
         "nombre",
         "rubro",
         "lugar",
+        "modelo",
         "cara",
         "paleta",
         "colorPropio",

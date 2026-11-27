@@ -40,6 +40,7 @@ export function FormularioDeCartaEnLinea({ formulario, accion }: PropsDeFormular
   const [rubro, setRubro] = useState(formulario.rubro.valorInicial);
   const [lugar, setLugar] = useState(formulario.lugar.valorInicial);
   const { identidad } = formulario;
+  const [modelo, setModelo] = useState(identidad.modelo.valorInicial);
   const [cara, setCara] = useState(identidad.cara.valorInicial);
   const [paleta, setPaleta] = useState(identidad.color.valorInicial);
   const [otroColor, setOtroColor] = useState(identidad.color.otro.valorInicial);
@@ -82,6 +83,17 @@ export function FormularioDeCartaEnLinea({ formulario, accion }: PropsDeFormular
             alCambiar={setLugar}
             autoComplete="off"
           />
+          <fieldset className={estilos["grupo"]}>
+            <legend className={estilos["leyenda"]}>{identidad.modelo.etiqueta}</legend>
+            <OpcionesExcluyentes
+              dato="modelo-de-la-carta"
+              nombre="modelo"
+              valor={modelo}
+              alCambiar={setModelo}
+              opciones={identidad.modelo.opciones}
+              apagado={identidad.apagada}
+            />
+          </fieldset>
           <fieldset className={estilos["grupo"]}>
             <legend className={estilos["leyenda"]}>{identidad.cara.etiqueta}</legend>
             <OpcionesExcluyentes

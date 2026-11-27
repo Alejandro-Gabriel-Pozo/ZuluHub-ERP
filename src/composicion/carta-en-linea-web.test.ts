@@ -221,7 +221,7 @@ describe("guardarLaCartaEnLinea", () => {
     });
   });
 
-  it("la identidad del pedido reemplaza a la vigente: la cara, la paleta o «otro» color y el logo como PARTES; vacío es «sin elegir»; el modelo es siempre el vigente", async () => {
+  it("la identidad del pedido reemplaza a la vigente: la cara, la paleta o «otro» color y el logo como PARTES; vacío es «sin elegir»; el modelo es el del pedido o, si no lo trae, el vigente", async () => {
     const { m, d } = montar();
     await guardarLaCartaEnLinea(
       d,
@@ -236,13 +236,15 @@ describe("guardarLaCartaEnLinea", () => {
       SUCURSAL,
     );
     expect(m.llamadas[1]?.entrada).toMatchObject({
-      modelo: "LISTA",
+      modelo: "LIBRO",
       cara: "NOCHE",
       colorPropio: "#0e7490",
       logo: { ...VIGENTE.logo, idPublico: "logos/nuevo" },
     });
     await guardarLaCartaEnLinea(d, contexto, pedido({ cara: "", paleta: "", logo: "" }), SUCURSAL);
     expect(m.llamadas[3]?.entrada).toMatchObject({ cara: null, colorPropio: null, logo: null });
+    // Sin modelo en el pedido queda el vigente (otra pantalla, un reintento viejo).
+    expect(m.llamadas[3]?.entrada).toMatchObject({ modelo: "LISTA" });
     await guardarLaCartaEnLinea(d, contexto, pedido({ paleta: "#17562f" }), SUCURSAL);
     expect(m.llamadas[5]?.entrada).toMatchObject({ colorPropio: "#17562f" });
   });

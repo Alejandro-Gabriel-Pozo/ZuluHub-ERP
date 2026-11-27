@@ -64,6 +64,18 @@ export const DATOS_DE_CARTA = {
     ponerPor: PONER_POR,
     requiere: REQUIERE_VIDRIERA,
   },
+  "modelo-de-la-carta": {
+    ficha: "src/capacidades/experiencia/vidriera/modelos.ts",
+    propositos: [
+      {
+        para: "Modelo de la carta en línea: Lista o Libro; elegir Libro exige la función del plan «vidriera_modelo_libro» y, sin ella o con ahorro de datos, la carta se ve como Lista.",
+        fuente: FUENTE_DE_IDENTIDAD,
+      },
+    ],
+    consumidores: [FORMULARIO_DE_CARTA],
+    ponerPor: PONER_POR,
+    requiere: REQUIERE_VIDRIERA,
+  },
   "cara-de-la-carta": {
     ficha: "src/capacidades/experiencia/vidriera/caras.ts",
     propositos: [

@@ -4,6 +4,7 @@ import {
   type PartesDeDireccion,
 } from "../capacidades/activos/direccion-externa";
 import { CARAS_DE_VIDRIERA } from "../capacidades/experiencia/vidriera/caras";
+import { MODELOS_ELEGIBLES_EN_LA_PANTALLA } from "../capacidades/experiencia/vidriera/modelos";
 import { COLOR_RRGGBB } from "../primitivas/color/contraste";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
@@ -24,7 +25,7 @@ import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
  * La identidad (V1): `cara` de la lista cerrada o vacía («sin elegir»); `paleta` (vacía = usar lo de la empresa, un `#rrggbb` de las seis paletas o la palabra «otro») y, solo con «otro», `colorPropio`
  * con la forma `#rrggbb`; `logo` como la dirección pegada de un proveedor permitido (se lee con `leerDireccionPegada` y viaja en PARTES, nunca como dirección) o vacío. Lista de permitidos: lo que no
  * tiene esa forma es `PEDIDO_INVALIDO`. Lo que NO viene (ausente, no vacío) conserva lo vigente: así un pedido que no trae la identidad (otra pantalla, un reintento viejo) no la borra.
- * El modelo no viaja: queda el vigente (VYP-3).
+ * El modelo (Lista o Libro, DEC-CAT-004) viaja solo si el formulario lo trae; ausente, queda el vigente. Que el plan lo permita lo decide el caso de uso, no esta lectura.
  * Chequeo: `entradas-de-carta-en-linea.test.ts`.
  */
 
@@ -35,6 +36,7 @@ const FORMA_DE_GUARDAR = z.object({
   nombre: texto,
   rubro: texto,
   lugar: texto,
+  modelo: z.enum(MODELOS_ELEGIBLES_EN_LA_PANTALLA).optional(),
   cara: z.enum(["", ...CARAS_DE_VIDRIERA]).optional(),
   paleta: z.union([z.literal(""), z.literal("otro"), z.string().regex(COLOR_RRGGBB)]).optional(),
   colorPropio: z.string().max(7).optional(),
@@ -55,6 +57,7 @@ export type PedidoDeGuardarLaCarta = Readonly<{
   nombre: string;
   rubro: string;
   lugar: string;
+  modelo?: (typeof MODELOS_ELEGIBLES_EN_LA_PANTALLA)[number];
   cara?: string | null;
   colorPropio?: string | null;
   logo?: PartesDeDireccion | null;
@@ -81,7 +84,7 @@ function colorElegido(paleta: string, colorPropio: string | undefined): Pedido<s
 export function leerElPedidoDeGuardarLaCarta(crudo: unknown): Pedido<PedidoDeGuardarLaCarta> {
   const forma = leido(FORMA_DE_GUARDAR, crudo);
   if (!forma.ok) return forma;
-  const { cara, paleta, colorPropio, logo, ...base } = forma.valor;
+  const { cara, paleta, colorPropio, logo, modelo, ...base } = forma.valor;
   const color = paleta === undefined ? ok(undefined) : colorElegido(paleta, colorPropio);
   if (!color.ok) return color;
   let elLogo: PartesDeDireccion | null | undefined;
@@ -94,6 +97,7 @@ export function leerElPedidoDeGuardarLaCarta(crudo: unknown): Pedido<PedidoDeGua
   }
   return ok({
     ...base,
+    ...(modelo === undefined ? {} : { modelo }),
     ...(cara === undefined ? {} : { cara: cara === "" ? null : cara }),
     ...(color.valor === undefined ? {} : { colorPropio: color.valor }),
     ...(elLogo === undefined ? {} : { logo: elLogo }),

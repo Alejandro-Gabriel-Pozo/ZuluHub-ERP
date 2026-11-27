@@ -177,6 +177,22 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
   "catalogo.carta.oculto": { porDefecto: "Oculto" },
   "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // Modelo de la carta (DEC-CAT-004): el dueño pidió el selector Lista/Libro el 27/11/2026. «Lista» y «Libro» son de `portal-de-la-empresa.html` (aprobados); «Modelo» es propuesta aceptada por delegación (fila 173).
+  "catalogo.carta.modelo": {
+    porDefecto: "Modelo",
+    usos: [{ como: "DATO", dato: "modelo-de-la-carta" }],
+    fuente: { decision: "DEC-CAT-004" },
+  },
+  "catalogo.carta.modelo_lista": {
+    porDefecto: "Lista",
+    usos: [{ como: "DATO", dato: "modelo-de-la-carta" }],
+    fuente: { decision: "DEC-CAT-004" },
+  },
+  "catalogo.carta.modelo_libro": {
+    porDefecto: "Libro",
+    usos: [{ como: "DATO", dato: "modelo-de-la-carta" }],
+    fuente: { decision: "DEC-CAT-004" },
+  },
   // Identidad de la carta (V1: cara, color y logo en «Carta en línea»; inventario aceptado por el orquestador, fila 173). Fuente: las maquetas aprobadas el 09/11/2026 `carta.html` (grupo «Colores»,
   // «Usar lo de la empresa», «Otro color», «Escribí el color como #0e7490», «El texto no se lee bien sobre este color», «Logo», «Quitar»), `carta-caras.html` y las paletas de `PAL`; «Dirección de la imagen»
   // y «La dirección no sirve» son de la fila 171 (15/11/2026). SUPUESTO (DEC-0827): el rótulo «Cara» y los nombres «Día», «Boliche» y «Noche» (la maqueta los muestra, el rótulo exacto no está confirmado).

@@ -25,7 +25,7 @@ import { textoDe } from "./formularios-de-caja";
  *
  * La sucursal la fija el SERVIDOR: es la elegida en este dispositivo (cookie validada contra las que la persona puede elegir, `sucursalDelPedido`), nunca la que diga el navegador; la que
  * la página mostró solo viaja ligada (`bind`, cifrada) y se COMPARA con la del servidor: si la persona cambió de sucursal en otra pestaña, el pedido se rechaza (el genérico) y no actúa
- * sobre la sucursal nueva. Del formulario solo se toman los tres textos y la identidad (cara, paleta, color propio y logo); la carta, su versión y la sucursal las fija la página.
+ * sobre la sucursal nueva. Del formulario solo se toman los tres textos, el modelo y la identidad (cara, paleta, color propio y logo); la carta, su versión y la sucursal las fija la página.
  *
  * Cómo se repite sin duplicar: guardar lleva la clave de la carta (la misma clave dos veces es una sola carta); poner y sacar piden un ESTADO (repetirlo no escribe ni audita de nuevo).
  * Tras CUALQUIER resultado se vuelve a pedir la página (`revalidatePath`): lo que sigue lleva la versión vigente y, si hubo un conflicto, se ve lo que cambió.
@@ -101,6 +101,7 @@ export async function guardarLosTextosDeLaCarta(
         rubro: textoDe(datos, "rubro"),
         lugar: textoDe(datos, "lugar"),
         cara: identidadDe(datos, "cara"),
+        modelo: identidadDe(datos, "modelo"),
         paleta: identidadDe(datos, "paleta"),
         colorPropio: identidadDe(datos, "colorPropio"),
         logo: identidadDe(datos, "logo"),
