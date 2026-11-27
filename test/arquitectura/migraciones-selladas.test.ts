@@ -78,7 +78,7 @@ describe("sellos de migraciones", () => {
   });
 
   it("una migración nueva con número mayor que todas las selladas es válida (la próxima sin sellar)", () => {
-    const conNueva = new Map(hoy).set("0114_nueva.sql", HASH);
+    const conNueva = new Map(hoy).set("0116_nueva.sql", HASH);
     expect(problemasDeSellos(sellos, conNueva)).toEqual([]);
   });
 
