@@ -3,8 +3,8 @@
 --   última comprobación. El `cobrado` guardado de cada origen de la foto es la Σ de sus cobros en la jornada MENOS las devoluciones vigentes que citan ese origen (hasta ahora).
 --   Sin devoluciones, el mismo número de siempre; lo ya guardado sigue siendo válido. El resto del cuerpo es el de 0027, sin tocar.
 -- NO ADITIVO (AVISO, como el AVISO 3 de 0091 y el de 0114): reemplaza una función existente. NO toca datos, columnas ni restricciones.
--- Reversión: `migraciones/reversiones/0115_revertir_cierre_de_caja_cobrado_neto_de_devoluciones.sql` (restituye el cuerpo de 0027 byte a byte; no hay datos que frenen la reversión,
---   pero una foto guardada con devoluciones quedaría con un `cobrado` que la función vieja no recalcularía igual: solo se compara al guardar la foto).
+-- Reversión: `migraciones/reversiones/0115_revertir_cierre_de_caja_cobrado_neto_de_devoluciones.sql` (restituye el cuerpo de 0027 byte a byte). FRENA (55000) si ya hay una foto de cierre
+--   con el cobrado neto de devoluciones: la función vieja no la habría aceptado (AVISAR AL DUEÑO antes de revertir con datos). Sin datos así, se puede repetir sin que cambie nada.
 -- DEPENDE de 0027 (caja, cierre) y 0114 (la devolución de un cobro de ticket). Solo corre contra el Postgres local de las pruebas; nunca contra Neon.
 
 CREATE OR REPLACE FUNCTION cierre_de_caja_verificar() RETURNS trigger LANGUAGE plpgsql
@@ -114,7 +114,7 @@ BEGIN
   END IF;
 
   -- Cobrado contra el ticket (0115): `cobrado` de cada origen guardado es la Σ real de sus cobros en las sesiones de la jornada MENOS lo ya devuelto de ese origen
-  -- (las devoluciones vigentes que lo citan, hasta ahora: su egreso no tiene una anulación). Sin devoluciones es la suma bruta de siempre. El total del ticket es de ventas
+  -- (las devoluciones vigentes que lo citan, de la misma empresa y sucursal, hasta ahora: su egreso no tiene una anulación). Sin devoluciones es la suma bruta de siempre. El total del ticket es de ventas
   -- y no se puede verificar acá.
   IF EXISTS (
     SELECT 1 FROM public.conciliacion_de_cobro_por_origen o
@@ -129,7 +129,8 @@ BEGIN
              AND c.sucursal_id = o.sucursal_id AND s.fecha_negocio = o.fecha_negocio)
          - (SELECT coalesce(sum(d.importe), 0)
               FROM public.movimiento_de_dinero d
-             WHERE d.empresa_id = o.empresa_id AND d.devuelve_origen_tipo = o.origen_tipo AND d.devuelve_origen_id = o.origen_id
+             WHERE d.empresa_id = o.empresa_id AND d.sucursal_id = o.sucursal_id
+               AND d.devuelve_origen_tipo = o.origen_tipo AND d.devuelve_origen_id = o.origen_id
                AND NOT EXISTS (SELECT 1 FROM public.movimiento_caja a
                                 WHERE a.empresa_id = d.empresa_id AND a.anula_a = d.movimiento_id AND a.clase = 'ANULACION'))
        )

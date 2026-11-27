@@ -1,6 +1,9 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
+import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import {
   REGLAS_DE_CAJA,
   armarCaja,
@@ -281,6 +284,185 @@ describe.skipIf(base === null)("caja: la devolución en el cierre del día", () 
     });
     // El día 2 no tiene cobros de esa cobranza: no hay control que comparar.
     expect(enDia2.cobradoContraTicket).toEqual([]);
+  });
+
+  const origenesGuardados = async (m: MundoDeCobro, j: JornadaLista) =>
+    (
+      await dueno.query<{ origen_id: string; cobrado: string; total_del_ticket: string }>(
+        `select origen_id, cobrado::text, total_del_ticket::text from conciliacion_de_cobro_por_origen
+          where empresa_id = $1 and sucursal_id = $2 and fecha_negocio = $3 order by origen_id`,
+        [m.empresa, m.sucursal, j.fecha],
+      )
+    ).rows;
+  /** Cierra la sesión (efectivo contado = lo esperado, el resto conforme) y el día reconociendo lo reconocible. */
+  const cerrarSesionYDia = async (m: MundoDeCobro, j: JornadaLista, esperado: string) => {
+    const cerrada = await caja.casos.cerrarSesion(j.ctx(30), {
+      sesionId: j.sesionId,
+      conteo: conteoDe(esperado),
+      otros: [],
+      conformeGeneral: true,
+      observacion: null,
+    });
+    expect(cerrada.ok, JSON.stringify(cerrada)).toBe(true);
+    await empezarElCierre(cierre, j);
+    return cerrarElDia(cierre, j, { texto: "Devolucion reconocida" });
+  };
+
+  it("una devolución PARCIAL: el día cierra, cuadra y la foto guarda el cobrado neto (6.000) contra el total del ticket (10.000)", async () => {
+    const m = await mundo();
+    const cobranza = origenNuevo();
+    const j = await jornada(m, [{ medio: "EFECTIVO", importe: "10000.00", origen: cobranza }]);
+    await devolver(m, j, cobranza.id, [linea(m, "TRANSFERENCIA", "4000.00")]);
+    const dia = await cerrarSesionYDia(m, j, "11000.00");
+    expect(dia.ok, JSON.stringify(dia)).toBe(true);
+    expect(await origenesGuardados(m, j)).toEqual([
+      { origen_id: cobranza.id, cobrado: "6000.00", total_del_ticket: "10000.00" },
+    ]);
+  });
+
+  it("una devolución ANULADA vuelve al bruto: el día cierra sin diferencia contra el ticket y no guarda ningún origen", async () => {
+    const m = await mundo();
+    const cobranza = origenNuevo();
+    const j = await jornada(m, [{ medio: "EFECTIVO", importe: "10000.00", origen: cobranza }]);
+    const d = await devolver(m, j, cobranza.id, [linea(m, "QR", "10000.00")]);
+    const anulada = await caja.casos.anularDevolucion(j.ctx(20), {
+      claveDeIdempotencia: claveNueva(),
+      devolucionId: d.devolucionId,
+      motivo: "Se devolvió por error",
+    });
+    expect(anulada.ok).toBe(true);
+    const dia = await cerrarSesionYDia(m, j, "11000.00");
+    expect(dia.ok, JSON.stringify(dia)).toBe(true);
+    expect(await origenesGuardados(m, j)).toEqual([]);
+  });
+
+  it("dos orígenes en la misma jornada: cada uno resta SOLO lo suyo; el que se devolvió entero no figura y el otro guarda su diferencia", async () => {
+    const m = await mundo();
+    const a = origenNuevo();
+    const b = origenNuevo();
+    const j = await jornada(m, [
+      { medio: "EFECTIVO", importe: "8000.00", origen: a, totalDelTicket: "0.00" },
+      { medio: "EFECTIVO", importe: "3000.00", origen: b, totalDelTicket: "2000.00" },
+    ]);
+    await devolver(m, j, a.id, [linea(m, "TRANSFERENCIA", "8000.00")]);
+    await devolver(m, j, b.id, [linea(m, "QR", "500.00")]);
+    const dia = await cerrarSesionYDia(m, j, "12000.00");
+    expect(dia.ok, JSON.stringify(dia)).toBe(true);
+    // A: 8.000 − 8.000 = 0 contra un ticket de 0 → sin diferencia. B: 3.000 − 500 = 2.500 contra 2.000 → diferencia de 500 guardada.
+    expect(await origenesGuardados(m, j)).toEqual([
+      { origen_id: b.id, cobrado: "2500.00", total_del_ticket: "2000.00" },
+    ]);
+  });
+
+  it("AISLAMIENTO: lo devuelto de una cobranza de OTRA empresa no entra en la cuenta de esta (ni aunque el id coincida)", async () => {
+    const m = await mundo();
+    const otra = await mundo();
+    const cobranza = origenNuevo();
+    const j = await jornada(m, [
+      { medio: "EFECTIVO", importe: "1000.00", origen: cobranza, totalDelTicket: "400.00" },
+    ]);
+    const jOtra = await jornada(otra, [
+      { medio: "EFECTIVO", importe: "1000.00", origen: cobranza, totalDelTicket: "400.00" },
+    ]);
+    await devolver(otra, jOtra, cobranza.id, [linea(otra, "QR", "600.00")]);
+    expect((await conciliacion(j)).cobradoContraTicket[0]).toMatchObject({
+      cobrado: pesos("1000.00"),
+      diferencia: pesos("600.00"),
+    });
+    expect((await conciliacion(jOtra)).cobradoContraTicket).toEqual([]);
+  });
+
+  it("cerrar el día dos veces: la segunda no cambia la foto ni falla", async () => {
+    const m = await mundo();
+    const cobranza = origenNuevo();
+    const j = await jornada(m, [
+      { medio: "EFECTIVO", importe: "2000.00", origen: cobranza, totalDelTicket: "1500.00" },
+    ]);
+    await devolver(m, j, cobranza.id, [linea(m, "QR", "200.00")]);
+    const primera = await cerrarSesionYDia(m, j, "2800.00");
+    expect(primera.ok, JSON.stringify(primera)).toBe(true);
+    const antes = JSON.stringify(await origenesGuardados(m, j));
+    const segunda = await cerrarElDia(cierre, j, { texto: "Devolucion reconocida" });
+    expect(segunda.ok, JSON.stringify(segunda)).toBe(true);
+    expect(JSON.stringify(await origenesGuardados(m, j))).toBe(antes);
+  });
+
+  it("CONCURRENCIA: cerrar el día contra una devolución de OTRA jornada sobre la misma cobranza, en los dos órdenes: el cierre siempre confirma y la foto es coherente con la base", async () => {
+    for (const cierraPrimero of [true, false]) {
+      const m = await mundo();
+      const cobranza = origenNuevo();
+      const dia1 = await jornada(m, [
+        { medio: "EFECTIVO", importe: "5000.00", origen: cobranza, totalDelTicket: "4000.00" },
+      ]);
+      expect(
+        (
+          await caja.casos.cerrarSesion(dia1.ctx(30), {
+            sesionId: dia1.sesionId,
+            conteo: conteoDe("6000.00"),
+            otros: [],
+            conformeGeneral: true,
+            observacion: null,
+          })
+        ).ok,
+      ).toBe(true);
+      await empezarElCierre(cierre, dia1);
+      const dia2 = await jornada(m, [], 2);
+      const cerrar = () => cerrarElDia(cierre, dia1, { texto: "Devolucion reconocida" });
+      const devolverYa = () =>
+        caja.casos.devolverDinero(dia2.ctx(10), {
+          claveDeIdempotencia: claveNueva(),
+          cajaId: m.cajaId,
+          cobranzaId: cobranza.id,
+          lineas: [linea(m, "TRANSFERENCIA", "1000.00")],
+          motivo: "Producto en mal estado",
+        });
+      let pc: ReturnType<typeof cerrar>;
+      let pd: ReturnType<typeof devolverYa>;
+      if (cierraPrimero) {
+        pc = cerrar();
+        pd = devolverYa();
+      } else {
+        pd = devolverYa();
+        pc = cerrar();
+      }
+      const [rc, rd] = await Promise.all([pc, pd]);
+      expect(rd.ok, JSON.stringify(rd)).toBe(true);
+      expect(rc.ok, JSON.stringify(rc)).toBe(true);
+      const guardado = await origenesGuardados(m, dia1);
+      // Si la devolución entró antes de la foto: 5.000 − 1.000 = 4.000 = el total → sin diferencia y sin fila. Si entró después: la foto quedó con el bruto (5.000).
+      expect([0, 1]).toContain(guardado.length);
+      if (guardado.length === 1) expect(guardado[0]?.cobrado).toBe("5000.00");
+    }
+  });
+
+  it("la reversión de 0115 FRENA (55000) si ya hay una foto de cierre con el cobrado neto de devoluciones, y no cambia nada", async () => {
+    const m = await mundo();
+    const cobranza = origenNuevo();
+    const j = await jornada(m, [{ medio: "EFECTIVO", importe: "3000.00", origen: cobranza }]);
+    await devolver(m, j, cobranza.id, [linea(m, "QR", "1000.00")]);
+    expect((await cerrarSesionYDia(m, j, "3000.00")).ok).toBe(true);
+    expect(await origenesGuardados(m, j)).toHaveLength(1);
+    const reversion = await readFile(
+      join(
+        CARPETA_DE_MIGRACIONES,
+        "reversiones/0115_revertir_cierre_de_caja_cobrado_neto_de_devoluciones.sql",
+      ),
+      "utf8",
+    );
+    const cuerpo = async () =>
+      (
+        await dueno.query<{ def: string }>(
+          "select pg_get_functiondef(p.oid) as def from pg_proc p where p.proname = 'cierre_de_caja_verificar'",
+        )
+      ).rows[0]?.def;
+    const antes = await cuerpo();
+    const fallo = await dueno.query(reversion).then(
+      () => null,
+      (error: unknown) => error as { code?: string; message?: string },
+    );
+    expect(fallo?.code).toBe("55000");
+    expect(fallo?.message).toContain("no se revierte sin decisión del dueño");
+    expect(await cuerpo()).toBe(antes);
   });
 
   it("CONCURRENCIA: devolver contra cerrar la sesión, en los dos órdenes: el esperado del arqueo cuenta la devolución que entró o la devolución se rechaza; nunca un cierre sin una devolución ya hecha", async () => {

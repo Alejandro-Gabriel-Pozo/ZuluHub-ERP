@@ -70,6 +70,7 @@ function cierresDelArqueo(
 async function diferenciasContraLosTickets(
   tx: TxDeLecturaDeLaJornada,
   empresa: EmpresaId,
+  sucursal: SucursalId,
   tickets: TicketsPorCobranza,
   cobradoBruto: readonly Readonly<{
     origen: Readonly<{ tipo: string; id: string }>;
@@ -82,6 +83,7 @@ async function diferenciasContraLosTickets(
   if (cobranzaIds.length === 0) return [];
   const devueltos = await tx.devolucionesDeLaJornada.devueltoPorOrigen(
     empresa,
+    sucursal,
     ORIGEN_DE_COBRANZA_DE_TICKET,
     cobranzaIds,
   );
@@ -132,6 +134,7 @@ export async function leerLaJornada(
   const diferenciasDeTicket = await diferenciasContraLosTickets(
     tx,
     empresa,
+    sucursal,
     tickets,
     cobrado.map((c) => ({ origen: c.origen, importe: c.cobrado })),
   );

@@ -108,6 +108,7 @@ export function armarCobradoPorOrigenDeLaJornada({
           (
             await tx.devolucionesDeLaJornada.devueltoPorOrigen(
               contexto.empresaId,
+              jornada.valor.sucursal,
               ORIGEN_DE_LA_COBRANZA,
               pagina.filter((o) => o.origen.tipo === ORIGEN_DE_LA_COBRANZA).map((o) => o.origen.id),
             )

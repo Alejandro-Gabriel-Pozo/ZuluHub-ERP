@@ -33,9 +33,10 @@ export interface RepositorioDeDevolucionesDeLaJornada {
     sucursal: SucursalId,
     fecha: FechaCivil,
   ): Promise<ImportePorPar[]>;
-  /** Lo devuelto (vigente, HASTA AHORA, de cualquier jornada) de cada una de esas cobranzas; las que no tienen devoluciones no figuran. */
+  /** Lo devuelto (vigente, HASTA AHORA, de cualquier jornada) de cada una de esas cobranzas, de esa sucursal; las que no tienen devoluciones no figuran. */
   devueltoPorOrigen(
     empresa: EmpresaId,
+    sucursal: SucursalId,
     tipo: OrigenDevoluble,
     origenIds: readonly string[],
   ): Promise<DevueltoDeUnOrigen[]>;
@@ -97,11 +98,12 @@ export function crearRepositorioDeDevolucionesDeLaJornada(
       return filas.map(porPar);
     },
 
-    async devueltoPorOrigen(empresa, tipo, origenIds) {
+    async devueltoPorOrigen(empresa, sucursal, tipo, origenIds) {
       if (origenIds.length === 0) return [];
       const filas = await db
         .selectFrom("movimiento_de_dinero as d")
         .where("d.empresa_id", "=", empresa)
+        .where("d.sucursal_id", "=", sucursal)
         .where("d.devuelve_origen_tipo", "=", tipo)
         .where("d.devuelve_origen_id", "in", [...origenIds])
         .where((eb) =>

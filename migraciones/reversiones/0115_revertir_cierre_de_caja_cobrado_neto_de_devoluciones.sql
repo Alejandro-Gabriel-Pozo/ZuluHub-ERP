@@ -1,5 +1,36 @@
 -- 0115_revertir_cierre_de_caja_cobrado_neto_de_devoluciones: deshace 0115. Restituye el cuerpo de `cierre_de_caja_verificar` de 0027 byte a byte (el cobrado de cada origen
--- vuelve a ser la Σ bruta de sus cobros). No cambia datos; se puede repetir sin que cambie nada. Corre en UNA transacción, con el dueño de la base.
+-- vuelve a ser la Σ bruta de sus cobros). No cambia datos; FRENA (55000) si ya hay una foto de cierre con el cobrado neto de devoluciones (AVISAR AL DUEÑO). Se puede repetir sin que cambie nada.
+-- Corre en UNA transacción, con el dueño de la base.
+-- Precondición: el cobrado guardado de la foto del cierre ya no puede ser menor que la suma bruta de los cobros (0115 lo permitía por las devoluciones). Si hay una foto así, volver a la
+-- función de 0027 dejaría guardado un dato que esa función no habría aceptado: se frena (55000) y se AVISA AL DUEÑO antes de revertir. Se corre con un rol que evade RLS: sin eso el
+-- conteo no vería las fotos de las empresas y la reversión pasaría con datos.
+DO $$
+DECLARE
+  v_fotos bigint := 0;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolbypassrls)) THEN
+    RAISE EXCEPTION 'la reversión necesita que el rol que la corre evada RLS (superusuario o BYPASSRLS)' USING ERRCODE = '55000';
+  END IF;
+  IF to_regclass('public.conciliacion_de_cobro_por_origen') IS NOT NULL THEN
+    EXECUTE $q$
+      SELECT count(*)
+        FROM public.conciliacion_de_cobro_por_origen o
+       WHERE o.cobrado IS DISTINCT FROM (
+         SELECT coalesce(sum(m.importe), 0)
+           FROM public.cobro co
+           JOIN public.movimiento_caja m ON m.id = co.movimiento_id AND m.empresa_id = co.empresa_id
+           JOIN public.sesion_caja s ON s.id = m.sesion_id AND s.empresa_id = m.empresa_id
+           JOIN public.caja c ON c.id = s.caja_id AND c.empresa_id = s.empresa_id
+          WHERE co.empresa_id = o.empresa_id AND co.origen_tipo = o.origen_tipo AND co.origen_id = o.origen_id
+            AND c.sucursal_id = o.sucursal_id AND s.fecha_negocio = o.fecha_negocio)
+    $q$ INTO v_fotos;
+  END IF;
+  IF v_fotos > 0 THEN
+    RAISE EXCEPTION 'hay % orígenes de la foto del cierre cuyo cobrado es neto de devoluciones: no se revierte sin decisión del dueño', v_fotos USING ERRCODE = '55000';
+  END IF;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION cierre_de_caja_verificar() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
