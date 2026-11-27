@@ -195,7 +195,7 @@ export function leerPaqueteDeCliente(
   if (planCrudo !== null && Object.hasOwn(planCrudo, "modulos")) {
     const lista = planCrudo["modulos"];
     if (Array.isArray(lista) && lista.length > 0 && lista.every((m) => typeof m === "string")) {
-      modulos = lista as string[];
+      modulos = lista;
     } else {
       problemas.push(
         "plan.modulos: tiene que ser una lista de textos (o no ir: entonces son todos los disponibles)",
