@@ -304,7 +304,7 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     );
   }
 
-  // (h) `pruebas` en tres fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
+  // (h) `pruebas` en cuatro fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
   problemas.push(...problemasDeLosFragmentos(texto, "ci.yml"));
 
   // (g) Las copias de Estabilidad por evento: 3 en un pull request, 12 en la nocturna y a pedido.
@@ -382,13 +382,13 @@ const COPIAS_DE_ESTABILIDAD: Readonly<Record<string, number>> = {
   workflow_dispatch: 12,
 };
 /**
- * `pruebas` corre en TRES fragmentos de la suite (`vitest --shard`; decisión del dueño, 17/11/2026, opción B). Previene: el timeout de un job monolítico al borde del límite
+ * `pruebas` corre en CUATRO fragmentos de la suite (`vitest --shard`; tres desde la decisión del dueño del 17/11/2026, opción B; cuatro desde el 27/11/2026, cuando partir `recorrido` dejó a `pruebas` como camino crítico: 10,6 min de mediana con tres). Previene: el timeout de un job monolítico al borde del límite
  * (run 43989591478: 20 min 16 s y 20 min 5 s cancelados) y que un fragmento se pierda sin que nadie lo note: la matriz es EXACTAMENTE [1, 2, 3], el total sale de `strategy.job-total`
  * (nunca un número escrito a mano que se desfase de la matriz), el fragmento llega por `PEDERNAL_FRAGMENTO` (lo lee `vitest.config.ts`; el paso sigue siendo `npm test`, que es lo que el guardián de contratos exige) y `fail-fast: false` deja correr y ver a todos. El resultado del job que ve el Gate (`needs.pruebas.result`) es
  * el agregado de la matriz: success solo si TODOS los fragmentos dieron success; cualquiera fallido o cancelado lo deja en failure o cancelled (fail-closed).
  */
 const PRUEBAS_EN_FRAGMENTOS = {
-  matriz: "[1, 2, 3]",
+  matriz: "[1, 2, 3, 4]",
   comando: "- run: npm test",
   entorno: ["PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}"],
   topePorFragmento: 20,
@@ -404,7 +404,7 @@ function problemasDeLosFragmentos(texto: string, archivo: string): string[] {
   const lineas = cuerpo.split("\n").map((l) => l.replace(/\s+#.*$/, "").trimEnd());
   esperado(
     lineas.includes(`        shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}`),
-    `la matriz de fragmentos tiene que ser \`shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}\` (tres fragmentos, ninguno de menos)`,
+    `la matriz de fragmentos tiene que ser \`shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}\` (cuatro fragmentos, ninguno de menos)`,
   );
   esperado(
     lineas.includes("      fail-fast: false"),
@@ -676,15 +676,17 @@ const CASOS: Caso[] = [
     esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
-    nombre: "«pruebas» pierde un fragmento (la matriz queda en [1, 2])",
+    nombre: "«pruebas» pierde un fragmento (la matriz queda en [1, 2, 3])",
     alterar: (t) =>
-      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2]")),
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3, 4]", "shard: [1, 2, 3]")),
     esperado: ["pruebas", "la matriz de fragmentos"],
   },
   {
-    nombre: "«pruebas» suma un fragmento sin decidirlo (la matriz queda en [1, 2, 3, 4])",
+    nombre: "«pruebas» suma un fragmento sin decidirlo (la matriz queda en [1, 2, 3, 4, 5])",
     alterar: (t) =>
-      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2, 3, 4]")),
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(b, "shard: [1, 2, 3, 4]", "shard: [1, 2, 3, 4, 5]"),
+      ),
     esperado: ["pruebas", "la matriz de fragmentos"],
   },
   {
@@ -1075,7 +1077,10 @@ describe("gate-rapido.yml: sus pruebas se reparten igual que las de ci.yml", () 
   });
   it("sin la matriz o con otro tope, falla", () => {
     expect(
-      problemasDeLosFragmentos(RAPIDO.replace("shard: [1, 2, 3]", "shard: [1]"), "gate-rapido.yml"),
+      problemasDeLosFragmentos(
+        RAPIDO.replace("shard: [1, 2, 3, 4]", "shard: [1]"),
+        "gate-rapido.yml",
+      ),
     ).toHaveLength(1);
     expect(
       problemasDeLosFragmentos(
