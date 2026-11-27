@@ -682,7 +682,7 @@ describe("alta de un cliente: los datos del hotel pasan los validadores reales",
     const r = validarVersionDePlan(CATALOGO_DE_MODULOS, CATALOGO_DE_PERILLAS, {
       nombreComercial: paquete.plan.nombreComercial,
       modulos: [...paquete.plan.modulos],
-      perillas: paquete.plan.perillas as never,
+      perillas: paquete.plan.perillas,
     });
     expect(r.ok, JSON.stringify(r)).toBe(true);
   });
